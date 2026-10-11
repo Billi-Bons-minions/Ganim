@@ -76,6 +76,7 @@ from manim_studio.ui.icon_set import icon
 from manim_studio.ui.icons import kind_icon, rate_icon
 from manim_studio.ui.parameter_slider import ParameterSlider
 from manim_studio.ui.settings import AppSettings
+from manim_studio.ui.style_menu import fill_style_menu
 from manim_studio.ui.theme import px
 from manim_studio.ui.widgets import (
     ColorButton,
@@ -578,6 +579,7 @@ class PropertiesPanel(QScrollArea):
             form.note(lambda: self._analysis_note(object_id))
         if info.style:
             form.section(tr("section.style"))
+            form.header_widget(self._style_button([object_id]))
             for field in ("stroke_color", "stroke_width", "stroke_opacity", "fill_color", "fill_opacity"):
                 if field in info.style:
                     self._object_field_row(form, object_id, field, _STYLE_SPECS[field], tr(f"prop.{field}"))
@@ -823,6 +825,7 @@ class PropertiesPanel(QScrollArea):
         style_fields = [f for f in STYLE_FIELDS if any(f in kind_info(obj.kind).style for obj in objects)]
         if style_fields:
             form.section(tr("section.style"))
+            form.header_widget(self._style_button(ids))
             for field in style_fields:
                 self._multi_field_row(form, ids, field, _STYLE_SPECS[field], tr(f"prop.{field}"))
         shared = self._shared_params(objects)
@@ -834,6 +837,18 @@ class PropertiesPanel(QScrollArea):
         layer = ParamSpec("z_index", ParamType.INT, 0, minimum=-100, maximum=100)
         self._multi_field_row(form, ids, "z_index", layer, tr("prop.z_index"))
         form.note(lambda: tr("prop.multi_note"))
+
+    def _style_button(self, ids: list[str]) -> QToolButton:
+        button = QToolButton()
+        button.setText(tr("menu.styles"))
+        button.setIcon(icon("a_change_color"))
+        button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        button.setProperty("variant", "button")
+        button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        menu = QMenu(button)
+        menu.aboutToShow.connect(lambda: fill_style_menu(menu, self.controller, self.controller.library, ids[0] if len(ids) == 1 else ""))
+        button.setMenu(menu)
+        return button
 
     def _arrange_bar(self, count: int) -> QWidget:
         bar, row = flow_container(px(1))

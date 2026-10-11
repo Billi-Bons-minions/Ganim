@@ -18,6 +18,7 @@ from manim_studio.ui.document import ProjectDocument
 from manim_studio.ui.editor_state import EditorState
 from manim_studio.ui.render_controller import RenderController
 from manim_studio.ui.settings import AppSettings
+from manim_studio.ui.user_library import UserLibrary
 
 
 def cache_dir() -> Path:
@@ -75,9 +76,11 @@ class AppContext(QObject):
 
     environmentChanged = Signal()
 
-    def __init__(self, settings: AppSettings) -> None:
+    def __init__(self, settings: AppSettings, data_folder: Path | None = None) -> None:
         super().__init__()
         self.settings = settings
+        self.data_folder = data_folder or data_dir()
+        self.library = UserLibrary(self.data_folder / "library", self)
         self._window: QWidget | None = None
         self.document = ProjectDocument(tr("scene.first_name"), self)
         self.editor = EditorState(self.document, self)
@@ -86,7 +89,8 @@ class AppContext(QObject):
         self.tex_cache = TexPreviewCache(cache_dir() / "tex", enabled=settings.latex_preview and latex_found, parent=self)
         self.environment: EnvironmentReport | None = None
         self.render = RenderController(self.document, self.editor, settings, self.latex_available, self.window, self)
-        self.autosaver = AutoSaver(self.document, data_dir() / "autosave", self)
+        self.autosaver = AutoSaver(self.document, self.data_folder / "autosave", self)
+        self.controller.library = self.library
         self._env_signals = _EnvironmentSignals()
         self._env_signals.done.connect(self._on_environment)
         self._checking = False

@@ -352,6 +352,21 @@ def set_line_endpoint(scene: Scene, object_id: str, which: int, x: float, y: flo
     obj.params["length"] = round(length, 6)
 
 
+def apply_style(scene: Scene, object_ids: Iterable[str], values: dict[str, Any]) -> None:
+    """Give objects (and the members of groups) a saved look where it applies."""
+    from manim_studio.model import groups
+
+    for object_id in object_ids:
+        for leaf in groups.leaves(scene, object_id):
+            obj = require_object(scene, leaf)
+            info = kind_info(obj.kind)
+            for key, value in values.items():
+                if key in info.style:
+                    setattr(obj, key, value)
+                elif info.param(key) is not None:
+                    obj.params[key] = value
+
+
 def change_z_index(scene: Scene, object_ids: Iterable[str], delta: int) -> None:
     """Move objects up (positive) or down (negative) in the layer order."""
     for object_id in object_ids:

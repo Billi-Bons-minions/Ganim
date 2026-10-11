@@ -354,3 +354,14 @@ def test_portrait_joined_video_with_subtitles_and_sound(tmp_path) -> None:
         assert container.streams.audio
     assert video.with_suffix(".srt").exists()
     assert list(video.parent.glob("sections/*.mp4"))
+
+
+def test_builtin_templates_run_in_manim(tmp_path) -> None:
+    from manim_studio.templates import BUILTIN_TEMPLATES
+
+    project = make_project(*(template.build() for template in BUILTIN_TEMPLATES))
+    from manim_studio.codegen import CodegenOptions
+
+    script = generate_script(project, CodegenOptions(joined=True))
+    result = run_manim(tmp_path, script, "AllScenes", "--dry_run")
+    assert result.returncode == 0, result.stdout + result.stderr + script

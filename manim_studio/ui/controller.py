@@ -17,6 +17,7 @@ from manim_studio.model.arrange import arrange_deltas, move_layer
 from manim_studio.model.assets import relative_asset_path
 from manim_studio.model.entities import Scene
 from manim_studio.model.factory import (
+    clone_scene,
     create_animation,
     create_object,
     create_play_step,
@@ -50,6 +51,7 @@ from manim_studio.model.types import GRAPH_TOOL_KINDS, REFERENCE_PARAMS, UNADDED
 from manim_studio.ui.document import ProjectDocument
 from manim_studio.ui.editor_state import INSPECT_ANIMATION, INSPECT_STEP, EditorState
 from manim_studio.ui.settings import AppSettings
+from manim_studio.ui.user_library import style_of
 
 CLIPBOARD_PREFIX = "manim-studio-objects:"
 PARAMETER_SYMBOLS = ("a", "b", "c", "k", "m", "n", "p", "q", "r", "s", "u", "v", "w")
@@ -77,6 +79,7 @@ class EditorController(QObject):
         self.editor = editor
         self.settings = settings
         self.window = window
+        self.library = None
 
     # --- helpers -------------------------------------------------------------
 
@@ -268,6 +271,83 @@ class EditorController(QObject):
         ids = list(self.editor.selected_objects)
         if ids:
             self._edit(tr("undo.layer"), lambda s: ops.change_z_index(s, ids, delta))
+
+    # --- styles, building blocks and templates ---------------------------------------------
+
+    def save_style(self, object_id: str) -> None:
+        """Save the look of an object under a name the user chooses."""
+        obj = self.scene().object_by_id(object_id)
+        if obj is None or self.library is None:
+            return
+        name, ok = QInputDialog.getText(self.window(), tr("style.save_title"), tr("style.save_label"))
+        if ok and name.strip():
+            self.library.save_style(name.strip(), style_of(obj))
+            self.statusMessage.emit(tr("style.saved", name=name.strip()))
+
+    def apply_style(self, values: dict, ids: list[str] | None = None) -> None:
+        """Give the selected objects a saved look."""
+        ids = list(ids if ids is not None else self.editor.selected_objects)
+        if ids:
+            self._edit(tr("undo.apply_style"), lambda s: ops.apply_style(s, ids, values))
+
+    def _with_descendants(self, ids: list[str]) -> list[str]:
+        scene = self.scene()
+        result: list[str] = []
+
+        def visit(object_id: str) -> None:
+            if object_id in result:
+                return
+            result.append(object_id)
+            for member in groups.members(scene, object_id):
+                visit(member)
+
+        for object_id in ids:
+            visit(object_id)
+        return result
+
+    def save_component(self, ids: list[str] | None = None) -> None:
+        """Save the selected objects as a building block for later use."""
+        ids = self._with_descendants(list(ids if ids is not None else self.editor.selected_objects))
+        if not ids or self.library is None:
+            return
+        default = self.scene().object_by_id(ids[0]).name if len(ids) == 1 else ""
+        name, ok = QInputDialog.getText(self.window(), tr("component.save_title"), tr("component.save_label"), text=default)
+        if ok and name.strip():
+            self.library.save_component(name.strip(), [self.scene().object_by_id(i) for i in ids])
+            self.statusMessage.emit(tr("component.saved", name=name.strip()))
+
+    def insert_component(self, component, x: float | None = None, y: float | None = None) -> list[str]:
+        """Insert a building block (centered at ``x``/``y`` or at a free spot)."""
+        objects = component.create_objects()
+        if not objects:
+            return []
+        placed = [obj for obj in objects if obj.kind not in UNADDED_KINDS]
+        if placed:
+            cx = (min(o.x for o in placed) + max(o.x for o in placed)) / 2
+            cy = (min(o.y for o in placed) + max(o.y for o in placed)) / 2
+        else:
+            cx = cy = 0.0
+        if x is None or y is None:
+            x, y = self._free_position()
+        new_ids = self._edit(tr("undo.insert_component", name=component.name), lambda s: ops.paste_objects(s, objects, x - cx, y - cy))
+        self.editor.select_objects(new_ids or [])
+        return new_ids or []
+
+    def add_scene_from_template(self, template_scene: Scene) -> None:
+        """Add a new scene that starts as a copy of a template."""
+        names = [scene.name for scene in self.document.project.scenes]
+        scene = clone_scene(template_scene, unique_name(names, template_scene.name))
+        self.document.edit_project(tr("undo.add_scene"), lambda p: ops.add_scene(p, scene))
+        self.editor.set_scene(scene.id)
+
+    def save_template(self) -> None:
+        """Save the active scene as a template for new scenes."""
+        if self.library is None:
+            return
+        name, ok = QInputDialog.getText(self.window(), tr("template.save_title"), tr("template.save_label"), text=self.scene().name)
+        if ok and name.strip():
+            self.library.save_template(name.strip(), self.scene())
+            self.statusMessage.emit(tr("template.saved", name=name.strip()))
 
     # --- groups, arranging and layers ---------------------------------------------------
 

@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from PySide6.QtCore import QMimeData, QPoint, QSize, Qt, Signal
 from PySide6.QtGui import QDrag, QMouseEvent
-from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QScrollArea, QToolButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QMenu, QScrollArea, QToolButton, QVBoxLayout, QWidget
 
 from manim_studio.i18n import tr
 from manim_studio.model.types import ObjectKind
 from manim_studio.ui.flow_layout import flow_container
 from manim_studio.ui.icon_set import icon
 from manim_studio.ui.icons import kind_icon, kind_pixmap
-from manim_studio.ui.stage.view import KIND_MIME
+from manim_studio.ui.stage.view import COMPONENT_MIME, KIND_MIME
 from manim_studio.ui.theme import px
 
 #: Library categories in display order.
@@ -119,10 +119,71 @@ class LibraryTile(QToolButton):
         drag.exec(Qt.DropAction.CopyAction)
 
 
+class ComponentTile(QToolButton):
+    """A saved building block: click to insert, drag onto the stage, right-click to delete."""
+
+    requested = Signal(object)
+    deleteRequested = Signal(object)
+
+    def __init__(self, component, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.component = component
+        self._press: QPoint | None = None
+        self._dragged = False
+        self.setProperty("variant", "tile")
+        self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        self.setIcon(icon("package"))
+        self.setIconSize(QSize(px(28), px(28)))
+        metrics = self.fontMetrics()
+        self.setText(metrics.elidedText(component.name, Qt.TextElideMode.ElideRight, px(70)))
+        self.setFixedSize(px(76), px(66))
+        self.setToolTip(tr("library.component_tooltip", name=component.name))
+        self.setCursor(Qt.CursorShape.OpenHandCursor)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._menu)
+        self.clicked.connect(self._on_clicked)
+
+    def _on_clicked(self) -> None:
+        if not self._dragged:
+            self.requested.emit(self.component)
+        self._dragged = False
+
+    def _menu(self, position: QPoint) -> None:
+        menu = QMenu(self)
+        menu.addAction(icon("plus"), tr("library.component_insert"), lambda: self.requested.emit(self.component))
+        menu.addAction(icon("trash"), tr("library.component_delete"), lambda: self.deleteRequested.emit(self.component))
+        menu.exec(self.mapToGlobal(position))
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802 - Qt API
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._press = event.position().toPoint()
+            self._dragged = False
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:  # noqa: N802 - Qt API
+        if self._press is None or not (event.buttons() & Qt.MouseButton.LeftButton):
+            super().mouseMoveEvent(event)
+            return
+        if (event.position().toPoint() - self._press).manhattanLength() < QApplication.startDragDistance():
+            return
+        self._press = None
+        self._dragged = True
+        self.setDown(False)
+        mime = QMimeData()
+        mime.setData(COMPONENT_MIME, str(self.component.path or self.component.name).encode("utf-8"))
+        drag = QDrag(self)
+        drag.setMimeData(mime)
+        drag.setPixmap(icon("package").pixmap(px(40), px(40)))
+        drag.setHotSpot(QPoint(px(20), px(20)))
+        drag.exec(Qt.DropAction.CopyAction)
+
+
 class LibraryPanel(QWidget):
-    """Searchable object library grouped by category."""
+    """Searchable object library grouped by category (plus the user's building blocks)."""
 
     objectRequested = Signal(str)
+    componentRequested = Signal(object)
+    componentDeleteRequested = Signal(object)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -139,6 +200,14 @@ class LibraryPanel(QWidget):
         column = QVBoxLayout(content)
         column.setContentsMargins(px(10), px(4), px(10), px(10))
         column.setSpacing(px(6))
+        self.component_label = QLabel(tr("library.category.components"))
+        self.component_label.setProperty("role", "section")
+        self.component_grid, self.component_flow = flow_container(px(6))
+        self.component_tiles: list[ComponentTile] = []
+        column.addWidget(self.component_label)
+        column.addWidget(self.component_grid)
+        self.component_label.hide()
+        self.component_grid.hide()
         for key, kinds in CATEGORIES:
             label = QLabel(tr(f"library.category.{key}"))
             label.setProperty("role", "section")
@@ -167,6 +236,22 @@ class LibraryPanel(QWidget):
         layout.addLayout(search_row)
         layout.addWidget(scroll, 1)
 
+    def set_components(self, components: list) -> None:
+        """Show the user's building blocks at the top of the library."""
+        for tile in self.component_tiles:
+            self.component_flow.removeWidget(tile)
+            tile.deleteLater()
+        self.component_tiles = []
+        for component in components:
+            tile = ComponentTile(component)
+            tile.requested.connect(self.componentRequested)
+            tile.deleteRequested.connect(self.componentDeleteRequested)
+            self.component_flow.addWidget(tile)
+            self.component_tiles.append(tile)
+        self.component_label.setVisible(bool(components))
+        self.component_grid.setVisible(bool(components))
+        self._filter(self.search.text())
+
     def set_latex_available(self, available: bool) -> None:
         """Enable or disable the formula tile depending on LaTeX."""
         tile = self.tiles.get(ObjectKind.MATH_TEX)
@@ -177,6 +262,13 @@ class LibraryPanel(QWidget):
 
     def _filter(self, text: str) -> None:
         needle = text.strip().lower()
+        shown = 0
+        for tile in self.component_tiles:
+            match = not needle or needle in tile.component.name.lower()
+            tile.setVisible(match)
+            shown += int(match)
+        self.component_label.setVisible(shown > 0)
+        self.component_grid.setVisible(shown > 0)
         for label, grid, tiles in self._sections:
             visible = 0
             for tile in tiles:

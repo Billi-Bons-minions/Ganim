@@ -24,7 +24,7 @@ def window(tmp_path, qapp):
     settings = AppSettings(QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat))
     settings.hidden_environment_warning = "manim,ffmpeg,latex"
     apply_theme(app, "dark", 1.0, tmp_path / "style")
-    context = AppContext(settings)
+    context = AppContext(settings, data_folder=tmp_path / "data")
     main = MainWindow(context, lambda: None)
     context.set_window(main)
     main.show()
@@ -495,3 +495,26 @@ def test_open_package_from_window(window, tmp_path) -> None:
     window.open_package(str(package), str(tmp_path / "entpackt"))
     assert window.document.path == (tmp_path / "entpackt" / "project.msproj").resolve()
     assert [obj.kind for obj in window.editor.scene().objects] == [ObjectKind.CIRCLE]
+
+
+def test_components_templates_and_styles(window) -> None:
+    from manim_studio.model.types import ObjectKind
+    from manim_studio.templates import BUILTIN_TEMPLATES
+
+    controller = window.controller
+    circle = controller.add_object(ObjectKind.CIRCLE, 1.0, 1.0)
+    window.context.library.save_component("Kreis", [window.editor.scene().object_by_id(circle)])
+    assert len(window.library.component_tiles) == 1
+    window.library.component_tiles[0].click()
+    assert len(window.editor.scene().objects) == 2
+    controller.insert_component(window.context.library.components()[0], -3.0, 2.0)
+    newest = window.editor.scene().object_by_id(window.editor.selected_objects[0])
+    assert (newest.x, newest.y) == (-3.0, 2.0)
+
+    controller.apply_style({"fill_color": "#FC6255", "fill_opacity": 0.5}, [circle])
+    assert window.editor.scene().object_by_id(circle).fill_color == "#FC6255"
+
+    scenes_before = len(window.document.project.scenes)
+    controller.add_scene_from_template(BUILTIN_TEMPLATES[1].build())
+    assert len(window.document.project.scenes) == scenes_before + 1
+    assert any(obj.kind == ObjectKind.GRAPH_MARKERS for obj in window.editor.scene().objects)

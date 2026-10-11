@@ -52,6 +52,7 @@ from manim_studio.model.serialization import FILE_SUFFIX, ProjectFormatError
 from manim_studio.model.stage_edits import is_recording
 from manim_studio.model.state import START, parameter_values, states_after
 from manim_studio.model.types import AnimationKind, ObjectKind, StepKind
+from manim_studio.templates import BUILTIN_TEMPLATES
 from manim_studio.ui.chrome import PanelFrame, SegmentedControl, StageBanner, Toast, action_button, separator, tool_button
 from manim_studio.ui.context import AppContext, cache_dir
 from manim_studio.ui.dialogs.environment_dialog import EnvironmentDialog
@@ -80,6 +81,7 @@ from manim_studio.ui.stage.drawing import PX, StageResources, camera_size
 from manim_studio.ui.stage.ruler import Ruler, RulerCorner
 from manim_studio.ui.stage.view import StageView
 from manim_studio.ui.still_preview import StillPreview
+from manim_studio.ui.style_menu import fill_style_menu
 from manim_studio.ui.theme import current_palette, px
 from manim_studio.ui.tutorial import TourStep, TutorialOverlay
 
@@ -280,6 +282,12 @@ class MainWindow(QMainWindow):
             action.triggered.connect(lambda _checked=False, k=kind: self.controller.add_object(k))
         scene_menu = bar.addMenu(tr("menu.scene"))
         scene_menu.addActions([self.act_new_scene, self.act_duplicate_scene, self.act_rename_scene, self.act_delete_scene])
+        scene_menu.addSeparator()
+        self.template_menu = scene_menu.addMenu(icon("template"), tr("menu.new_from_template"))
+        self.template_menu.aboutToShow.connect(self._fill_template_menu)
+        scene_menu.addAction(icon("save"), tr("action.save_template"), self.controller.save_template)
+        self.delete_template_menu = scene_menu.addMenu(icon("trash"), tr("menu.delete_template"))
+        self.delete_template_menu.aboutToShow.connect(self._fill_delete_template_menu)
         timeline_menu = bar.addMenu(tr("menu.timeline"))
         self.animation_menu = timeline_menu.addMenu(icon("sparkle"), tr("menu.add_animation"))
         self.animation_menu.aboutToShow.connect(lambda: build_animation_menu(self.animation_menu, self.controller, False))
@@ -522,6 +530,11 @@ class MainWindow(QMainWindow):
         self.objects.contextMenuRequested.connect(self.show_object_menu)
         self.properties.arrangeRequested.connect(self.arrange)
         self.library.objectRequested.connect(self._on_library_request)
+        self.library.componentRequested.connect(self._insert_component)
+        self.library.componentDeleteRequested.connect(self._delete_component)
+        self.stage.componentDropRequested.connect(self._drop_component)
+        link(self.context.library.changed, self._refresh_components)
+        self._refresh_components()
         self.scene_tabs.currentChanged.connect(self._on_tab_changed)
         self.scene_tabs.tabMoved.connect(self._on_tab_moved)
         self.scene_tabs.tabBarDoubleClicked.connect(lambda index: self.controller.rename_scene(self.scene_tabs.tabData(index)))
@@ -776,6 +789,44 @@ class MainWindow(QMainWindow):
         else:
             self.stage.fit_frame()
 
+    def _refresh_components(self) -> None:
+        self.library.set_components(self.context.library.components())
+
+    def _insert_component(self, component) -> None:
+        self.set_center_mode(MODE_STAGE)
+        self.controller.insert_component(component)
+
+    def _drop_component(self, key: str, x: float, y: float) -> None:
+        component = next((item for item in self.context.library.components() if str(item.path or item.name) == key), None)
+        if component is not None:
+            self.controller.insert_component(component, x, y)
+
+    def _delete_component(self, component) -> None:
+        answer = QMessageBox.question(self, tr("library.component_delete"), tr("library.component_delete_question", name=component.name))
+        if answer == QMessageBox.StandardButton.Yes:
+            self.context.library.delete_component(component)
+
+    def _fill_template_menu(self) -> None:
+        self.template_menu.clear()
+        for template in BUILTIN_TEMPLATES:
+            action = self.template_menu.addAction(icon(template.icon), tr(f"template.{template.key}.name"))
+            action.triggered.connect(lambda _checked=False, t=template: self.controller.add_scene_from_template(t.build()))
+        user = self.context.library.templates()
+        if user:
+            self.template_menu.addSeparator()
+            for template in user:
+                action = self.template_menu.addAction(icon("scene"), template.name)
+                action.triggered.connect(lambda _checked=False, t=template: self.controller.add_scene_from_template(t.create_scene()))
+
+    def _fill_delete_template_menu(self) -> None:
+        self.delete_template_menu.clear()
+        user = self.context.library.templates()
+        if not user:
+            empty = self.delete_template_menu.addAction(tr("menu.no_templates"))
+            empty.setEnabled(False)
+        for template in user:
+            self.delete_template_menu.addAction(template.name, lambda t=template: self.context.library.delete_template(t))
+
     def _show_rulers(self, show: bool) -> None:
         for widget in (self.ruler_corner, self.top_ruler, self.left_ruler):
             widget.setVisible(show)
@@ -862,6 +913,9 @@ class MainWindow(QMainWindow):
             menu.addActions([self.act_rename, self.act_lock, self.act_hide])
             arrange_menu = menu.addMenu(icon("align_left"), tr("menu.arrange"))
             self._fill_arrange_menu(arrange_menu)
+            style_menu = menu.addMenu(icon("a_change_color"), tr("menu.styles"))
+            fill_style_menu(style_menu, self.controller, self.context.library, object_id)
+            menu.addAction(icon("package"), tr("action.save_component"), lambda: self.controller.save_component())
         else:
             add = menu.addMenu(icon("plus"), tr("menu.insert"))
             scene_pos = self.stage.mapToScene(self.stage.mapFromGlobal(global_position))

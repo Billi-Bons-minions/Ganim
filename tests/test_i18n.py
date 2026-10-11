@@ -17,8 +17,10 @@ from manim_studio.model.schema import ANIMATION_PARAMS, KIND_INFO, MARKER_FEATUR
 from manim_studio.model.stage_edits import COLOR, MOVE, ROTATE, SCALE, VALUE
 from manim_studio.model.types import MANIM_COLORS, RATE_FUNCTIONS, AnimationKind, ObjectKind, Visibility
 from manim_studio.render.command import QUALITY_PRESETS
+from manim_studio.templates import BUILTIN_TEMPLATES
 from manim_studio.ui.dialogs.export_dialog import EXPORT_SCENES
 from manim_studio.ui.panels.properties_panel import GRAPH_ACTIONS
+from manim_studio.ui.user_library import BUILTIN_STYLES
 
 SOURCE = Path(__file__).resolve().parent.parent / "manim_studio"
 STATIC_KEY = re.compile(r"""\btr\(\s*["']([a-z_]+(?:\.[a-z_0-9]+)+)["']""")
@@ -69,6 +71,8 @@ def dynamic_keys() -> set[str]:
     keys |= {f"prop.step_{key}" for key in ("section", "subcaption", "sound_gain", "sound_offset")}
     keys |= {"banner.code", "lock.code_step", "action.add_code_step", "action.fade_out_all", "action.camera_view"}
     keys |= {"action.save_package", "action.open_package"}
+    keys |= {f"style.builtin.{style.name}" for style in BUILTIN_STYLES}
+    keys |= {f"template.{template.key}.name" for template in BUILTIN_TEMPLATES}
     keys |= {f"undo.{action}" for action in (VALUE,)}
     keys |= {f"lock.{reason}" for reason in ("transform_conflict",)}
     keys |= {f"prop.{point}_{axis}" for point in ("start", "end", "center") for axis in ("x", "y")}

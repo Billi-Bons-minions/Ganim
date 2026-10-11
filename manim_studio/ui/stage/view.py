@@ -31,6 +31,7 @@ from manim_studio.ui.stage.items import (
 from manim_studio.ui.theme import color as theme_color
 
 KIND_MIME = "application/x-manim-studio-kind"
+COMPONENT_MIME = "application/x-manim-studio-component"
 FRAME_MARGIN = 0.6
 ROTATION_SNAP = 15.0
 SCALE_SNAP = 0.05
@@ -65,6 +66,7 @@ class StageView(QGraphicsView):
     scaleRequested = Signal(str, float)
     rotateRequested = Signal(str, float)
     dropRequested = Signal(str, float, float)
+    componentDropRequested = Signal(str, float, float)
     contextMenuRequested = Signal(QPoint, str)
     cursorMoved = Signal(float, float)
     statusMessage = Signal(str)
@@ -680,28 +682,31 @@ class StageView(QGraphicsView):
     # --- drag and drop from the library -------------------------------------------------
 
     def dragEnterEvent(self, event) -> None:  # noqa: N802 - Qt API
-        if event.mimeData().hasFormat(KIND_MIME):
+        if event.mimeData().hasFormat(KIND_MIME) or event.mimeData().hasFormat(COMPONENT_MIME):
             event.acceptProposedAction()
         else:
             super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event) -> None:  # noqa: N802 - Qt API
-        if event.mimeData().hasFormat(KIND_MIME):
+        if event.mimeData().hasFormat(KIND_MIME) or event.mimeData().hasFormat(COMPONENT_MIME):
             event.acceptProposedAction()
         else:
             super().dragMoveEvent(event)
 
     def dropEvent(self, event) -> None:  # noqa: N802 - Qt API
-        if not event.mimeData().hasFormat(KIND_MIME):
+        mime = event.mimeData()
+        if not (mime.hasFormat(KIND_MIME) or mime.hasFormat(COMPONENT_MIME)):
             super().dropEvent(event)
             return
-        kind = bytes(event.mimeData().data(KIND_MIME).data()).decode("utf-8")
         scene_pos = self.mapToScene(event.position().toPoint())
         modifiers = event.modifiers()
         x = self._snap_value(scene_pos.x() / PX, modifiers)
         y = self._snap_value(-scene_pos.y() / PX, modifiers)
         event.acceptProposedAction()
-        self.dropRequested.emit(kind, x, y)
+        if mime.hasFormat(COMPONENT_MIME):
+            self.componentDropRequested.emit(bytes(mime.data(COMPONENT_MIME).data()).decode("utf-8"), x, y)
+            return
+        self.dropRequested.emit(bytes(mime.data(KIND_MIME).data()).decode("utf-8"), x, y)
 
     # --- painting ------------------------------------------------------------------------
 

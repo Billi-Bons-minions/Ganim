@@ -17,6 +17,7 @@ TEX_TEMPLATE = r"""\documentclass[preview]{standalone}
 \usepackage[english]{babel}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{xcolor}
 \begin{document}
 \begin{%(env)s}
 %(body)s

@@ -9,7 +9,15 @@ from manim_studio.codegen.formatting import INDENT, MAX_LINE
 from manim_studio.codegen.literals import LiteralError, fmt_float, py_color, py_degrees, py_point
 from manim_studio.model.entities import STEP_LAGGED, STEP_SEQUENCE, Animation, Scene, Step
 from manim_studio.model.schema import animation_allowed
-from manim_studio.model.types import MODIFIER_ANIMATIONS, RATE_FUNCTIONS, TRANSFORM_ANIMATIONS, AnimationKind, ObjectKind, StepKind
+from manim_studio.model.types import (
+    MODIFIER_ANIMATIONS,
+    RATE_FUNCTIONS,
+    REFERENCE_PARAMS,
+    TRANSFORM_ANIMATIONS,
+    AnimationKind,
+    ObjectKind,
+    StepKind,
+)
 
 #: Manim class for every animation that is generated as a plain call.
 ANIMATION_CLASSES: dict[AnimationKind, str] = {
@@ -25,6 +33,18 @@ ANIMATION_CLASSES: dict[AnimationKind, str] = {
     AnimationKind.INDICATE: "Indicate",
     AnimationKind.CIRCUMSCRIBE: "Circumscribe",
     AnimationKind.UNCREATE: "Uncreate",
+    AnimationKind.SPIN_IN: "SpinInFromNothing",
+    AnimationKind.ADD_LETTERS: "AddTextLetterByLetter",
+    AnimationKind.GROW_ARROW: "GrowArrow",
+    AnimationKind.SHRINK_TO_CENTER: "ShrinkToCenter",
+    AnimationKind.FLASH: "Flash",
+    AnimationKind.WIGGLE: "Wiggle",
+    AnimationKind.APPLY_WAVE: "ApplyWave",
+    AnimationKind.FOCUS_ON: "FocusOn",
+    AnimationKind.FADE_TRANSFORM: "FadeTransform",
+    AnimationKind.TRANSFORM_MATCHING: "TransformMatchingShapes",
+    AnimationKind.MOVE_ALONG_PATH: "MoveAlongPath",
+    AnimationKind.SWAP: "Swap",
 }
 
 SHIFT_DIRECTIONS = {"up": "UP", "down": "DOWN", "left": "LEFT", "right": "RIGHT"}
@@ -107,8 +127,16 @@ def _extra_arguments(anim: Animation, scene: Scene, names: dict[str, str]) -> li
             f"color={py_color(str(params.get('color', '')))}",
             f"scale_factor={fmt_float(float(params.get('scale_factor', 1.2)))}",
         ]
-    if anim.kind == AnimationKind.CIRCUMSCRIBE:
+    if anim.kind in (AnimationKind.CIRCUMSCRIBE, AnimationKind.FLASH):
         return [f"color={py_color(str(params.get('color', '')))}"]
+    if anim.kind == AnimationKind.APPLY_WAVE:
+        return [f"amplitude={fmt_float(float(params.get('amplitude', 0.2)))}"]
+    if anim.kind in (AnimationKind.MOVE_ALONG_PATH, AnimationKind.SWAP):
+        key = REFERENCE_PARAMS[anim.kind]
+        other = params.get(key)
+        if other == anim.target_id or other not in names:
+            raise CodegenError(f"{key}_missing", names.get(anim.target_id, ""))
+        return [names[str(other)]]
     return []
 
 

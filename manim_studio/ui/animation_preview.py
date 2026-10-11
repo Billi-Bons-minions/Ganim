@@ -213,6 +213,137 @@ class AnimationPreview(QWidget):
         painter.drawPath(trimmed)
 
 
+    def _draw_spin_in(self, painter: QPainter, t: float, unit: float) -> None:
+        painter.rotate(-90 * (1 - t))
+        painter.scale(max(t, 0.001), max(t, 0.001))
+        painter.setPen(self._pen(RED))
+        fill = QColor(RED)
+        fill.setAlphaF(0.35)
+        painter.setBrush(fill)
+        painter.drawPath(self._square_path(unit * 0.9, 0.05))
+
+    def _draw_add_letters(self, painter: QPainter, t: float, unit: float) -> None:
+        font = QFont()
+        font.setPixelSize(round(unit * 1.3))
+        font.setBold(True)
+        text = "Manim"[: max(0, min(5, math.ceil(t * 5)))]
+        path = QPainterPath()
+        path.addText(QPointF(0, 0), font, "Manim")
+        bounds = path.boundingRect()
+        visible = QPainterPath()
+        visible.addText(QPointF(-bounds.center().x(), -bounds.center().y()), font, text)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor("#FFFFFF"))
+        painter.drawPath(visible)
+
+    def _draw_grow_arrow(self, painter: QPainter, t: float, unit: float) -> None:
+        length = unit * 2.6 * max(t, 0.02)
+        painter.setPen(self._pen(YELLOW))
+        start = QPointF(-unit * 1.3, unit * 0.6)
+        end = QPointF(start.x() + length, start.y() - length * 0.45)
+        painter.drawLine(start, end)
+        angle = math.atan2(end.y() - start.y(), end.x() - start.x())
+        tip = unit * 0.4 * max(t, 0.2)
+        left = QPointF(end.x() - tip * math.cos(angle - 0.5), end.y() - tip * math.sin(angle - 0.5))
+        right = QPointF(end.x() - tip * math.cos(angle + 0.5), end.y() - tip * math.sin(angle + 0.5))
+        painter.setBrush(YELLOW)
+        painter.drawPolygon([end, left, right])
+
+    def _draw_shrink_to_center(self, painter: QPainter, t: float, unit: float) -> None:
+        painter.scale(max(1 - t, 0.001), max(1 - t, 0.001))
+        self._circle(painter, unit)
+
+    def _draw_flash(self, painter: QPainter, t: float, unit: float) -> None:
+        self._circle(painter, unit * 0.5, YELLOW, fill=0.8)
+        painter.setPen(self._pen(YELLOW, 2.0))
+        inner, outer = unit * (0.7 + 0.9 * t), unit * (0.7 + 0.9 * min(1.0, t * 1.6))
+        if t < 0.95:
+            for k in range(12):
+                angle = math.radians(30 * k)
+                painter.drawLine(QPointF(inner * math.cos(angle), inner * math.sin(angle)), QPointF(outer * math.cos(angle), outer * math.sin(angle)))
+
+    def _draw_wiggle(self, painter: QPainter, t: float, unit: float) -> None:
+        wiggle = math.sin(t * math.pi * 6) * math.sin(t * math.pi)
+        painter.rotate(10 * wiggle)
+        painter.scale(1 + 0.1 * math.sin(t * math.pi), 1 + 0.1 * math.sin(t * math.pi))
+        painter.setPen(self._pen(RED))
+        fill = QColor(RED)
+        fill.setAlphaF(0.35)
+        painter.setBrush(fill)
+        painter.drawPath(self._square_path(unit * 0.9, 0.05))
+
+    def _draw_apply_wave(self, painter: QPainter, t: float, unit: float) -> None:
+        path = QPainterPath()
+        for index in range(61):
+            x = -unit * 1.6 + unit * 3.2 * index / 60
+            bump = math.exp(-((index / 60 - t) ** 2) / 0.02)
+            point = QPointF(x, -unit * 0.6 * bump)
+            path.lineTo(point) if index else path.moveTo(point)
+        painter.setPen(self._pen(BLUE))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawPath(path)
+
+    def _draw_focus_on(self, painter: QPainter, t: float, unit: float) -> None:
+        self._circle(painter, unit * 0.5)
+        radius = unit * (2.4 - 1.8 * t)
+        spot = QColor("#FFFFFF")
+        spot.setAlphaF(0.25 * t)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(spot)
+        painter.drawEllipse(QPointF(0, 0), radius, radius)
+
+    def _draw_fade_transform(self, painter: QPainter, t: float, unit: float) -> None:
+        painter.save()
+        painter.setOpacity(1 - t)
+        self._circle(painter, unit)
+        painter.restore()
+        painter.setOpacity(t)
+        painter.setPen(self._pen(RED))
+        fill = QColor(RED)
+        fill.setAlphaF(0.35)
+        painter.setBrush(fill)
+        painter.drawPath(self._square_path(unit, 0.05))
+
+    def _draw_transform_matching(self, painter: QPainter, t: float, unit: float) -> None:
+        font = QFont()
+        font.setPixelSize(round(unit * 1.2))
+        font.setBold(True)
+        painter.setFont(font)
+        painter.setPen(QColor("#FFFFFF"))
+        width = unit * 0.8
+        for index, letter in enumerate("ab"):
+            start = (index - 0.5) * width
+            end = (0.5 - index) * width
+            x = start + (end - start) * smooth(t)
+            y = -math.sin(math.pi * t) * unit * 0.4 * (1 if index else -1)
+            painter.drawText(QRectF(x - width / 2, y - unit, width, unit * 2), Qt.AlignmentFlag.AlignCenter, letter)
+
+    def _draw_move_along_path(self, painter: QPainter, t: float, unit: float) -> None:
+        path = QPainterPath(QPointF(-unit * 1.6, unit * 0.8))
+        path.cubicTo(QPointF(-unit * 0.6, -unit * 1.8), QPointF(unit * 0.6, unit * 1.8), QPointF(unit * 1.6, -unit * 0.8))
+        pen = self._pen(QColor("#888888"), 1.5)
+        pen.setStyle(Qt.PenStyle.DashLine)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawPath(path)
+        point = path.pointAtPercent(t)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(YELLOW)
+        painter.drawEllipse(point, unit * 0.25, unit * 0.25)
+
+    def _draw_swap(self, painter: QPainter, t: float, unit: float) -> None:
+        angle = math.pi * smooth(t)
+        radius = unit * 1.1
+        for color, phase in ((BLUE, 0.0), (RED, math.pi)):
+            x = -radius * math.cos(angle + phase)
+            y = -radius * 0.6 * math.sin(angle + phase)
+            painter.setPen(self._pen(color))
+            fill = QColor(color)
+            fill.setAlphaF(0.35)
+            painter.setBrush(fill)
+            painter.drawEllipse(QPointF(x, y), unit * 0.45, unit * 0.45)
+
+
 class AnimationPopup(QFrame):
     """Tooltip-like window with a preview, title and short explanation."""
 

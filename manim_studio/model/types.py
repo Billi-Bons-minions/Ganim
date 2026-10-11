@@ -49,6 +49,7 @@ class ObjectKind(str, Enum):
     PARAMETER = "parameter"
     DATA_PLOT = "data_plot"
     BAR_CHART = "bar_chart"
+    CAMERA = "camera"
 
 
 class AnimationKind(str, Enum):
@@ -70,6 +71,18 @@ class AnimationKind(str, Enum):
     CIRCUMSCRIBE = "circumscribe"
     UNCREATE = "uncreate"
     SET_VALUE = "set_value"
+    SPIN_IN = "spin_in"
+    ADD_LETTERS = "add_letters"
+    GROW_ARROW = "grow_arrow"
+    SHRINK_TO_CENTER = "shrink_to_center"
+    FLASH = "flash"
+    WIGGLE = "wiggle"
+    APPLY_WAVE = "apply_wave"
+    FOCUS_ON = "focus_on"
+    FADE_TRANSFORM = "fade_transform"
+    TRANSFORM_MATCHING = "transform_matching"
+    MOVE_ALONG_PATH = "move_along_path"
+    SWAP = "swap"
 
 
 class StepKind(str, Enum):
@@ -95,14 +108,30 @@ ENTRANCE_ANIMATIONS = frozenset(
         AnimationKind.DRAW_BORDER_THEN_FILL,
         AnimationKind.FADE_IN,
         AnimationKind.GROW_FROM_CENTER,
+        AnimationKind.SPIN_IN,
+        AnimationKind.ADD_LETTERS,
+        AnimationKind.GROW_ARROW,
     }
 )
 
 #: Animations that remove an object from the screen.
-EXIT_ANIMATIONS = frozenset({AnimationKind.FADE_OUT, AnimationKind.UNCREATE})
+EXIT_ANIMATIONS = frozenset({AnimationKind.FADE_OUT, AnimationKind.UNCREATE, AnimationKind.SHRINK_TO_CENTER})
+
+#: Transforms after which the target object takes the place of the source.
+REPLACING_TRANSFORMS = frozenset({AnimationKind.REPLACEMENT_TRANSFORM, AnimationKind.FADE_TRANSFORM, AnimationKind.TRANSFORM_MATCHING})
 
 #: Animations that morph one object into another object.
-TRANSFORM_ANIMATIONS = frozenset({AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM})
+TRANSFORM_ANIMATIONS = frozenset({AnimationKind.TRANSFORM}) | REPLACING_TRANSFORMS
+
+#: Animations that move an object along a path or swap two objects.
+MOTION_ANIMATIONS = frozenset({AnimationKind.MOVE_ALONG_PATH, AnimationKind.SWAP})
+
+#: Animations with a second object: parameter key that names it.
+REFERENCE_PARAMS = {
+    **{kind: "target" for kind in (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM, AnimationKind.FADE_TRANSFORM, AnimationKind.TRANSFORM_MATCHING)},
+    AnimationKind.MOVE_ALONG_PATH: "path",
+    AnimationKind.SWAP: "partner",
+}
 
 #: Animations generated with Manim's ``.animate`` syntax (can be merged per object).
 MODIFIER_ANIMATIONS = frozenset(
@@ -110,7 +139,16 @@ MODIFIER_ANIMATIONS = frozenset(
 )
 
 #: Animations that only draw attention and do not change the final state.
-EMPHASIS_ANIMATIONS = frozenset({AnimationKind.INDICATE, AnimationKind.CIRCUMSCRIBE})
+EMPHASIS_ANIMATIONS = frozenset(
+    {
+        AnimationKind.INDICATE,
+        AnimationKind.CIRCUMSCRIBE,
+        AnimationKind.FLASH,
+        AnimationKind.WIGGLE,
+        AnimationKind.APPLY_WAVE,
+        AnimationKind.FOCUS_ON,
+    }
+)
 
 #: Rate function name -> Python expression valid after ``from manim import *``.
 RATE_FUNCTIONS: dict[str, str] = {
@@ -161,6 +199,10 @@ GRAPH_TOOL_KINDS = frozenset(
 
 #: Kinds that are not drawn and never added to the Manim scene.
 INVISIBLE_KINDS = frozenset({ObjectKind.GROUP, ObjectKind.PARAMETER})
+#: Kinds that are not added to the Manim scene (the camera is shown on the stage only).
+UNADDED_KINDS = INVISIBLE_KINDS | {ObjectKind.CAMERA}
+#: Animations a camera understands.
+CAMERA_ANIMATIONS = frozenset({AnimationKind.MOVE, AnimationKind.SCALE, AnimationKind.ROTATE})
 
 #: Curve types of a function graph.
 CURVE_FUNCTION = "function"

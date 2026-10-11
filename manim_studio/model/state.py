@@ -13,6 +13,7 @@ from manim_studio.model.types import (
     ENTRANCE_ANIMATIONS,
     EXIT_ANIMATIONS,
     MODIFIER_ANIMATIONS,
+    REPLACING_TRANSFORMS,
     RETURNING_RATE_FUNCTIONS,
     AnimationKind,
     ObjectKind,
@@ -209,15 +210,27 @@ def apply_animation(states: dict[str, ObjectState], anim: Animation, scene: Scen
         target = states.get(str(anim.params.get("target")))
         if target is not None and not returns:
             states[anim.target_id] = replace(target, object_id=anim.target_id, visible=True)
-    elif kind == AnimationKind.REPLACEMENT_TRANSFORM:
+    elif kind in REPLACING_TRANSFORMS:
         target_id = str(anim.params.get("target"))
         if target_id in states and not returns:
             states[anim.target_id] = replace(current, visible=False)
             states[target_id] = replace(states[target_id], visible=True)
-    elif kind == AnimationKind.INDICATE:
+    elif kind in (AnimationKind.INDICATE, AnimationKind.WIGGLE, AnimationKind.APPLY_WAVE):
         states[anim.target_id] = replace(current, visible=True)
-    elif kind == AnimationKind.CIRCUMSCRIBE:
+    elif kind in (AnimationKind.CIRCUMSCRIBE, AnimationKind.FLASH, AnimationKind.FOCUS_ON):
         return
+    elif kind == AnimationKind.MOVE_ALONG_PATH:
+        if scene is not None and not returns:
+            from manim_studio.model.paths import path_end
+
+            end = path_end(scene, states, str(anim.params.get("path")))
+            if end is not None:
+                states[anim.target_id] = replace(current, x=end[0], y=end[1], visible=True)
+    elif kind == AnimationKind.SWAP:
+        partner = states.get(str(anim.params.get("partner")))
+        if partner is not None and not returns:
+            states[anim.target_id] = replace(current, x=partner.x, y=partner.y, visible=True)
+            states[partner.object_id] = replace(partner, x=current.x, y=current.y, visible=True)
     elif kind == AnimationKind.SET_VALUE:
         if not returns:
             states[anim.target_id] = replace(current, value=float(anim.params.get("value", current.value)))

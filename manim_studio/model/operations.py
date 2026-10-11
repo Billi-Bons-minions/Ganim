@@ -11,6 +11,8 @@ from typing import Any, Iterable
 
 from manim_studio.model.entities import Animation, Project, Scene, SceneObject, Step
 from manim_studio.model.factory import (
+    ANIMATION_REFERENCE_KEYS,
+    OBJECT_REFERENCE_KEYS,
     clone_object,
     clone_scene,
     clone_step,
@@ -71,7 +73,7 @@ def add_object(scene: Scene, obj: SceneObject, index: int | None = None) -> str:
 
 
 #: Object parameters that refer to other objects.
-REFERENCE_PARAMS = ("axes_id", "target", "graph_id", "other_graph_id")
+REFERENCE_PARAMS = OBJECT_REFERENCE_KEYS
 
 
 def _expand_for_delete(scene: Scene, object_ids: Iterable[str]) -> set[str]:
@@ -99,7 +101,9 @@ def remove_objects(scene: Scene, object_ids: Iterable[str]) -> None:
         scene.objects = [obj for obj in scene.objects if obj.id not in empty_groups]
     for step in scene.steps:
         step.animations = [
-            anim for anim in step.animations if anim.target_id not in ids | set(empty_groups) and anim.params.get("target") not in ids
+            anim
+            for anim in step.animations
+            if anim.target_id not in ids | set(empty_groups) and not any(anim.params.get(key) in ids for key in ANIMATION_REFERENCE_KEYS)
         ]
 
 

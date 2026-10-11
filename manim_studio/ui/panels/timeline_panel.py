@@ -19,7 +19,8 @@ from manim_studio.i18n import tr
 from manim_studio.model.entities import STEP_LAGGED, STEP_MODES
 from manim_studio.model.playback import total_duration
 from manim_studio.model.state import START
-from manim_studio.model.types import AnimationKind, StepKind
+from manim_studio.model.types import StepKind
+from manim_studio.ui.animation_catalog import ANIMATION_GROUPS, ONLY_WHEN_ALLOWED
 from manim_studio.ui.chrome import separator
 from manim_studio.ui.controller import EditorController
 from manim_studio.ui.document import ProjectDocument
@@ -29,23 +30,17 @@ from manim_studio.ui.panels.timeline_view import TimelineCanvas
 from manim_studio.ui.playback import PlaybackController
 from manim_studio.ui.theme import px
 
+
 #: Order of animations in the menus.
-ANIMATION_MENU = (
-    (AnimationKind.CREATE, AnimationKind.WRITE, AnimationKind.DRAW_BORDER_THEN_FILL, AnimationKind.FADE_IN, AnimationKind.GROW_FROM_CENTER),
-    (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM),
-    (AnimationKind.MOVE, AnimationKind.SCALE, AnimationKind.ROTATE, AnimationKind.CHANGE_COLOR),
-    (AnimationKind.INDICATE, AnimationKind.CIRCUMSCRIBE),
-    (AnimationKind.FADE_OUT, AnimationKind.UNCREATE),
-)
-
-
 def build_animation_menu(menu: QMenu, controller: EditorController, same_step: bool) -> None:
     """Fill ``menu`` with all animations; unsuitable ones are disabled."""
     menu.clear()
-    for group_index, group in enumerate(ANIMATION_MENU):
+    for group_index, (_key, group) in enumerate(ANIMATION_GROUPS):
         if group_index:
             menu.addSeparator()
         for kind in group:
+            if kind in ONLY_WHEN_ALLOWED and not controller.animation_allowed(kind):
+                continue
             action = menu.addAction(icon(f"a_{kind.value}"), tr(f"anim.{kind.value}"))
             action.setToolTip(tr(f"anim_help.{kind.value}"))
             action.setEnabled(controller.animation_allowed(kind))

@@ -443,3 +443,35 @@ def test_graph_quick_actions_and_parameter_slider(window) -> None:
     slider.slider.setValue(0)
     anim = step_animation(window.editor.scene(), window.editor.cursor, parameter, VALUE)
     assert anim is not None and anim.params["value"] == -5.0
+
+
+def test_reference_animations_fade_out_all_and_camera(window, qapp) -> None:
+    from PySide6.QtWidgets import QMenu, QToolButton
+
+    from manim_studio.i18n import tr
+    from manim_studio.model.types import AnimationKind, ObjectKind
+
+    controller = window.controller
+    dot = controller.add_object(ObjectKind.DOT, -2.0, 0.0)
+    path = controller.add_object(ObjectKind.CIRCLE, 0.0, 0.0)
+    window.editor.select_objects([dot])
+    button = next(b for b in window.properties.findChildren(QToolButton) if b.text() == tr("anim_short.move_along_path"))
+    menu: QMenu = button.menu()
+    menu.aboutToShow.emit()
+    action = next(a for a in menu.actions() if a.text() == window.editor.scene().object_by_id(path).name)
+    action.trigger()
+    animations = [anim for step in window.editor.scene().steps for anim in step.animations]
+    assert [(a.kind, a.params.get("path")) for a in animations] == [(AnimationKind.MOVE_ALONG_PATH, path)]
+
+    window.act_fade_out_all.trigger()
+    last = window.editor.scene().steps[-1]
+    assert sorted(a.target_id for a in last.animations) == sorted([dot, path])
+    assert {a.kind for a in last.animations} == {AnimationKind.FADE_OUT}
+
+    camera = controller.add_object(ObjectKind.CAMERA)
+    assert controller.add_object(ObjectKind.CAMERA) == camera
+    assert window.act_camera_view.isEnabled()
+    window.act_camera_view.trigger()
+    qapp.processEvents()
+    assert window.stage.view_scale() > 0
+    window.act_camera_view.trigger()

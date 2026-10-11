@@ -17,6 +17,7 @@ from manim_studio.model.types import (
     ENTRANCE_ANIMATIONS,
     EXIT_ANIMATIONS,
     MODIFIER_ANIMATIONS,
+    MOTION_ANIMATIONS,
     TRANSFORM_ANIMATIONS,
     AnimationKind,
     StepKind,
@@ -50,8 +51,10 @@ def group_color(kind: AnimationKind) -> QColor:
         return QColor("#9A72AC")
     if kind in EMPHASIS_ANIMATIONS:
         return QColor(palette.warning)
-    if kind in MODIFIER_ANIMATIONS:
+    if kind in MODIFIER_ANIMATIONS or kind in MOTION_ANIMATIONS:
         return QColor(palette.accent)
+    if kind == AnimationKind.SET_VALUE:
+        return QColor("#5CD0B3")
     return QColor(palette.text_muted)
 
 

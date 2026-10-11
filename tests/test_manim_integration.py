@@ -266,3 +266,61 @@ def test_data_plots_and_bar_charts_render(tmp_path) -> None:
     script = generate_script(make_project(Scene(id="s", name="Daten", objects=objects, steps=steps)))
     result = run_manim(tmp_path, script, "Daten", "--format", "png")
     assert result.returncode == 0, result.stdout + result.stderr + script
+
+
+def test_new_animations_camera_and_colored_formula(tmp_path) -> None:
+    from manim import Circle, Square, Text, tempconfig
+
+    objects = [
+        make_object(ObjectKind.CIRCLE, "Kreis", "c", -3.0, 0.0, radius=0.5),
+        make_object(ObjectKind.SQUARE, "Quadrat", "q", 3.0, 0.0, side_length=1.0),
+        make_object(ObjectKind.CIRCLE, "Bahn", "path", 0.0, 0.0, radius=2.0),
+        make_object(ObjectKind.ARROW, "Pfeil", "a", 0.0, -3.0),
+        make_object(ObjectKind.TEXT, "Text", "t", 0.0, 3.0, text="Hallo"),
+        make_object(ObjectKind.TRIANGLE, "Dreieck", "tri", -5.0, 3.0),
+        make_object(ObjectKind.STAR, "Stern", "st", 5.0, 3.0),
+        make_object(ObjectKind.CAMERA, "Kamera", "cam"),
+    ]
+    steps = [
+        play(
+            make_animation(AnimationKind.SPIN_IN, "c", run_time=0.2),
+            make_animation(AnimationKind.GROW_ARROW, "a", run_time=0.2),
+            make_animation(AnimationKind.ADD_LETTERS, "t", run_time=0.2),
+        ),
+        play(
+            make_animation(AnimationKind.SWAP, "c", "swap", partner="q", run_time=0.2),
+            make_animation(AnimationKind.FLASH, "a", run_time=0.2),
+            make_animation(AnimationKind.WIGGLE, "t", run_time=0.2),
+            make_animation(AnimationKind.MOVE, "cam", "cm", x=1.0, y=0.5, run_time=0.2),
+        ),
+        play(
+            make_animation(AnimationKind.MOVE_ALONG_PATH, "q", "along", path="path", run_time=0.2),
+            make_animation(AnimationKind.APPLY_WAVE, "t", run_time=0.2),
+            make_animation(AnimationKind.FOCUS_ON, "a", run_time=0.2),
+            make_animation(AnimationKind.SCALE, "cam", "cs", factor=1.5, run_time=0.2),
+        ),
+        play(
+            make_animation(AnimationKind.FADE_TRANSFORM, "tri", "ft", target="st", run_time=0.2),
+            make_animation(AnimationKind.SHRINK_TO_CENTER, "a", run_time=0.2),
+        ),
+        play(make_animation(AnimationKind.TRANSFORM_MATCHING, "st", "tm", target="tri", run_time=0.2)),
+    ]
+    if shutil.which("latex") and shutil.which("dvisvgm"):
+        objects.append(make_object(ObjectKind.MATH_TEX, "Formel", "f", 0.0, -1.5, latex=r"\frac{a}{b} + a^2", colored_parts=[["a", "#FC6255"]]))
+    scene_model = Scene(id="s", name="Neu", objects=objects, steps=steps)
+    script = generate_script(make_project(scene_model))
+    assert "class Neu(MovingCameraScene):" in script and "self.camera.frame.animate" in script
+    namespace: dict = {}
+    exec(compile(script, "neu.py", "exec"), namespace)
+    with tempconfig({"dry_run": True, "quality": "low_quality", "media_dir": str(tmp_path)}):
+        scene = namespace["Neu"]()
+        scene.render()
+    family = [member for top in scene.mobjects for member in top.get_family()]
+    circle = next(m for m in family if isinstance(m, Circle) and m.width < 1.5)
+    square = next(m for m in family if isinstance(m, Square))
+    assert circle.get_center()[:2] == pytest.approx([3.0, 0.0], abs=1e-3)
+    assert square.get_center()[:2] == pytest.approx([2.0, 0.0], abs=1e-3)
+    assert any(isinstance(m, Text) for m in family)
+    assert scene.camera.frame.get_center()[:2] == pytest.approx([1.0, 0.5], abs=1e-3)
+    result = run_manim(tmp_path, script, "Neu", "--format", "png")
+    assert result.returncode == 0, result.stdout + result.stderr + script

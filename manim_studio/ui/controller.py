@@ -45,8 +45,8 @@ from manim_studio.model.stage_edits import (
     value_edit,
     would_create,
 )
-from manim_studio.model.state import START
-from manim_studio.model.types import GRAPH_TOOL_KINDS, AnimationKind, ObjectKind, StepKind
+from manim_studio.model.state import START, states_after
+from manim_studio.model.types import GRAPH_TOOL_KINDS, REFERENCE_PARAMS, UNADDED_KINDS, AnimationKind, ObjectKind, StepKind
 from manim_studio.ui.document import ProjectDocument
 from manim_studio.ui.editor_state import INSPECT_ANIMATION, INSPECT_STEP, EditorState
 from manim_studio.ui.settings import AppSettings
@@ -121,6 +121,13 @@ class EditorController(QObject):
         if x is None or y is None:
             x, y = self._free_position()
         scene = self.scene()
+        existing_camera = next((o for o in scene.objects if o.kind == ObjectKind.CAMERA), None)
+        if kind == ObjectKind.CAMERA and existing_camera is not None:
+            self.editor.select_objects([existing_camera.id])
+            self.statusMessage.emit(tr("status.camera_exists"))
+            return existing_camera.id
+        if kind == ObjectKind.CAMERA:
+            x, y = 0.0, 0.0
         if kind == ObjectKind.PARAMETER and "symbol" not in params:
             params["symbol"] = self._free_symbol()
         names = [obj.name for obj in scene.objects]
@@ -508,8 +515,29 @@ class EditorController(QObject):
 
     def add_transform(self, kind: AnimationKind, source_id: str, target_id: str, same_step: bool, inspect: bool = True) -> None:
         """Transform ``source_id`` into the existing object ``target_id``."""
-        animation = create_animation(kind, source_id, target=target_id)
+        self.add_reference_animation(kind, source_id, target_id, same_step, inspect)
+
+    def add_reference_animation(self, kind: AnimationKind, source_id: str, other_id: str, same_step: bool, inspect: bool = True) -> None:
+        """Add a transform, a move along a path or a swap with a second object."""
+        animation = create_animation(kind, source_id, **{REFERENCE_PARAMS[kind]: other_id})
         self._insert_animations([animation], same_step and self.recording(), kind, inspect)
+
+    def fade_out_all(self) -> None:
+        """Add a step that fades out every object that is visible at this point."""
+        scene = self.scene()
+        states = states_after(scene, self.editor.cursor)
+        ids = []
+        for obj in scene.objects:
+            if obj.kind in UNADDED_KINDS or groups.parent_group(scene, obj.id) is not None:
+                continue
+            state = states.get(obj.id)
+            if state is not None and state.visible and allowed_for_objects(scene, AnimationKind.FADE_OUT, [obj.id]):
+                ids.append(obj.id)
+        if not ids:
+            self.statusMessage.emit(tr("status.nothing_visible"))
+            return
+        animations = [create_animation(AnimationKind.FADE_OUT, object_id) for object_id in ids]
+        self._insert_animations(animations, False, AnimationKind.FADE_OUT, False)
 
     def add_transform_to_new(self, kind: AnimationKind, source_id: str, new_kind: ObjectKind, same_step: bool) -> None:
         """Create a hidden object at the source's position and transform into it."""

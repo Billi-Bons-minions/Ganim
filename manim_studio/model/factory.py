@@ -99,10 +99,16 @@ def clone_step(step: Step) -> Step:
     return clone
 
 
+#: Object parameters that name other objects.
+OBJECT_REFERENCE_KEYS = ("axes_id", "target", "graph_id", "other_graph_id", "parameter_id", "derive_from", "x_parameter")
+#: Animation parameters that name other objects.
+ANIMATION_REFERENCE_KEYS = ("target", "path", "partner")
+
+
 def remap_references(objects: Iterable[SceneObject], steps: Iterable[Step], mapping: dict[str, str]) -> None:
     """Replace object ids in references according to ``mapping``."""
     for obj in objects:
-        for key in ("axes_id", "target", "graph_id", "other_graph_id", "parameter_id"):
+        for key in OBJECT_REFERENCE_KEYS:
             value = obj.params.get(key)
             if value in mapping:
                 obj.params[key] = mapping[value]
@@ -111,9 +117,9 @@ def remap_references(objects: Iterable[SceneObject], steps: Iterable[Step], mapp
     for step in steps:
         for anim in step.animations:
             anim.target_id = mapping.get(anim.target_id, anim.target_id)
-            target = anim.params.get("target")
-            if target in mapping:
-                anim.params["target"] = mapping[target]
+            for key in ANIMATION_REFERENCE_KEYS:
+                if anim.params.get(key) in mapping:
+                    anim.params[key] = mapping[anim.params[key]]
 
 
 def clone_scene(scene: Scene, name: str) -> Scene:

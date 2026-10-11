@@ -64,7 +64,7 @@ CATEGORIES: tuple[tuple[str, tuple[ObjectKind, ...]], ...] = (
             ObjectKind.BAR_CHART,
         ),
     ),
-    ("media", (ObjectKind.IMAGE,)),
+    ("media", (ObjectKind.IMAGE, ObjectKind.CAMERA)),
 )
 
 LIBRARY_ORDER: tuple[ObjectKind, ...] = tuple(kind for _, kinds in CATEGORIES for kind in kinds)

@@ -529,6 +529,119 @@ def _vertex(p: QPainter) -> None:
         _rect(p, x - 2, y - 2, 4, 4, 0.5, fill=True)
 
 
+def _a_spin_in(p: QPainter) -> None:
+    _rect(p, 9, 9, 6, 6, 1)
+    _arc(p, 12, 12, 8.5, 20, 140)
+    _arc(p, 12, 12, 8.5, 200, 140)
+    _arrow_head(p, 4.5, 8.2, math.radians(250), 3.5)
+    _arrow_head(p, 19.5, 15.8, math.radians(70), 3.5)
+
+
+def _a_add_letters(p: QPainter) -> None:
+    _text(p, "A", size=11, rect=QRectF(1, 4, 8, 14))
+    _text(p, "B", size=11, rect=QRectF(8, 4, 8, 14))
+    p.save()
+    pen = p.pen()
+    pen.setStyle(Qt.PenStyle.DotLine)
+    p.setPen(pen)
+    _line(p, 17, 7, 17, 17)
+    p.restore()
+    _line(p, 3, 20, 21, 20)
+
+
+def _a_grow_arrow(p: QPainter) -> None:
+    _line(p, 3, 18, 15, 6)
+    _poly(p, [(9, 5), (16, 5), (16, 12)])
+    p.save()
+    pen = p.pen()
+    pen.setStyle(Qt.PenStyle.DotLine)
+    p.setPen(pen)
+    _line(p, 16, 5, 21, 0)
+    p.restore()
+
+
+def _a_shrink(p: QPainter) -> None:
+    _rect(p, 10, 10, 4, 4, 1)
+    for x1, y1, x2, y2 in ((3, 3, 7.5, 7.5), (21, 3, 16.5, 7.5), (3, 21, 7.5, 16.5), (21, 21, 16.5, 16.5)):
+        _line(p, x1, y1, x2, y2)
+    _poly(p, [(7.5, 4), (7.5, 7.5), (4, 7.5)])
+    _poly(p, [(16.5, 4), (16.5, 7.5), (20, 7.5)])
+    _poly(p, [(4, 16.5), (7.5, 16.5), (7.5, 20)])
+    _poly(p, [(20, 16.5), (16.5, 16.5), (16.5, 20)])
+
+
+def _a_flash(p: QPainter) -> None:
+    _circle(p, 12, 12, 2.5, fill=True)
+    for k in range(8):
+        angle = math.radians(45 * k)
+        _line(p, 12 + 5 * math.cos(angle), 12 + 5 * math.sin(angle), 12 + 9.5 * math.cos(angle), 12 + 9.5 * math.sin(angle))
+
+
+def _a_wiggle(p: QPainter) -> None:
+    p.save()
+    p.translate(12, 12)
+    p.rotate(-12)
+    _rect(p, -5, -5, 10, 10, 1.5)
+    p.restore()
+    _arc(p, 12, 12, 9.5, 120, 40)
+    _arc(p, 12, 12, 9.5, 300, 40)
+
+
+def _a_wave(p: QPainter) -> None:
+    path = QPainterPath(QPointF(2, 12))
+    for index in range(1, 41):
+        x = 2 + 20 * index / 40
+        path.lineTo(QPointF(x, 12 - 5 * math.sin(index / 40 * math.pi) * math.sin(index / 40 * 4 * math.pi)))
+    p.drawPath(path)
+    _line(p, 2, 19, 22, 19)
+
+
+def _a_focus(p: QPainter) -> None:
+    _circle(p, 12, 12, 9)
+    _circle(p, 12, 12, 4.5)
+    _circle(p, 12, 12, 1.2, fill=True)
+
+
+def _a_fade_transform(p: QPainter) -> None:
+    p.save()
+    pen = p.pen()
+    pen.setStyle(Qt.PenStyle.DotLine)
+    p.setPen(pen)
+    _circle(p, 6.5, 12, 4)
+    p.restore()
+    _rect(p, 14, 8, 8, 8, 1)
+    _line(p, 9.5, 5, 15, 5)
+    _poly(p, [(13, 3), (15, 5), (13, 7)])
+
+
+def _a_matching(p: QPainter) -> None:
+    _text(p, "ab", size=9, rect=QRectF(0, 2, 11, 10))
+    _text(p, "ba", size=9, rect=QRectF(13, 12, 11, 10))
+    _line(p, 6, 13, 16, 13)
+    _poly(p, [(14, 11), (16, 13), (14, 15)])
+
+
+def _a_path(p: QPainter) -> None:
+    path = QPainterPath(QPointF(3, 19))
+    path.cubicTo(6, 4, 14, 22, 20, 6)
+    p.save()
+    pen = p.pen()
+    pen.setStyle(Qt.PenStyle.DashLine)
+    p.setPen(pen)
+    p.drawPath(path)
+    p.restore()
+    _circle(p, 20, 6, 2.6, fill=True)
+
+
+def _a_swap(p: QPainter) -> None:
+    _circle(p, 5, 15, 3)
+    _rect(p, 16, 12, 6, 6, 1)
+    _arc(p, 12, 13, 7, 30, 120)
+    _arrow_head(p, 18.1, 9.5, math.radians(60), 3)
+    _arc(p, 12, 14, 7, 210, 120)
+    _arrow_head(p, 5.9, 17.5, math.radians(240), 3)
+
+
 def _a_value(p: QPainter) -> None:
     _line(p, 3, 17, 21, 17)
     _circle(p, 15, 17, 2.6, fill=True)
@@ -720,6 +833,18 @@ ICONS: dict[str, Drawer] = {
     "a_rotate": _rotate,
     "a_change_color": _a_color,
     "a_set_value": _a_value,
+    "a_spin_in": _a_spin_in,
+    "a_add_letters": _a_add_letters,
+    "a_grow_arrow": _a_grow_arrow,
+    "a_shrink_to_center": _a_shrink,
+    "a_flash": _a_flash,
+    "a_wiggle": _a_wiggle,
+    "a_apply_wave": _a_wave,
+    "a_focus_on": _a_focus,
+    "a_fade_transform": _a_fade_transform,
+    "a_transform_matching": _a_matching,
+    "a_move_along_path": _a_path,
+    "a_swap": _a_swap,
     "a_indicate": _sparkle,
     "a_circumscribe": _a_circumscribe,
     "a_fade_out": _a_fade_out,

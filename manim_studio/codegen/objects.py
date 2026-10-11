@@ -20,6 +20,7 @@ from manim_studio.codegen.literals import (
     py_range,
     py_str,
 )
+from manim_studio.codegen.naming import DEFAULT_FRAME_WIDTH
 from manim_studio.codegen.objects_extra import (
     EXTRA_CONSTRUCTORS,
     brace_code,
@@ -28,6 +29,7 @@ from manim_studio.codegen.objects_extra import (
 from manim_studio.codegen.objects_extra import text as extra_text
 from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import Scene, SceneObject
+from manim_studio.model.latex import colored_parts, colorize
 from manim_studio.model.schema import is_vector_image_path
 from manim_studio.model.types import GRAPH_TOOL_KINDS, INVISIBLE_KINDS, ObjectKind
 
@@ -121,7 +123,18 @@ def _text(obj: SceneObject) -> list[str]:
 def _math_tex(obj: SceneObject) -> list[str]:
     latex = str(obj.params.get("latex", ""))
     kwargs = [("font_size", fmt_float(_p(obj, "font_size"))), ("color", py_color(obj.fill_color))]
+    parts = colored_parts(obj.params)
+    if parts:
+        latex = colorize(latex, [(text, py_color(color).strip('"')) for text, color in parts])
+        kwargs.append(("tex_template", COLOR_TEX))
     return call("MathTex", [py_str(latex, prefer_raw=True)], kwargs, 2)
+
+
+#: Name and source of the LaTeX template with colors (``\textcolor``).
+COLOR_TEX = "COLOR_TEX"
+COLOR_TEX_SOURCE = """# LaTeX template that allows colored parts of formulas (\\textcolor)
+COLOR_TEX = TexTemplate()
+COLOR_TEX.add_to_preamble(r"\\usepackage{xcolor}")"""
 
 
 def _axis_ranges(obj: SceneObject) -> Kwargs:
@@ -224,6 +237,19 @@ def _special_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> tupl
     return None
 
 
+def camera_code(obj: SceneObject, variable: str) -> list[str]:
+    """Initial position, zoom and rotation of the camera frame."""
+    lines = []
+    if round(obj.x, 6) != 0 or round(obj.y, 6) != 0:
+        lines.append(f"{variable}.move_to({py_point(obj.x, obj.y)})")
+    width = float(obj.params.get("width", DEFAULT_FRAME_WIDTH))
+    if abs(width - DEFAULT_FRAME_WIDTH) > 1e-3:
+        lines.append(f"{variable}.set(width={fmt_float(width)})")
+    if round(obj.rotation, 6) != 0:
+        lines.append(f"{variable}.rotate({py_degrees(obj.rotation)})")
+    return lines
+
+
 def object_code(
     scene: Scene, obj: SceneObject, names: dict[str, str], base_dir: str | Path | None, helpers: set[str] | None = None
 ) -> list[str]:
@@ -232,12 +258,18 @@ def object_code(
     helpers = helpers if helpers is not None else set()
     try:
         special = _special_code(scene, obj, names) or graph_object_code(scene, obj, names, helpers)
+        if obj.kind == ObjectKind.CAMERA:
+            return camera_code(obj, variable)
         if special is not None:
             lines, place = special
         elif obj.kind == ObjectKind.DATA_PLOT:
             lines, place = assign(variable, data_plot_code(scene, obj, names)), False
         elif obj.kind == ObjectKind.BAR_CHART:
             lines, place = assign(variable, bar_chart_code(obj)) + bar_label_lines(obj, variable), True
+        elif obj.kind == ObjectKind.MATH_TEX:
+            if colored_parts(obj.params):
+                helpers.add(COLOR_TEX)
+            lines, place = assign(variable, _math_tex(obj)), True
         elif obj.kind == ObjectKind.IMAGE:
             lines, place = assign(variable, image_code(obj, base_dir)), True
         else:

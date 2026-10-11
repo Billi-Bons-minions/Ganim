@@ -180,6 +180,16 @@ class StageView(QGraphicsView):
         self._auto_fit = False
         self._after_zoom()
 
+    def follow_rect(self, rect: QRectF) -> None:
+        """Show exactly ``rect`` (the camera's view) without changing the auto-fit mode."""
+        if rect.isEmpty():
+            return
+        self.fitInView(rect, Qt.AspectRatioMode.KeepAspectRatio)
+        self._auto_fit = False
+        self._refresh_handles()
+        self.zoomChanged.emit(self.zoom_percent())
+        self.viewChanged.emit()
+
     def zoom(self, factor: float) -> None:
         """Zoom in (>1) or out (<1)."""
         current = self.transform().m11()
@@ -243,7 +253,7 @@ class StageView(QGraphicsView):
             item.setPos(pt(state.x, state.y))
             item.setRotation(-state.rotation)
             item.setScale(state.scale)
-            item.setZValue(obj.z_index * 10_000 + index)
+            item.setZValue(9_000_000 if obj.kind == ObjectKind.CAMERA else obj.z_index * 10_000 + index)
             item.content_hidden = self._exact_item is not None
         self._sync_groups(scene, known)
         for object_id in [object_id for object_id in self._items if object_id not in known]:

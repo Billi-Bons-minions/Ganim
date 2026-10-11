@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Callable
 
-from PySide6.QtCore import QPoint, QSize, Qt, QTimer, QUrl
+from PySide6.QtCore import QPoint, QRectF, QSize, Qt, QTimer, QUrl
 from PySide6.QtGui import QAction, QCloseEvent, QDesktopServices, QKeySequence
 from PySide6.QtWidgets import (
     QApplication,
@@ -194,6 +194,7 @@ class MainWindow(QMainWindow):
         self.act_delete_scene = self._action("delete_scene", lambda: c.delete_scene(), None, "trash")
         self.act_add_step = self._action("add_step", lambda: c.add_step(StepKind.PLAY), "Ctrl+T", "plus")
         self.act_add_wait = self._action("add_wait", lambda: c.add_step(StepKind.WAIT), "Ctrl+W", "clock")
+        self.act_fade_out_all = self._action("fade_out_all", c.fade_out_all, "Ctrl+Shift+F", "a_fade_out")
         self.act_duplicate_step = self._action("duplicate_step", c.duplicate_step, None, "duplicate")
         self.act_delete_step = self._action("delete_step", c.delete_step, None, "trash")
         self.act_prev_step = self._action("prev_step", lambda: c.go_to_step(-1), "PgUp", "chevron_left")
@@ -216,6 +217,7 @@ class MainWindow(QMainWindow):
         self.act_show_hidden.setChecked(self.settings.show_hidden)
         self.act_exact = self._action("exact_view", self._on_exact_toggled, "Ctrl+Shift+X", "render", checkable=True)
         self.act_rulers = self._action("show_rulers", self._on_view_options, "Ctrl+R", "ruler", checkable=True)
+        self.act_camera_view = self._action("camera_view", self._on_camera_view, "Ctrl+Shift+K", "camera", checkable=True)
         self.act_rulers.setChecked(self.settings.show_rulers)
         self.act_fit = self._action("fit", lambda: self.stage.fit_frame(), "Ctrl+0", "fit")
         self.act_zoom_selection = self._action("zoom_selection", self.zoom_to_selection, "Ctrl+Shift+0", "zoom_selection")
@@ -276,13 +278,13 @@ class MainWindow(QMainWindow):
         self.simultaneous_menu = timeline_menu.addMenu(tr("menu.add_simultaneous"))
         self.simultaneous_menu.aboutToShow.connect(lambda: build_animation_menu(self.simultaneous_menu, self.controller, True))
         timeline_menu.addSeparator()
-        timeline_menu.addActions([self.act_add_step, self.act_add_wait, self.act_duplicate_step, self.act_delete_step])
+        timeline_menu.addActions([self.act_add_step, self.act_add_wait, self.act_fade_out_all, self.act_duplicate_step, self.act_delete_step])
         timeline_menu.addSeparator()
         timeline_menu.addActions([self.act_start, self.act_prev_step, self.act_next_step, self.act_end])
         timeline_menu.addSeparator()
         timeline_menu.addActions([self.act_play, self.act_stop_playback])
         view_menu = bar.addMenu(tr("menu.view"))
-        view_menu.addActions([self.act_grid, self.act_snap, self.act_rulers, self.act_show_hidden, self.act_exact])
+        view_menu.addActions([self.act_grid, self.act_snap, self.act_rulers, self.act_show_hidden, self.act_exact, self.act_camera_view])
         view_menu.addSeparator()
         view_menu.addActions([self.act_fit, self.act_zoom_selection, self.act_zoom_in, self.act_zoom_out])
         self.panels_menu = view_menu.addMenu(tr("menu.panels"))
@@ -364,7 +366,7 @@ class MainWindow(QMainWindow):
         tools = QHBoxLayout(self.stage_tools)
         tools.setContentsMargins(0, 0, 0, 0)
         tools.setSpacing(px(2))
-        for action in (self.act_grid, self.act_snap, self.act_rulers, self.act_show_hidden, self.act_exact):
+        for action in (self.act_grid, self.act_snap, self.act_rulers, self.act_show_hidden, self.act_exact, self.act_camera_view):
             tools.addWidget(action_button(action))
         tools.addWidget(separator(vertical=True))
         tools.addWidget(action_button(self.act_zoom_out))
@@ -559,6 +561,7 @@ class MainWindow(QMainWindow):
         self.empty_hint.setVisible(not scene.objects)
         self._update_banner()
         self._update_selection_tools()
+        self._follow_camera(scene, states)
         if self.act_exact.isChecked():
             if playhead is None:
                 self.still.request()
@@ -740,6 +743,27 @@ class MainWindow(QMainWindow):
         action = menu.addAction(icon("trash"), tr("action.remove_vertex"), lambda: self.controller.remove_vertex(object_id, index))
         action.setEnabled(obj is not None and len(obj.params.get("points", [])) > 3)
         menu.exec(global_position)
+
+    def _camera(self, scene):
+        return next((obj for obj in scene.objects if obj.kind == ObjectKind.CAMERA), None)
+
+    def _follow_camera(self, scene, states) -> None:
+        camera = self._camera(scene)
+        self.act_camera_view.setEnabled(camera is not None)
+        if camera is None or not self.act_camera_view.isChecked():
+            return
+        state = states.get(camera.id)
+        if state is None:
+            return
+        width = float(camera.params.get("width", 14.2222)) * state.scale * PX
+        height = width * 9 / 16
+        self.stage.follow_rect(QRectF(state.x * PX - width / 2, -state.y * PX - height / 2, width, height))
+
+    def _on_camera_view(self, checked: bool) -> None:
+        if checked:
+            self.refresh_stage()
+        else:
+            self.stage.fit_frame()
 
     def _show_rulers(self, show: bool) -> None:
         for widget in (self.ruler_corner, self.top_ruler, self.left_ruler):

@@ -12,6 +12,7 @@ from typing import Any
 
 from manim_studio.model.data import DATA_STYLES, REGRESSIONS
 from manim_studio.model.types import (
+    CAMERA_ANIMATIONS,
     CURVE_DERIVATIVE,
     CURVE_FUNCTION,
     CURVE_PARAMETRIC,
@@ -189,6 +190,7 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         (
             ParamSpec("latex", ParamType.LATEX, r"e^{i\pi} + 1 = 0"),
             ParamSpec("font_size", ParamType.FLOAT, 48.0, minimum=1.0, maximum=500.0, step=1.0, decimals=1, scalable=True),
+            ParamSpec("colored_parts", ParamType.WORD_COLORS, []),
         ),
         _TEXT_STYLE,
         (("fill_color", _WHITE), ("fill_opacity", 1.0)),
@@ -505,6 +507,11 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         frozenset({"fill_color", "fill_opacity", "stroke_width"}),
         (("fill_color", "#58C4DD"), ("fill_opacity", 0.7), ("stroke_width", 3.0)),
     ),
+    ObjectKind.CAMERA: KindInfo(
+        ObjectKind.CAMERA,
+        (ParamSpec("width", ParamType.FLOAT, 14.2222, minimum=0.2, maximum=1000.0, step=0.5, decimals=3),),
+        frozenset(),
+    ),
     ObjectKind.PARAMETER: KindInfo(
         ObjectKind.PARAMETER,
         (
@@ -543,12 +550,22 @@ ANIMATION_PARAMS: dict[AnimationKind, tuple[ParamSpec, ...]] = {
     ),
     AnimationKind.CIRCUMSCRIBE: (ParamSpec("color", ParamType.COLOR, _YELLOW),),
     AnimationKind.SET_VALUE: (ParamSpec("value", ParamType.FLOAT, 2.0, minimum=-1e9, maximum=1e9, step=0.5, decimals=3),),
+    AnimationKind.FADE_TRANSFORM: (ParamSpec("target", ParamType.OBJECT_REF, None),),
+    AnimationKind.TRANSFORM_MATCHING: (ParamSpec("target", ParamType.OBJECT_REF, None),),
+    AnimationKind.MOVE_ALONG_PATH: (ParamSpec("path", ParamType.OBJECT_REF, None),),
+    AnimationKind.SWAP: (ParamSpec("partner", ParamType.OBJECT_REF, None),),
+    AnimationKind.FLASH: (ParamSpec("color", ParamType.COLOR, _YELLOW),),
+    AnimationKind.APPLY_WAVE: (ParamSpec("amplitude", ParamType.FLOAT, 0.2, minimum=0.01, maximum=5.0, step=0.05),),
 }
 
 #: Manim's default rate function per animation where it differs from ``smooth``.
 DEFAULT_RATE_FUNC: dict[AnimationKind, str] = {
     AnimationKind.WRITE: "linear",
     AnimationKind.INDICATE: "there_and_back",
+    AnimationKind.ADD_LETTERS: "linear",
+    AnimationKind.MOVE_ALONG_PATH: "linear",
+    AnimationKind.WIGGLE: "linear",
+    AnimationKind.APPLY_WAVE: "linear",
 }
 
 #: Animations that require a vector object (not a raster image).
@@ -561,8 +578,14 @@ _VECTOR_ONLY = frozenset(
         AnimationKind.CHANGE_COLOR,
         AnimationKind.TRANSFORM,
         AnimationKind.REPLACEMENT_TRANSFORM,
+        AnimationKind.FADE_TRANSFORM,
+        AnimationKind.TRANSFORM_MATCHING,
+        AnimationKind.SPIN_IN,
+        AnimationKind.APPLY_WAVE,
     }
 )
+#: Arrow kinds that ``GrowArrow`` supports.
+ARROW_KINDS = frozenset({ObjectKind.ARROW, ObjectKind.VECTOR, ObjectKind.DOUBLE_ARROW})
 
 
 def kind_info(kind: ObjectKind) -> KindInfo:
@@ -600,6 +623,12 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
         return obj_kind in (ObjectKind.PARAMETER, ObjectKind.DECIMAL_NUMBER)
     if obj_kind == ObjectKind.PARAMETER:
         return False
+    if obj_kind == ObjectKind.CAMERA:
+        return anim_kind in CAMERA_ANIMATIONS
+    if anim_kind == AnimationKind.ADD_LETTERS:
+        return obj_kind == ObjectKind.TEXT
+    if anim_kind == AnimationKind.GROW_ARROW:
+        return obj_kind in ARROW_KINDS
     if anim_kind in _VECTOR_ONLY:
         return is_vector_object(obj_kind, params)
     return True

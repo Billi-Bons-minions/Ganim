@@ -8,7 +8,7 @@ import re
 import unicodedata
 
 from manim_studio.model.entities import Project, Scene
-from manim_studio.model.types import RATE_FUNCTIONS
+from manim_studio.model.types import RATE_FUNCTIONS, ObjectKind
 
 _TRANSLITERATION = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss"})
 
@@ -95,11 +95,20 @@ def _make_unique(candidate: str, used: set[str], separator: str) -> str:
     return f"{candidate}{separator}{number}"
 
 
+#: Code that refers to the camera frame of a ``MovingCameraScene``.
+CAMERA_FRAME = "self.camera.frame"
+#: Default width of the camera frame (Manim's ``frame_width``).
+DEFAULT_FRAME_WIDTH = 8.0 * 16.0 / 9.0
+
+
 def variable_names(scene: Scene) -> dict[str, str]:
     """Map every object id of a scene to a unique variable name."""
     used: set[str] = set()
     names: dict[str, str] = {}
     for obj in scene.objects:
+        if obj.kind == ObjectKind.CAMERA:
+            names[obj.id] = CAMERA_FRAME
+            continue
         name = _make_unique(to_variable_name(obj.name), used, "_")
         used.add(name)
         names[obj.id] = name

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import replace
 
 from manim_studio.model import groups
 from manim_studio.model.entities import Animation, Scene, Step
+from manim_studio.model.paths import arc_point, path_polyline, point_at
 from manim_studio.model.rate_functions import rate
 from manim_studio.model.state import (
     START,
@@ -15,7 +17,7 @@ from manim_studio.model.state import (
     refresh_group_states,
     states_after,
 )
-from manim_studio.model.types import AnimationKind, StepKind
+from manim_studio.model.types import ENTRANCE_ANIMATIONS, EXIT_ANIMATIONS, TRANSFORM_ANIMATIONS, AnimationKind, StepKind
 
 _SHIFTS = {"up": (0.0, 1.0), "down": (0.0, -1.0), "left": (-1.0, 0.0), "right": (1.0, 0.0)}
 
@@ -85,6 +87,12 @@ def _partial_entrance(state: ObjectState, anim: Animation, progress: float) -> O
         return replace(state, draw=1 - progress)
     if kind == AnimationKind.GROW_FROM_CENTER:
         return replace(state, visible=True, scale=state.scale * max(progress, 0.001))
+    if kind == AnimationKind.SPIN_IN:
+        return replace(state, visible=True, scale=state.scale * max(progress, 0.001), rotation=state.rotation - 90.0 * (1 - progress))
+    if kind in (AnimationKind.ADD_LETTERS, AnimationKind.GROW_ARROW):
+        return replace(state, visible=True, draw=max(progress, 0.001))
+    if kind == AnimationKind.SHRINK_TO_CENTER:
+        return replace(state, scale=state.scale * max(1 - progress, 0.001))
     dx, dy = _SHIFTS.get(str(anim.params.get("shift", "none")), (0.0, 0.0))
     if kind == AnimationKind.FADE_IN:
         return replace(state, visible=True, opacity=progress, x=state.x - dx * (1 - progress), y=state.y - dy * (1 - progress))
@@ -136,18 +144,31 @@ def apply_partial(states: dict[str, ObjectState], anim: Animation, progress: flo
         apply_to_group(states, scene, anim, progress, partial=True)
         return
     kind = anim.kind
-    if kind in (
-        AnimationKind.CREATE,
-        AnimationKind.WRITE,
-        AnimationKind.DRAW_BORDER_THEN_FILL,
-        AnimationKind.UNCREATE,
-        AnimationKind.GROW_FROM_CENTER,
-        AnimationKind.FADE_IN,
-        AnimationKind.FADE_OUT,
-    ):
+    if kind in ENTRANCE_ANIMATIONS | EXIT_ANIMATIONS:
         states[anim.target_id] = _partial_entrance(state, anim, progress)
-    elif kind in (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM):
+    elif kind in TRANSFORM_ANIMATIONS:
         _partial_transform(states, anim, progress)
+    elif kind == AnimationKind.MOVE_ALONG_PATH:
+        if scene is not None:
+            point = point_at(path_polyline(scene, states, str(anim.params.get("path"))), progress)
+            if point is not None:
+                states[anim.target_id] = replace(state, visible=True, x=point[0], y=point[1])
+    elif kind == AnimationKind.SWAP:
+        partner = states.get(str(anim.params.get("partner")))
+        if partner is not None:
+            x, y = arc_point((state.x, state.y), (partner.x, partner.y), progress)
+            px, py = arc_point((partner.x, partner.y), (state.x, state.y), progress)
+            states[anim.target_id] = replace(state, visible=True, x=x, y=y)
+            states[partner.object_id] = replace(partner, visible=True, x=px, y=py)
+    elif kind in (AnimationKind.FLASH, AnimationKind.FOCUS_ON):
+        color = str(anim.params.get("color", "#F7D96F"))
+        states[anim.target_id] = replace(state, outline=progress, outline_color=color)
+    elif kind == AnimationKind.WIGGLE:
+        wiggle = math.sin(progress * math.pi * 6) * math.sin(progress * math.pi)
+        states[anim.target_id] = replace(state, visible=True, rotation=state.rotation + 6.0 * wiggle, scale=state.scale * (1 + 0.1 * math.sin(progress * math.pi)))
+    elif kind == AnimationKind.APPLY_WAVE:
+        amplitude = float(anim.params.get("amplitude", 0.2))
+        states[anim.target_id] = replace(state, visible=True, y=state.y + amplitude * math.sin(progress * math.pi))
     elif kind == AnimationKind.INDICATE:
         color = str(anim.params.get("color", state.fill_color))
         factor = 1 + (float(anim.params.get("scale_factor", 1.2)) - 1) * progress

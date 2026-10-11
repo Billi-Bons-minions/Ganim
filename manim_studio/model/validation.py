@@ -11,6 +11,7 @@ from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.data import bar_values, data_points
 from manim_studio.model.entities import STEP_TOGETHER, Animation, Scene, SceneObject, Step
 from manim_studio.model.expression import check_expression, is_valid_name
+from manim_studio.model.paths import local_outline
 from manim_studio.model.schema import animation_allowed
 from manim_studio.model.types import (
     CURVE_DERIVATIVE,
@@ -23,7 +24,9 @@ from manim_studio.model.types import (
     LATEX_KINDS,
     MODIFIER_ANIMATIONS,
     RATE_FUNCTIONS,
+    REFERENCE_PARAMS,
     TRANSFORM_ANIMATIONS,
+    AnimationKind,
     ObjectKind,
     StepKind,
 )
@@ -216,6 +219,13 @@ def _animation_issues(scene: Scene, step_index: int, anim: Animation) -> list[Is
             add(ERROR, "transform_target_self", object_id=target.id)
         elif not animation_allowed(anim.kind, other.kind, other.params):
             add(ERROR, "animation_incompatible", anim.kind.value, other.id)
+    if anim.kind in (AnimationKind.MOVE_ALONG_PATH, AnimationKind.SWAP):
+        key = REFERENCE_PARAMS[anim.kind]
+        other = scene.object_by_id(anim.params.get(key))
+        if other is None or other.id == target.id:
+            add(ERROR, f"{key}_missing", object_id=target.id)
+        elif anim.kind == AnimationKind.MOVE_ALONG_PATH and local_outline(scene, other) is None:
+            add(ERROR, "path_unsupported", other.name, other.id)
     color = anim.params.get("color")
     if color is not None and not is_hex_color(color):
         add(ERROR, "color_invalid", str(color))
@@ -245,6 +255,9 @@ def validate_scene(scene: Scene, latex_available: bool = True, base_dir: str | P
     issues: list[Issue] = []
     if not is_hex_color(scene.background_color):
         issues.append(Issue(ERROR, "color_invalid", scene.id, detail=scene.background_color))
+    cameras = [obj for obj in scene.objects if obj.kind == ObjectKind.CAMERA]
+    for extra in cameras[1:]:
+        issues.append(Issue(ERROR, "camera_duplicate", scene.id, extra.id))
     for obj in scene.objects:
         issues.extend(_object_issues(scene, obj, latex_available, base_dir))
     for index, step in enumerate(scene.steps):

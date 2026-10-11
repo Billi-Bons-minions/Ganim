@@ -36,6 +36,7 @@ from manim_studio.model.geometry import (
     origin_shift,
     param_float,
 )
+from manim_studio.model.latex import colored_parts, colorize
 from manim_studio.model.schema import is_vector_image_path
 from manim_studio.model.state import ObjectState
 from manim_studio.model.types import GRAPH_TOOL_KINDS, ObjectKind
@@ -230,7 +231,7 @@ def _text_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
     ]
 
 
-def _tinted_svg(svg: Path, color: str, height_px: float, resources: StageResources) -> QImage | None:
+def _tinted_svg(svg: Path, color: str | None, height_px: float, resources: StageResources) -> QImage | None:
     renderer = QSvgRenderer(str(svg))
     if not renderer.isValid():
         return None
@@ -243,14 +244,17 @@ def _tinted_svg(svg: Path, color: str, height_px: float, resources: StageResourc
         image.fill(Qt.GlobalColor.transparent)
         painter = QPainter(image)
         renderer.render(painter)
-        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-        painter.fillRect(image.rect(), QColor(color))
+        if color is not None:
+            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+            painter.fillRect(image.rect(), QColor(color))
         painter.end()
         resources.tinted[key] = image
     return resources.tinted[key]
 
 
-def tex_image_primitives(obj: SceneObject, state: ObjectState, resources: StageResources, source: str, environment: str) -> list[Primitive]:
+def tex_image_primitives(
+    obj: SceneObject, state: ObjectState, resources: StageResources, source: str, environment: str, tint: bool = True
+) -> list[Primitive]:
     """LaTeX rendered to an SVG image (or the source text while it compiles)."""
     font_size = param_float(obj.params, "font_size", 48.0)
     svg = resources.tex.svg_path(source, environment) if resources.tex is not None else None
@@ -258,7 +262,7 @@ def tex_image_primitives(obj: SceneObject, state: ObjectState, resources: StageR
         view = QSvgRenderer(str(svg)).viewBoxF()
         scale = TEX_UNITS_PER_PT_AT_48 * font_size / 48.0 * PX
         width, height = view.width() * scale, view.height() * scale
-        image = _tinted_svg(svg, state.fill_color, height, resources)
+        image = _tinted_svg(svg, state.fill_color if tint else None, height, resources)
         if image is not None:
             rect = QRectF(-width / 2, -height / 2, width, height)
             return [Primitive(image=image, rect=rect, brush=QBrush(_color(state.fill_color, obj.fill_opacity)))]
@@ -269,7 +273,13 @@ def tex_image_primitives(obj: SceneObject, state: ObjectState, resources: StageR
 
 
 def _math_tex_primitives(obj: SceneObject, state: ObjectState, resources: StageResources) -> list[Primitive]:
-    return tex_image_primitives(obj, state, resources, str(obj.params.get("latex", "")), "align*")
+    latex = str(obj.params.get("latex", ""))
+    parts = colored_parts(obj.params)
+    if not parts:
+        return tex_image_primitives(obj, state, resources, latex, "align*")
+    base = QColor(state.fill_color).name()[1:].upper()
+    colored = f"{{\\color[HTML]{{{base}}}{colorize(latex, parts)}}}"
+    return tex_image_primitives(obj, state, resources, colored, "align*", tint=False)
 
 
 # --- coordinate systems -------------------------------------------------------------
@@ -485,11 +495,43 @@ def _shape_drawing(obj: SceneObject, state: ObjectState, scene: Scene, resources
         return tool_primitives(scene, obj, state, resources.values)
     if kind == ObjectKind.PARAMETER:
         return [], False
+    if kind == ObjectKind.CAMERA:
+        return camera_primitives(obj), True
     if kind == ObjectKind.DATA_PLOT:
         return data_primitives(scene, obj, state)
     if kind == ObjectKind.BAR_CHART:
         return bar_chart_primitives(obj, state)
     return _image_primitives(obj, resources), True
+
+
+def camera_rect(obj: SceneObject) -> QRectF:
+    """The camera frame in local scene pixels (16:9)."""
+    width = param_float(obj.params, "width", 14.2222) * PX
+    height = width * 9 / 16
+    return QRectF(-width / 2, -height / 2, width, height)
+
+
+def camera_primitives(obj: SceneObject) -> list[Primitive]:
+    """Dashed frame with corner marks showing what the camera sees."""
+    rect = camera_rect(obj)
+    frame = QPainterPath()
+    frame.addRect(rect)
+    pen = QPen(QColor(255, 255, 255, 170), 2.0, Qt.PenStyle.DashLine)
+    pen.setCosmetic(True)
+    corners = QPainterPath()
+    size = min(rect.width(), rect.height()) * 0.08
+    for corner, dx, dy in (
+        (rect.topLeft(), 1, 1),
+        (rect.topRight(), -1, 1),
+        (rect.bottomLeft(), 1, -1),
+        (rect.bottomRight(), -1, -1),
+    ):
+        corners.moveTo(corner.x() + dx * size, corner.y())
+        corners.lineTo(corner)
+        corners.lineTo(corner.x(), corner.y() + dy * size)
+    corner_pen = QPen(QColor("#FFFFFF"), 3.0)
+    corner_pen.setCosmetic(True)
+    return [Primitive(path=frame, pen=pen), Primitive(path=corners, pen=corner_pen)]
 
 
 def _primitive_rect(primitive: Primitive) -> QRectF:
@@ -508,7 +550,7 @@ def _translate(primitive: Primitive, dx: float, dy: float) -> None:
 
 
 def _hit_path(primitives: list[Primitive], bounds: QRectF, kind: ObjectKind) -> QPainterPath:
-    if kind in (ObjectKind.LINE, ObjectKind.ARROW, ObjectKind.FUNCTION_GRAPH, ObjectKind.VECTOR, ObjectKind.DOUBLE_ARROW, ObjectKind.DASHED_LINE, ObjectKind.ARC, ObjectKind.TANGENT):
+    if kind in (ObjectKind.LINE, ObjectKind.ARROW, ObjectKind.FUNCTION_GRAPH, ObjectKind.VECTOR, ObjectKind.DOUBLE_ARROW, ObjectKind.DASHED_LINE, ObjectKind.ARC, ObjectKind.TANGENT, ObjectKind.CAMERA):
         combined = QPainterPath()
         for primitive in primitives:
             if primitive.path is not None:

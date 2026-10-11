@@ -318,6 +318,14 @@ def _bar_chart(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: 
         p.drawRect(QRectF(s * 0.27 + index * s * 0.17, base - s * height, s * 0.12, s * height))
 
 
+def _camera_kind(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    body = QRectF(m * 0.8, s * 0.32, s * 0.58, s * 0.42)
+    p.drawRoundedRect(body, 3, 3)
+    p.drawPolygon(QPolygonF([QPointF(body.right(), s * 0.45), QPointF(s - m * 0.6, s * 0.34), QPointF(s - m * 0.6, s * 0.72), QPointF(body.right(), s * 0.61)]))
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawEllipse(QPointF(body.center().x(), body.center().y()), s * 0.1, s * 0.1)
+
+
 _EXTRA_DRAWERS = {
     ObjectKind.NUMBER_LINE: _number_line,
     ObjectKind.VECTOR: _vector,
@@ -346,6 +354,7 @@ _EXTRA_DRAWERS = {
     ObjectKind.PARAMETER: _parameter,
     ObjectKind.DATA_PLOT: _data_plot,
     ObjectKind.BAR_CHART: _bar_chart,
+    ObjectKind.CAMERA: _camera_kind,
 }
 
 

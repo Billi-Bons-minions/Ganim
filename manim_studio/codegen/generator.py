@@ -12,10 +12,10 @@ from manim_studio.codegen.formatting import indent_lines
 from manim_studio.codegen.graph_code import STUDIO_PLOT, STUDIO_PLOT_SOURCE
 from manim_studio.codegen.literals import LiteralError, py_color
 from manim_studio.codegen.naming import class_names, variable_names
-from manim_studio.codegen.objects import creation_order, object_code
+from manim_studio.codegen.objects import COLOR_TEX, COLOR_TEX_SOURCE, creation_order, object_code
 from manim_studio.model.entities import Project, Scene
 from manim_studio.model.state import visible_at_start
-from manim_studio.model.types import INVISIBLE_KINDS
+from manim_studio.model.types import UNADDED_KINDS, ObjectKind
 
 
 @dataclass(frozen=True)
@@ -43,7 +43,7 @@ def _object_lines(scene: Scene, names: dict[str, str], base_dir: str | Path | No
 
 
 def _initial_add_line(scene: Scene, names: dict[str, str]) -> list[str]:
-    shown = [names[obj.id] for obj in creation_order(scene) if obj.kind not in INVISIBLE_KINDS and visible_at_start(scene, obj)]
+    shown = [names[obj.id] for obj in creation_order(scene) if obj.kind not in UNADDED_KINDS and visible_at_start(scene, obj)]
     return [f"self.add({', '.join(shown)})"] if shown else []
 
 
@@ -90,7 +90,8 @@ def scene_class_code(
     scene: Scene, class_name: str, options: CodegenOptions = DEFAULT_OPTIONS, helpers: set[str] | None = None
 ) -> list[str]:
     """Return the full ``class ...(Scene)`` block of one scene."""
-    header = [f"class {class_name}(Scene):", "    def construct(self):"]
+    base = "MovingCameraScene" if any(obj.kind == ObjectKind.CAMERA for obj in scene.objects) else "Scene"
+    header = [f"class {class_name}({base}):", "    def construct(self):"]
     return header + indent_lines(construct_body(scene, options, helpers), 2)
 
 
@@ -117,7 +118,7 @@ def generate_script(project: Project, options: CodegenOptions = DEFAULT_OPTIONS)
     for scene in scenes:
         blocks += ["", ""] + scene_class_code(scene, names[scene.id], options, helpers)
     lines = header_lines(names[scenes[0].id])
-    for name, source in ((STUDIO_PLOT, STUDIO_PLOT_SOURCE), (STUDIO_TRANSFORM, STUDIO_TRANSFORM_SOURCE)):
+    for name, source in ((COLOR_TEX, COLOR_TEX_SOURCE), (STUDIO_PLOT, STUDIO_PLOT_SOURCE), (STUDIO_TRANSFORM, STUDIO_TRANSFORM_SOURCE)):
         if name in helpers:
             lines += ["", ""] + source.split("\n")
     return "\n".join(lines + blocks) + "\n"

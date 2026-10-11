@@ -31,7 +31,7 @@ from manim_studio.codegen.naming import class_names
 from manim_studio.i18n import has, tr
 from manim_studio.model import graphs, groups
 from manim_studio.model import operations as ops
-from manim_studio.model.animation_builder import allowed_for_objects
+from manim_studio.model.animation_builder import allowed_for_objects, reference_candidates
 from manim_studio.model.arrange import ALIGN_MODES, DISTRIBUTE_MODES
 from manim_studio.model.assets import relative_asset_path
 from manim_studio.model.entities import STEP_LAGGED, STEP_MODES, STEP_TOGETHER, Animation, SceneObject, Step
@@ -52,12 +52,14 @@ from manim_studio.model.types import (
     GRAPH_TOOL_KINDS,
     LINE_KINDS,
     RATE_FUNCTIONS,
+    REFERENCE_PARAMS,
     TRANSFORM_ANIMATIONS,
     AnimationKind,
     ObjectKind,
     StepKind,
     Visibility,
 )
+from manim_studio.ui.animation_catalog import ANIMATION_GROUPS, ONLY_WHEN_ALLOWED
 from manim_studio.ui.animation_preview import PreviewHover
 from manim_studio.ui.controller import EditorController
 from manim_studio.ui.data_editors import BarsEditor, DataEditor, FontPicker, PiecesEditor, PointsEditor, TableEditor, WordColorsEditor
@@ -96,16 +98,6 @@ _STYLE_SPECS = {
 }
 _POSITION_SPEC = ParamSpec("pos", ParamType.FLOAT, 0.0, minimum=-100.0, maximum=100.0, step=0.25, decimals=3)
 _ROTATION_SPEC = ParamSpec("rotation", ParamType.FLOAT, 0.0, minimum=-360.0, maximum=360.0, step=15.0, decimals=1)
-#: Animation buttons in the inspector, grouped by purpose.
-ANIMATION_GROUPS: tuple[tuple[str, tuple[AnimationKind, ...]], ...] = (
-    ("appear", (AnimationKind.CREATE, AnimationKind.WRITE, AnimationKind.FADE_IN, AnimationKind.GROW_FROM_CENTER, AnimationKind.DRAW_BORDER_THEN_FILL)),
-    ("change", (AnimationKind.MOVE, AnimationKind.SCALE, AnimationKind.ROTATE, AnimationKind.CHANGE_COLOR, AnimationKind.SET_VALUE)),
-    ("transform", (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM)),
-    ("emphasize", (AnimationKind.INDICATE, AnimationKind.CIRCUMSCRIBE)),
-    ("disappear", (AnimationKind.FADE_OUT, AnimationKind.UNCREATE)),
-)
-#: Animation buttons that are hidden (instead of disabled) where they do not apply.
-ONLY_WHEN_ALLOWED = frozenset({AnimationKind.SET_VALUE})
 #: Shapes offered as new targets for "transform into".
 TRANSFORM_TARGET_KINDS = (
     ObjectKind.SQUARE, ObjectKind.CIRCLE, ObjectKind.RECTANGLE, ObjectKind.TRIANGLE, ObjectKind.ELLIPSE, ObjectKind.TEXT, ObjectKind.MATH_TEX
@@ -705,32 +697,36 @@ class PropertiesPanel(QScrollArea):
         button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         button.setProperty("variant", "button")
         allowed = allowed_for_objects(self.editor.scene(), kind, object_ids)
-        if kind in TRANSFORM_ANIMATIONS:
+        if kind in REFERENCE_PARAMS:
             allowed = allowed and len(object_ids) == 1
         button.setEnabled(allowed)
         self.hover.attach(button, kind)
         object_id = object_ids[0]
-        if kind in TRANSFORM_ANIMATIONS:
+        if kind in REFERENCE_PARAMS:
             menu = QMenu(button)
-            menu.aboutToShow.connect(lambda: self._fill_transform_menu(menu, kind, object_id, simultaneous.isChecked()))
+            menu.aboutToShow.connect(lambda: self._fill_reference_menu(menu, kind, object_id, simultaneous.isChecked()))
             button.setMenu(menu)
             button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         else:
             button.clicked.connect(lambda: self.controller.add_animation(kind, simultaneous.isChecked(), inspect=False))
         return button
 
-    def _fill_transform_menu(self, menu: QMenu, kind: AnimationKind, object_id: str, same_step: bool) -> None:
+    def _fill_reference_menu(self, menu: QMenu, kind: AnimationKind, object_id: str, same_step: bool) -> None:
         menu.clear()
         scene = self.editor.scene()
-        header = menu.addAction(tr("animate.transform_into"))
+        key = REFERENCE_PARAMS[kind]
+        header = menu.addAction(tr(f"animate.choose_{key}"))
         header.setEnabled(False)
-        for obj in scene.objects:
-            if obj.id == object_id or not animation_allowed(kind, obj.kind, obj.params):
-                continue
+        for obj in reference_candidates(scene, kind, object_id):
             action = menu.addAction(kind_icon(obj.kind), obj.name)
             action.triggered.connect(
-                lambda _checked=False, target=obj.id: self.controller.add_transform(kind, object_id, target, same_step, inspect=False)
+                lambda _checked=False, other=obj.id: self.controller.add_reference_animation(kind, object_id, other, same_step, inspect=False)
             )
+        if kind not in TRANSFORM_ANIMATIONS:
+            if menu.actions() == [header]:
+                hint = menu.addAction(tr("animate.no_candidates"))
+                hint.setEnabled(False)
+            return
         menu.addSeparator()
         new_menu = menu.addMenu(icon("plus"), tr("animate.new_target"))
         for new_kind in TRANSFORM_TARGET_KINDS:

@@ -16,6 +16,7 @@ from manim_studio.model.stage_edits import MOVE, ROTATE, SCALE
 from manim_studio.model.state import ObjectState
 from manim_studio.model.types import FRAME_HEIGHT, FRAME_WIDTH
 from manim_studio.ui.stage.drawing import PX, StageResources, build_drawing, pt
+from manim_studio.ui.theme import color as theme_color
 from manim_studio.ui.stage.items import (
     ROLE_ROTATE,
     HandleItem,
@@ -24,7 +25,6 @@ from manim_studio.ui.stage.items import (
 )
 
 KIND_MIME = "application/x-manim-studio-kind"
-OUTSIDE_COLOR = QColor("#26262B")
 FRAME_MARGIN = 0.6
 ROTATION_SNAP = 15.0
 SCALE_SNAP = 0.05
@@ -57,6 +57,7 @@ class StageView(QGraphicsView):
     contextMenuRequested = Signal(QPoint, str)
     cursorMoved = Signal(float, float)
     statusMessage = Signal(str)
+    zoomChanged = Signal(float)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -101,6 +102,7 @@ class StageView(QGraphicsView):
         self.fitInView(QRectF(pt(-half_w, half_h), pt(half_w, -half_h)), Qt.AspectRatioMode.KeepAspectRatio)
         self._auto_fit = True
         self._refresh_handles()
+        self.zoomChanged.emit(self.zoom_percent())
 
     def zoom(self, factor: float) -> None:
         """Zoom in (>1) or out (<1)."""
@@ -109,10 +111,15 @@ class StageView(QGraphicsView):
         self.scale(factor, factor)
         self._auto_fit = False
         self._refresh_handles()
+        self.zoomChanged.emit(self.zoom_percent())
 
     def view_scale(self) -> float:
         """Return the current zoom (screen pixels per scene pixel)."""
         return self.transform().m11()
+
+    def zoom_percent(self) -> float:
+        """Return the zoom relative to "one Manim unit = 100 screen pixels"."""
+        return self.view_scale()
 
     # --- content --------------------------------------------------------------
 
@@ -404,12 +411,12 @@ class StageView(QGraphicsView):
     # --- painting ------------------------------------------------------------------------
 
     def drawBackground(self, painter: QPainter, rect: QRectF) -> None:  # noqa: N802 - Qt API
-        painter.fillRect(rect, OUTSIDE_COLOR)
+        painter.fillRect(rect, theme_color("stage_outside"))
         frame = QRectF(pt(-FRAME_WIDTH / 2, FRAME_HEIGHT / 2), pt(FRAME_WIDTH / 2, -FRAME_HEIGHT / 2))
         painter.fillRect(frame, self._background)
         if self._show_grid:
             self._draw_grid(painter, rect)
-        border = QPen(QColor("#8A8A92"), 1.0)
+        border = QPen(theme_color("border_strong"), 1.0)
         border.setCosmetic(True)
         painter.setPen(border)
         painter.setBrush(Qt.BrushStyle.NoBrush)

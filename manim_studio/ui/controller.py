@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Callable
 
-from PySide6.QtCore import QMimeData, QObject, Signal
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog, QWidget
 
 from manim_studio.i18n import tr
@@ -33,7 +34,7 @@ from manim_studio.ui.document import ProjectDocument
 from manim_studio.ui.editor_state import INSPECT_ANIMATION, INSPECT_STEP, EditorState
 from manim_studio.ui.settings import AppSettings
 
-OBJECTS_MIME = "application/x-manim-studio-objects"
+CLIPBOARD_PREFIX = "manim-studio-objects:"
 PASTE_OFFSET = 0.5
 IMAGE_FILTER_KEY = "dialog.image_filter"
 
@@ -43,12 +44,19 @@ class EditorController(QObject):
 
     statusMessage = Signal(str)
 
-    def __init__(self, document: ProjectDocument, editor: EditorState, settings: AppSettings, parent: QWidget) -> None:
+    def __init__(
+        self,
+        document: ProjectDocument,
+        editor: EditorState,
+        settings: AppSettings,
+        window: Callable[[], QWidget | None],
+        parent: QObject | None = None,
+    ) -> None:
         super().__init__(parent)
         self.document = document
         self.editor = editor
         self.settings = settings
-        self.window = parent
+        self.window = window
 
     # --- helpers -------------------------------------------------------------
 
@@ -74,7 +82,7 @@ class EditorController(QObject):
 
     def _choose_image(self) -> str | None:
         path, _ = QFileDialog.getOpenFileName(
-            self.window, tr("dialog.choose_image"), self.settings.last_directory("image"), tr(IMAGE_FILTER_KEY)
+            self.window(), tr("dialog.choose_image"), self.settings.last_directory("image"), tr(IMAGE_FILTER_KEY)
         )
         if not path:
             return None
@@ -124,29 +132,14 @@ class EditorController(QObject):
         self.editor.select_objects(new_ids or [])
 
     def copy_objects(self) -> None:
-        """Put the selected objects on the clipboard."""
+        """Put the selected objects on the clipboard (as marked JSON text)."""
         scene = self.scene()
         objects = [scene.object_by_id(i) for i in self.editor.selected_objects]
         data = [object_to_dict(obj) for obj in objects if obj is not None]
         if not data:
             return
-        mime = QMimeData()
-        payload = json.dumps(data, ensure_ascii=False)
-        mime.setData(OBJECTS_MIME, payload.encode("utf-8"))
-        mime.setText(", ".join(item["name"] for item in data))
-        QApplication.clipboard().setMimeData(mime)
+        QApplication.clipboard().setText(CLIPBOARD_PREFIX + json.dumps(data, ensure_ascii=False))
         self.statusMessage.emit(tr("status.copied", count=len(data)))
-
-    def release_clipboard(self) -> None:
-        """Replace our clipboard data with plain text before the application exits.
-
-        PySide6 crashes on shutdown if a ``QMimeData`` created in Python is
-        still owned by the clipboard, so it is swapped for Qt-owned text.
-        """
-        clipboard = QApplication.clipboard()
-        mime = clipboard.mimeData()
-        if mime is not None and mime.hasFormat(OBJECTS_MIME):
-            clipboard.setText(mime.text())
 
     def cut_objects(self) -> None:
         """Copy and then delete the selected objects."""
@@ -155,14 +148,13 @@ class EditorController(QObject):
 
     def can_paste(self) -> bool:
         """Return ``True`` if the clipboard contains objects."""
-        mime = QApplication.clipboard().mimeData()
-        return mime is not None and mime.hasFormat(OBJECTS_MIME)
+        return QApplication.clipboard().text().startswith(CLIPBOARD_PREFIX)
 
     def paste_objects(self) -> None:
         """Insert objects from the clipboard."""
         if not self.can_paste():
             return
-        raw = bytes(QApplication.clipboard().mimeData().data(OBJECTS_MIME).data()).decode("utf-8")
+        raw = QApplication.clipboard().text()[len(CLIPBOARD_PREFIX):]
         try:
             objects = [object_from_dict(item) for item in json.loads(raw)]
         except (ValueError, KeyError, TypeError):
@@ -330,7 +322,7 @@ class EditorController(QObject):
         scene = self.document.scene(scene_id)
         if scene is None:
             return
-        name, ok = QInputDialog.getText(self.window, tr("dialog.rename_scene"), tr("dialog.scene_name"), text=scene.name)
+        name, ok = QInputDialog.getText(self.window(), tr("dialog.rename_scene"), tr("dialog.scene_name"), text=scene.name)
         if ok and name.strip():
             self.document.edit_project(tr("undo.rename_scene"), lambda p: ops.rename_scene(p, scene_id, name.strip()))
 

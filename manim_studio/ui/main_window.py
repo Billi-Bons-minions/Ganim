@@ -1,35 +1,26 @@
-"""The main window: wires model, panels, stage and rendering together."""
+"""The main window: header bar, library, stage, inspector and timeline."""
 
 from __future__ import annotations
 
-import shutil
-import sys
 from pathlib import Path
+from typing import Any, Callable
 
-from PySide6.QtCore import (
-    QObject,
-    QPoint,
-    QProcess,
-    QRunnable,
-    QStandardPaths,
-    Qt,
-    QThreadPool,
-    QTimer,
-    QUrl,
-    Signal,
-)
+from PySide6.QtCore import QPoint, QSize, Qt, QTimer, QUrl
 from PySide6.QtGui import QAction, QCloseEvent, QDesktopServices, QKeySequence
 from PySide6.QtWidgets import (
     QApplication,
-    QDockWidget,
     QFileDialog,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QMainWindow,
     QMenu,
     QMessageBox,
     QProgressBar,
+    QSplitter,
+    QStackedWidget,
     QTabBar,
+    QTabWidget,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -38,19 +29,18 @@ from PySide6.QtWidgets import (
 from manim_studio import APP_NAME, __version__
 from manim_studio.codegen import CodegenError, CodegenOptions, generate_script
 from manim_studio.i18n import tr
+from manim_studio.logging_setup import log
 from manim_studio.model.assets import relative_asset_path, resolve_asset_path
 from manim_studio.model.serialization import FILE_SUFFIX, ProjectFormatError
 from manim_studio.model.state import START, states_after
 from manim_studio.model.types import ObjectKind, StepKind
-from manim_studio.render.environment import EnvironmentReport, check_environment
-from manim_studio.render.tex_preview import TexPreviewCache
-from manim_studio.ui.controller import EditorController
+from manim_studio.ui.chrome import PanelFrame, SegmentedControl, StageBanner, action_button, separator, tool_button
+from manim_studio.ui.context import AppContext
 from manim_studio.ui.dialogs.environment_dialog import EnvironmentDialog
 from manim_studio.ui.dialogs.export_dialog import ExportDialog
 from manim_studio.ui.dialogs.messages import codegen_error_text
 from manim_studio.ui.dialogs.settings_dialog import SettingsDialog
-from manim_studio.ui.document import ProjectDocument
-from manim_studio.ui.editor_state import EditorState
+from manim_studio.ui.icon_set import icon
 from manim_studio.ui.icons import app_icon, kind_icon
 from manim_studio.ui.panels.library_panel import LIBRARY_ORDER, LibraryPanel
 from manim_studio.ui.panels.objects_panel import ObjectsPanel
@@ -58,131 +48,73 @@ from manim_studio.ui.panels.output_panels import CodePanel, LogPanel
 from manim_studio.ui.panels.player_panel import PlayerPanel
 from manim_studio.ui.panels.properties_panel import PropertiesPanel
 from manim_studio.ui.panels.timeline_panel import TimelinePanel, build_animation_menu
-from manim_studio.ui.render_controller import RenderController
-from manim_studio.ui.settings import AppSettings
-from manim_studio.ui.stage.drawing import StageResources
+from manim_studio.ui.stage.drawing import PX, StageResources
 from manim_studio.ui.stage.view import StageView
+from manim_studio.ui.theme import current_palette, px
 
 CODE_REFRESH_MS = 250
 STATUS_TIMEOUT_MS = 6000
-
-
-class _EnvironmentSignals(QObject):
-    done = Signal(object)
-
-
-class _EnvironmentJob(QRunnable):
-    def __init__(self, python: str, signals: _EnvironmentSignals) -> None:
-        super().__init__()
-        self.python = python
-        self.signals = signals
-
-    def run(self) -> None:
-        report = check_environment(self.python)
-        try:
-            self.signals.done.emit(report)
-        except RuntimeError:
-            pass
+MODE_STAGE = 0
+MODE_PREVIEW = 1
+BOTTOM_TIMELINE = 0
+BOTTOM_LOG = 2
 
 
 class MainWindow(QMainWindow):
-    """Manim Studio's main window."""
+    """Manim Studio's main window (a view on :class:`AppContext`)."""
 
-    def __init__(self, settings: AppSettings, initial_file: str | None = None) -> None:
+    def __init__(self, context: AppContext, on_preferences_changed: Callable[[], None]) -> None:
         super().__init__()
-        self.settings = settings
+        self.context = context
+        self.settings = context.settings
+        self.document = context.document
+        self.editor = context.editor
+        self.controller = context.controller
+        self.render = context.render
+        self.tex_cache = context.tex_cache
+        self._on_preferences_changed = on_preferences_changed
+        self._links: list[tuple[Any, Callable]] = []
+        self._closing_for_rebuild = False
+        self._interactive_check = False
         self.setWindowIcon(app_icon())
-        self.document = ProjectDocument(tr("scene.first_name"), self)
-        self.editor = EditorState(self.document, self)
-        self.controller = EditorController(self.document, self.editor, settings, self)
-        self.environment: EnvironmentReport | None = None
-        cache = Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.CacheLocation)) / "tex"
-        self.tex_cache = TexPreviewCache(cache, enabled=settings.latex_preview and shutil.which("latex") is not None, parent=self)
         self.resources = StageResources(tex=self.tex_cache)
-        self.render = RenderController(self.document, self.editor, settings, self.latex_available, self)
-        self._env_signals = _EnvironmentSignals()
-        self._env_signals.done.connect(self._on_environment)
         self._code_timer = QTimer(self, singleShot=True, interval=CODE_REFRESH_MS)
         self._code_timer.timeout.connect(self.refresh_code)
-        self._build_central()
-        self._build_docks()
         self._build_actions()
         self._build_menus()
-        self._build_toolbar()
+        self._build_layout()
         self._build_statusbar()
         self._connect()
         self._restore_window()
         self.refresh_all()
-        if initial_file:
-            QTimer.singleShot(0, lambda: self.open_file(initial_file))
-        QTimer.singleShot(400, self.check_environment)
+        self._on_environment()
 
-    # --- construction -----------------------------------------------------------------
+    # --- signal bookkeeping (context objects outlive the window) -----------------------
 
-    def _build_central(self) -> None:
-        self.stage = StageView()
-        self.stage.set_policy(self.controller.edit_policy)
-        self.stage.set_grid(self.settings.show_grid, self.settings.grid_step, self.settings.snap)
-        self.scene_tabs = QTabBar()
-        self.scene_tabs.setMovable(True)
-        self.scene_tabs.setExpanding(False)
-        self.scene_tabs.setDocumentMode(True)
-        self.scene_tabs.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        add_scene = QToolButton()
-        add_scene.setText("+")
-        add_scene.setToolTip(tr("action.new_scene"))
-        add_scene.clicked.connect(self.controller.add_scene)
-        tabs = QHBoxLayout()
-        tabs.setContentsMargins(4, 2, 4, 0)
-        tabs.addWidget(self.scene_tabs)
-        tabs.addWidget(add_scene)
-        tabs.addStretch(1)
-        layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addLayout(tabs)
-        layout.addWidget(self.stage, 1)
-        central = QWidget()
-        central.setLayout(layout)
-        self.setCentralWidget(central)
+    def _link(self, signal: Any, slot: Callable) -> None:
+        signal.connect(slot)
+        self._links.append((signal, slot))
 
-    def _dock(self, key: str, widget: QWidget, area: Qt.DockWidgetArea) -> QDockWidget:
-        dock = QDockWidget(tr(f"dock.{key}"), self)
-        dock.setObjectName(f"dock_{key}")
-        dock.setWidget(widget)
-        self.addDockWidget(area, dock)
-        return dock
+    def teardown(self) -> None:
+        """Disconnect from long-lived objects before the window is replaced."""
+        for signal, slot in self._links:
+            try:
+                signal.disconnect(slot)
+            except (RuntimeError, TypeError):
+                pass
+        self._links = []
+        self.player.stop()
 
-    def _build_docks(self) -> None:
-        self.library = LibraryPanel()
-        self.objects = ObjectsPanel(self.document, self.editor)
-        self.properties = PropertiesPanel(self.document, self.editor, self.settings, self.latex_status)
-        self.timeline = TimelinePanel(self.document, self.editor, self.controller)
-        self.player = PlayerPanel()
-        self.code = CodePanel()
-        self.log = LogPanel()
-        left = Qt.DockWidgetArea.LeftDockWidgetArea
-        right = Qt.DockWidgetArea.RightDockWidgetArea
-        self.library_dock = self._dock("library", self.library, left)
-        self.objects_dock = self._dock("objects", self.objects, left)
-        self.properties_dock = self._dock("properties", self.properties, right)
-        self.player_dock = self._dock("preview", self.player, right)
-        self.code_dock = self._dock("code", self.code, right)
-        self.log_dock = self._dock("log", self.log, right)
-        self.timeline_dock = self._dock("timeline", self.timeline, Qt.DockWidgetArea.BottomDockWidgetArea)
-        self.splitDockWidget(self.library_dock, self.objects_dock, Qt.Orientation.Vertical)
-        self.splitDockWidget(self.properties_dock, self.player_dock, Qt.Orientation.Vertical)
-        self.tabifyDockWidget(self.player_dock, self.code_dock)
-        self.tabifyDockWidget(self.code_dock, self.log_dock)
-        self.player_dock.raise_()
-        self.resizeDocks([self.library_dock, self.properties_dock], [230, 360], Qt.Orientation.Horizontal)
-        self.resizeDocks([self.library_dock, self.objects_dock], [430, 250], Qt.Orientation.Vertical)
-        self.resizeDocks([self.properties_dock, self.player_dock], [460, 360], Qt.Orientation.Vertical)
+    # --- actions and menus ----------------------------------------------------------------
 
-    def _action(self, key: str, slot, shortcut: QKeySequence | str | None = None, checkable: bool = False) -> QAction:
+    def _action(self, key: str, slot, shortcut: QKeySequence | str | None = None, icon_name: str = "", checkable: bool = False) -> QAction:
         action = QAction(tr(f"action.{key}"), self)
+        if icon_name:
+            action.setIcon(icon(icon_name))
         if shortcut is not None:
-            action.setShortcut(QKeySequence(shortcut))
+            sequence = QKeySequence(shortcut)
+            action.setShortcut(sequence)
+            action.setToolTip(f"{tr(f'action.{key}')} ({sequence.toString(QKeySequence.SequenceFormat.NativeText)})")
         action.setCheckable(checkable)
         action.triggered.connect(slot)
         self.addAction(action)
@@ -191,61 +123,62 @@ class MainWindow(QMainWindow):
     def _build_actions(self) -> None:
         std = QKeySequence.StandardKey
         c = self.controller
-        self.act_new = self._action("new", self.new_project, std.New)
-        self.act_open = self._action("open", self.open_dialog, std.Open)
-        self.act_save = self._action("save", self.save, std.Save)
+        self.act_new = self._action("new", self.new_project, std.New, "new")
+        self.act_open = self._action("open", self.open_dialog, std.Open, "open")
+        self.act_save = self._action("save", self.save, std.Save, "save")
         self.act_save_as = self._action("save_as", self.save_as, std.SaveAs)
-        self.act_export_script = self._action("export_script", self.export_script, "Ctrl+Shift+E")
-        self.act_export = self._action("export", self.export_media, "Ctrl+E")
+        self.act_export_script = self._action("export_script", self.export_script, "Ctrl+Shift+E", "code")
+        self.act_export = self._action("export", self.export_media, "Ctrl+E", "export")
         self.act_quit = self._action("quit", self.close, std.Quit)
         stack = self.document.undo_stack
-        self.act_undo = self._action("undo", stack.undo, std.Undo)
-        self.act_redo = self._action("redo", stack.redo, std.Redo)
+        self.act_undo = self._action("undo", stack.undo, std.Undo, "undo")
+        self.act_redo = self._action("redo", stack.redo, std.Redo, "redo")
         self.act_redo.setShortcuts([QKeySequence(std.Redo), QKeySequence("Ctrl+Shift+Z")])
-        stack.canUndoChanged.connect(self.act_undo.setEnabled)
-        stack.canRedoChanged.connect(self.act_redo.setEnabled)
-        stack.undoTextChanged.connect(lambda text: self.act_undo.setToolTip(f"{tr('action.undo')}: {text}" if text else tr("action.undo")))
-        stack.redoTextChanged.connect(lambda text: self.act_redo.setToolTip(f"{tr('action.redo')}: {text}" if text else tr("action.redo")))
-        self.act_undo.setEnabled(False)
-        self.act_redo.setEnabled(False)
-        self.act_cut = self._action("cut", c.cut_objects, std.Cut)
-        self.act_copy = self._action("copy", c.copy_objects, std.Copy)
-        self.act_paste = self._action("paste", c.paste_objects, std.Paste)
-        self.act_duplicate = self._action("duplicate", self.duplicate, "Ctrl+D")
-        self.act_delete = self._action("delete", self.delete, std.Delete)
+        self.act_cut = self._action("cut", c.cut_objects, std.Cut, "cut")
+        self.act_copy = self._action("copy", c.copy_objects, std.Copy, "copy")
+        self.act_paste = self._action("paste", c.paste_objects, std.Paste, "paste")
+        self.act_duplicate = self._action("duplicate", self.duplicate, "Ctrl+D", "duplicate")
+        self.act_delete = self._action("delete", self.delete, std.Delete, "trash")
         self.act_select_all = self._action("select_all", c.select_all, std.SelectAll)
         self.act_forward = self._action("bring_forward", lambda: c.change_layer(1), "Ctrl+]")
         self.act_backward = self._action("send_backward", lambda: c.change_layer(-1), "Ctrl+[")
-        self.act_settings = self._action("settings", self.open_settings, std.Preferences)
-        self.act_new_scene = self._action("new_scene", c.add_scene, "Ctrl+Shift+N")
-        self.act_duplicate_scene = self._action("duplicate_scene", c.duplicate_scene)
+        self.act_settings = self._action("settings", self.open_settings, std.Preferences, "settings")
+        self.act_new_scene = self._action("new_scene", c.add_scene, "Ctrl+Shift+N", "plus")
+        self.act_duplicate_scene = self._action("duplicate_scene", c.duplicate_scene, None, "duplicate")
         self.act_rename_scene = self._action("rename_scene", lambda: c.rename_scene(), "F2")
-        self.act_delete_scene = self._action("delete_scene", lambda: c.delete_scene())
-        self.act_add_step = self._action("add_step", lambda: c.add_step(StepKind.PLAY), "Ctrl+T")
-        self.act_add_wait = self._action("add_wait", lambda: c.add_step(StepKind.WAIT), "Ctrl+W")
-        self.act_duplicate_step = self._action("duplicate_step", c.duplicate_step)
-        self.act_delete_step = self._action("delete_step", c.delete_step)
-        self.act_prev_step = self._action("prev_step", lambda: c.go_to_step(-1), "PgUp")
-        self.act_next_step = self._action("next_step", lambda: c.go_to_step(1), "PgDown")
-        self.act_start = self._action("go_start", lambda: self.editor.inspect_step(START), "Home")
-        self.act_end = self._action("go_end", lambda: self.editor.inspect_step(len(self.editor.scene().steps) - 1), "End")
-        self.act_grid = self._action("show_grid", self._on_view_options, "Ctrl+G", checkable=True)
+        self.act_delete_scene = self._action("delete_scene", lambda: c.delete_scene(), None, "trash")
+        self.act_add_step = self._action("add_step", lambda: c.add_step(StepKind.PLAY), "Ctrl+T", "plus")
+        self.act_add_wait = self._action("add_wait", lambda: c.add_step(StepKind.WAIT), "Ctrl+W", "clock")
+        self.act_duplicate_step = self._action("duplicate_step", c.duplicate_step, None, "duplicate")
+        self.act_delete_step = self._action("delete_step", c.delete_step, None, "trash")
+        self.act_prev_step = self._action("prev_step", lambda: c.go_to_step(-1), "PgUp", "chevron_left")
+        self.act_next_step = self._action("next_step", lambda: c.go_to_step(1), "PgDown", "chevron_right")
+        self.act_start = self._action("go_start", lambda: self.editor.inspect_step(START), "Home", "skip_back")
+        self.act_end = self._action("go_end", lambda: self.editor.inspect_step(len(self.editor.scene().steps) - 1), "End", "skip_forward")
+        self.act_grid = self._action("show_grid", self._on_view_options, "Ctrl+G", "grid", checkable=True)
         self.act_grid.setChecked(self.settings.show_grid)
-        self.act_snap = self._action("snap", self._on_view_options, "Ctrl+Shift+G", checkable=True)
+        self.act_snap = self._action("snap", self._on_view_options, "Ctrl+Shift+G", "magnet", checkable=True)
         self.act_snap.setChecked(self.settings.snap)
-        self.act_show_hidden = self._action("show_hidden", self._on_view_options, "Ctrl+H", checkable=True)
+        self.act_show_hidden = self._action("show_hidden", self._on_view_options, "Ctrl+H", "eye", checkable=True)
         self.act_show_hidden.setChecked(self.settings.show_hidden)
-        self.act_fit = self._action("fit", self.stage.fit_frame, "Ctrl+0")
-        self.act_zoom_in = self._action("zoom_in", lambda: self.stage.zoom(1.25), std.ZoomIn)
-        self.act_zoom_out = self._action("zoom_out", lambda: self.stage.zoom(0.8), std.ZoomOut)
-        self.act_preview = self._action("preview", self.render.preview, "F5")
-        self.act_cancel = self._action("cancel_render", self.render.cancel, "Shift+F5")
+        self.act_fit = self._action("fit", lambda: self.stage.fit_frame(), "Ctrl+0", "fit")
+        self.act_zoom_in = self._action("zoom_in", lambda: self.stage.zoom(1.25), std.ZoomIn, "zoom_in")
+        self.act_zoom_out = self._action("zoom_out", lambda: self.stage.zoom(0.8), std.ZoomOut, "zoom_out")
+        self.act_preview = self._action("preview", self.start_preview, "F5", "play")
+        self.act_cancel = self._action("cancel_render", self.render.cancel, "Shift+F5", "stop")
         self.act_cancel.setEnabled(False)
-        self.act_environment = self._action("check_environment", lambda: self.check_environment(interactive=True))
-        self.act_about = self._action("about", self.show_about)
+        self.act_environment = self._action("check_environment", lambda: self.check_environment(interactive=True), None, "info")
+        self.act_about = self._action("about", self.show_about, None, "info")
         self.act_manim_docs = self._action(
-            "manim_docs", lambda: QDesktopServices.openUrl(QUrl("https://docs.manim.community/en/stable/"))
+            "manim_docs", lambda: QDesktopServices.openUrl(QUrl("https://docs.manim.community/en/stable/")), None, "help"
         )
+        self.act_open_log_folder = self._action("open_log_folder", self.open_log_folder)
+        stack.canUndoChanged.connect(self.act_undo.setEnabled)
+        stack.canRedoChanged.connect(self.act_redo.setEnabled)
+        self._links.append((stack.canUndoChanged, self.act_undo.setEnabled))
+        self._links.append((stack.canRedoChanged, self.act_redo.setEnabled))
+        self.act_undo.setEnabled(stack.canUndo())
+        self.act_redo.setEnabled(stack.canRedo())
 
     def _build_menus(self) -> None:
         bar = self.menuBar()
@@ -268,12 +201,12 @@ class MainWindow(QMainWindow):
         edit_menu.addAction(self.act_settings)
         insert_menu = bar.addMenu(tr("menu.insert"))
         for kind in LIBRARY_ORDER:
-            action = insert_menu.addAction(kind_icon(kind, 20), tr(f"kind.{kind.value}"))
+            action = insert_menu.addAction(kind_icon(kind), tr(f"kind.{kind.value}"))
             action.triggered.connect(lambda _checked=False, k=kind: self.controller.add_object(k))
         scene_menu = bar.addMenu(tr("menu.scene"))
         scene_menu.addActions([self.act_new_scene, self.act_duplicate_scene, self.act_rename_scene, self.act_delete_scene])
         timeline_menu = bar.addMenu(tr("menu.timeline"))
-        self.animation_menu = timeline_menu.addMenu(tr("menu.add_animation"))
+        self.animation_menu = timeline_menu.addMenu(icon("sparkle"), tr("menu.add_animation"))
         self.animation_menu.aboutToShow.connect(lambda: build_animation_menu(self.animation_menu, self.controller, False))
         self.simultaneous_menu = timeline_menu.addMenu(tr("menu.add_simultaneous"))
         self.simultaneous_menu.aboutToShow.connect(lambda: build_animation_menu(self.simultaneous_menu, self.controller, True))
@@ -285,72 +218,188 @@ class MainWindow(QMainWindow):
         view_menu.addActions([self.act_grid, self.act_snap, self.act_show_hidden])
         view_menu.addSeparator()
         view_menu.addActions([self.act_fit, self.act_zoom_in, self.act_zoom_out])
-        view_menu.addSeparator()
-        panels = view_menu.addMenu(tr("menu.panels"))
-        for dock in (self.library_dock, self.objects_dock, self.properties_dock, self.timeline_dock, self.player_dock, self.code_dock, self.log_dock):
-            panels.addAction(dock.toggleViewAction())
+        self.panels_menu = view_menu.addMenu(tr("menu.panels"))
         render_menu = bar.addMenu(tr("menu.render"))
         render_menu.addActions([self.act_preview, self.act_cancel, self.act_export])
         render_menu.addSeparator()
         render_menu.addAction(self.act_environment)
         help_menu = bar.addMenu(tr("menu.help"))
-        help_menu.addActions([self.act_manim_docs, self.act_about])
+        help_menu.addActions([self.act_manim_docs, self.act_open_log_folder, self.act_about])
 
-    def _build_toolbar(self) -> None:
-        toolbar = self.addToolBar(tr("toolbar.main"))
-        toolbar.setObjectName("toolbar_main")
-        toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-        toolbar.addActions([self.act_new, self.act_open, self.act_save])
-        toolbar.addSeparator()
-        toolbar.addActions([self.act_undo, self.act_redo])
-        toolbar.addSeparator()
-        animation_button = QToolButton()
-        animation_button.setText(tr("timeline.add_animation"))
-        animation_button.setMenu(self.animation_menu)
-        animation_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        toolbar.addWidget(animation_button)
-        toolbar.addSeparator()
-        toolbar.addActions([self.act_grid, self.act_snap, self.act_fit])
-        toolbar.addSeparator()
-        toolbar.addActions([self.act_preview, self.act_export])
+    # --- layout -----------------------------------------------------------------------------
+
+    def _build_header(self) -> QFrame:
+        header = QFrame()
+        header.setObjectName("HeaderBar")
+        row = QHBoxLayout(header)
+        row.setContentsMargins(px(10), px(6), px(10), px(6))
+        row.setSpacing(px(6))
+        logo = QLabel()
+        logo.setPixmap(app_icon().pixmap(QSize(px(22), px(22))))
+        self.title_label = QLabel()
+        self.title_label.setProperty("role", "title")
+        row.addWidget(logo)
+        row.addWidget(self.title_label)
+        row.addSpacing(px(8))
+        for action in (self.act_undo, self.act_redo):
+            row.addWidget(action_button(action))
+        row.addWidget(separator(vertical=True))
+        self.scene_tabs = QTabBar()
+        self.scene_tabs.setMovable(True)
+        self.scene_tabs.setExpanding(False)
+        self.scene_tabs.setDrawBase(False)
+        self.scene_tabs.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        row.addWidget(self.scene_tabs)
+        row.addWidget(tool_button("plus", tr("action.new_scene"), self.controller.add_scene))
+        row.addStretch(1)
+        self.environment_button = QToolButton()
+        self.environment_button.setProperty("variant", "button")
+        self.environment_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.environment_button.clicked.connect(lambda: self.check_environment(interactive=True))
+        row.addWidget(self.environment_button)
+        row.addWidget(action_button(self.act_export, show_text=True, variant="button"))
+        row.addWidget(action_button(self.act_preview, show_text=True, variant="primary"))
+        return header
+
+    def _build_stage_area(self) -> QWidget:
+        self.stage = StageView()
+        self.stage.set_policy(self.controller.edit_policy)
+        self.stage.set_grid(self.settings.show_grid, self.settings.grid_step, self.settings.snap)
+        self.player = PlayerPanel()
+        self.mode_switch = SegmentedControl([("move", tr("center.stage")), ("render", tr("center.preview"))])
+        self.mode_switch.changed.connect(self.set_center_mode)
+        toolbar = QHBoxLayout()
+        toolbar.setContentsMargins(px(10), px(6), px(10), px(6))
+        toolbar.setSpacing(px(2))
+        toolbar.addWidget(self.mode_switch)
+        toolbar.addStretch(1)
+        self.stage_tools = QWidget()
+        tools = QHBoxLayout(self.stage_tools)
+        tools.setContentsMargins(0, 0, 0, 0)
+        tools.setSpacing(px(2))
+        for action in (self.act_grid, self.act_snap, self.act_show_hidden):
+            tools.addWidget(action_button(action))
+        tools.addWidget(separator(vertical=True))
+        tools.addWidget(action_button(self.act_zoom_out))
+        self.zoom_label = QLabel("100 %")
+        self.zoom_label.setProperty("role", "muted")
+        self.zoom_label.setMinimumWidth(px(46))
+        self.zoom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        tools.addWidget(self.zoom_label)
+        tools.addWidget(action_button(self.act_zoom_in))
+        tools.addWidget(action_button(self.act_fit))
+        toolbar.addWidget(self.stage_tools)
+        stage_holder = QWidget()
+        stage_layout = QVBoxLayout(stage_holder)
+        stage_layout.setContentsMargins(0, 0, 0, 0)
+        stage_layout.addWidget(self.stage)
+        self.banner = StageBanner(self.stage)
+        self.center_stack = QStackedWidget()
+        self.center_stack.addWidget(stage_holder)
+        self.center_stack.addWidget(self.player)
+        area = QWidget()
+        area.setObjectName("Panel")
+        column = QVBoxLayout(area)
+        column.setContentsMargins(0, 0, 0, 0)
+        column.setSpacing(0)
+        column.addLayout(toolbar)
+        column.addWidget(self.center_stack, 1)
+        return area
+
+    def _build_bottom_area(self) -> QTabWidget:
+        self.timeline = TimelinePanel(self.document, self.editor, self.controller)
+        self.code = CodePanel()
+        self.log = LogPanel()
+        tabs = QTabWidget()
+        tabs.setDocumentMode(True)
+        tabs.addTab(self.timeline, icon("clock"), tr("dock.timeline"))
+        tabs.addTab(self.code, icon("code"), tr("dock.code"))
+        tabs.addTab(self.log, icon("render"), tr("dock.log"))
+        tabs.setObjectName("Panel")
+        self.bottom_tabs = tabs
+        return tabs
+
+    def _build_layout(self) -> None:
+        self.library = LibraryPanel()
+        self.objects = ObjectsPanel(self.document, self.editor)
+        self.properties = PropertiesPanel(self.document, self.editor, self.settings, self.context.latex_status)
+        self.left_split = QSplitter(Qt.Orientation.Vertical)
+        self.left_split.addWidget(PanelFrame(tr("dock.library"), self.library))
+        self.left_split.addWidget(PanelFrame(tr("dock.objects"), self.objects))
+        self.left_split.setSizes([px(430), px(260)])
+        self.center_split = QSplitter(Qt.Orientation.Vertical)
+        self.center_split.addWidget(self._build_stage_area())
+        self.center_split.addWidget(self._build_bottom_area())
+        self.center_split.setStretchFactor(0, 3)
+        self.center_split.setStretchFactor(1, 1)
+        self.center_split.setSizes([px(640), px(250)])
+        self.inspector_frame = PanelFrame(tr("dock.properties"), self.properties)
+        self.main_split = QSplitter(Qt.Orientation.Horizontal)
+        self.main_split.addWidget(self.left_split)
+        self.main_split.addWidget(self.center_split)
+        self.main_split.addWidget(self.inspector_frame)
+        self.main_split.setStretchFactor(1, 1)
+        self.main_split.setSizes([px(250), px(1000), px(330)])
+        for splitter in (self.left_split, self.center_split, self.main_split):
+            splitter.setChildrenCollapsible(False)
+        central = QWidget()
+        column = QVBoxLayout(central)
+        column.setContentsMargins(0, 0, 0, 0)
+        column.setSpacing(0)
+        column.addWidget(self._build_header())
+        column.addWidget(self.main_split, 1)
+        self.setCentralWidget(central)
+        for key, widget in (("library", self.left_split), ("properties", self.inspector_frame), ("timeline", self.bottom_tabs)):
+            action = QAction(tr(f"dock.{key}"), self, checkable=True, checked=True)
+            action.toggled.connect(widget.setVisible)
+            self.panels_menu.addAction(action)
 
     def _build_statusbar(self) -> None:
         status = self.statusBar()
         self.coordinates = QLabel()
-        self.environment_label = QLabel(tr("env.checking"))
+        self.coordinates.setProperty("role", "faint")
         self.progress = QProgressBar()
         self.progress.setRange(0, 1000)
-        self.progress.setFixedWidth(180)
+        self.progress.setFixedWidth(px(180))
         self.progress.setVisible(False)
-        self.cancel_button = QToolButton()
-        self.cancel_button.setText(tr("action.cancel_render"))
-        self.cancel_button.clicked.connect(self.render.cancel)
+        self.cancel_button = tool_button("stop", tr("action.cancel_render"), self.render.cancel, tr("action.cancel_render"))
         self.cancel_button.setVisible(False)
         status.addPermanentWidget(self.progress)
         status.addPermanentWidget(self.cancel_button)
         status.addPermanentWidget(self.coordinates)
-        status.addPermanentWidget(self.environment_label)
+
+    # --- wiring -------------------------------------------------------------------------------
 
     def _connect(self) -> None:
-        self.document.changed.connect(self.refresh_all)
-        self.document.dirtyChanged.connect(lambda _dirty: self._update_title())
-        self.document.pathChanged.connect(self._update_title)
-        self.editor.sceneChanged.connect(self.refresh_all)
-        self.editor.cursorChanged.connect(self.refresh_stage)
-        self.editor.selectionChanged.connect(lambda: self.stage.set_selection(self.editor.selected_objects))
-        self.tex_cache.ready.connect(lambda _latex: self.refresh_stage())
-        self.tex_cache.ready.connect(lambda _latex: self.properties.refresh())
+        link = self._link
+        link(self.document.changed, self.refresh_all)
+        link(self.document.dirtyChanged, self._update_title)
+        link(self.document.pathChanged, self._update_title)
+        link(self.editor.sceneChanged, self.refresh_all)
+        link(self.editor.cursorChanged, self._on_cursor_changed)
+        link(self.editor.selectionChanged, self._on_selection_changed)
+        link(self.tex_cache.ready, self._on_tex_ready)
+        link(self.controller.statusMessage, self.show_status)
+        link(self.context.environmentChanged, self._on_environment)
+        link(self.render.busyChanged, self._on_render_busy)
+        link(self.render.progressChanged, self._on_render_progress)
+        link(self.render.statusMessage, self.show_status)
+        link(self.render.logLine, self.log.append)
+        link(self.render.logCleared, self.log.clear)
+        link(self.render.aboutToRender, self.player.stop)
+        link(self.render.previewReady, self._on_preview_ready)
+        link(self.render.showLogRequested, self._show_log)
         self.stage.selectionEdited.connect(self.editor.select_objects)
         self.stage.moveRequested.connect(self.controller.move_objects)
         self.stage.scaleRequested.connect(self.controller.scale_object)
         self.stage.rotateRequested.connect(self.controller.rotate_object)
-        self.stage.dropRequested.connect(lambda kind, x, y: self.controller.add_object(ObjectKind(kind), x, y))
+        self.stage.dropRequested.connect(self._on_drop)
         self.stage.contextMenuRequested.connect(self.show_object_menu)
-        self.stage.cursorMoved.connect(lambda x, y: self.coordinates.setText(tr("status.coordinates", x=f"{x:.2f}", y=f"{y:.2f}")))
+        self.stage.cursorMoved.connect(self._on_cursor_moved)
         self.stage.statusMessage.connect(self.show_status)
+        self.stage.zoomChanged.connect(self._on_zoom_changed)
         self.objects.contextMenuRequested.connect(self.show_object_menu)
-        self.library.objectRequested.connect(lambda kind: self.controller.add_object(ObjectKind(kind)))
-        self.controller.statusMessage.connect(self.show_status)
+        self.library.objectRequested.connect(self._on_library_request)
         self.scene_tabs.currentChanged.connect(self._on_tab_changed)
         self.scene_tabs.tabMoved.connect(self._on_tab_moved)
         self.scene_tabs.tabBarDoubleClicked.connect(lambda index: self.controller.rename_scene(self.scene_tabs.tabData(index)))
@@ -358,25 +407,25 @@ class MainWindow(QMainWindow):
         self.code.copyRequested.connect(self.copy_code)
         self.code.exportRequested.connect(self.export_script)
         self.log.saveRequested.connect(self.save_log)
-        self.render.busyChanged.connect(self._on_render_busy)
-        self.render.progressChanged.connect(lambda value: self.progress.setValue(round(value * 1000)))
-        self.render.statusMessage.connect(self.show_status)
-        self.render.logLine.connect(self.log.append)
-        self.render.logCleared.connect(self.log.clear)
-        self.render.aboutToRender.connect(self.player.stop)
-        self.render.previewReady.connect(self._on_preview_ready)
-        self.render.showLogRequested.connect(lambda: (self.log_dock.show(), self.log_dock.raise_()))
 
     def _restore_window(self) -> None:
-        geometry, state = self.settings.window_state()
+        geometry, _state = self.settings.window_state()
         if geometry is not None:
             self.restoreGeometry(geometry)
         else:
-            self.resize(1500, 920)
-        if state is not None:
-            self.restoreState(state)
+            self.resize(px(1560), px(940))
+        for key, splitter in (("main", self.main_split), ("left", self.left_split), ("center", self.center_split)):
+            state = self.settings.splitter_state(key)
+            if state is not None:
+                splitter.restoreState(state)
 
-    # --- refresh -------------------------------------------------------------------
+    def save_layout(self) -> None:
+        """Remember window geometry and splitter positions."""
+        self.settings.save_window_state(self.saveGeometry(), None)
+        for key, splitter in (("main", self.main_split), ("left", self.left_split), ("center", self.center_split)):
+            self.settings.set_splitter_state(key, splitter.saveState())
+
+    # --- refresh ----------------------------------------------------------------------------------
 
     def refresh_all(self) -> None:
         """Bring every view up to date with the model."""
@@ -391,6 +440,27 @@ class MainWindow(QMainWindow):
         self.resources.base_dir = self.document.base_dir
         states = states_after(scene, self.editor.cursor)
         self.stage.set_content(scene, states, self.resources, self.editor.selected_objects, self.act_show_hidden.isChecked())
+        self._update_banner()
+
+    def _update_banner(self) -> None:
+        cursor = self.editor.cursor
+        if cursor == START:
+            self.banner.show_message(tr("banner.start"), recording=False)
+        else:
+            step = self.editor.scene().steps[cursor]
+            key = "banner.wait" if step.kind == StepKind.WAIT else "banner.step"
+            dot = f"<span style='color:{current_palette().record}'>●</span>"
+            self.banner.show_message(tr(key, step=cursor + 1, dot=dot), recording=step.kind != StepKind.WAIT)
+        self._place_banner()
+
+    def _place_banner(self) -> None:
+        viewport = self.stage.viewport().geometry()
+        self.banner.move(viewport.x() + (viewport.width() - self.banner.width()) // 2, viewport.y() + px(10))
+        self.banner.raise_()
+
+    def resizeEvent(self, event) -> None:  # noqa: N802 - Qt API
+        super().resizeEvent(event)
+        QTimer.singleShot(0, self._place_banner)
 
     def refresh_code(self) -> None:
         """Regenerate the read-only code view."""
@@ -410,22 +480,54 @@ class MainWindow(QMainWindow):
             self.scene_tabs.addTab("")
         for index, scene in enumerate(scenes):
             self.scene_tabs.setTabText(index, scene.name)
+            self.scene_tabs.setTabIcon(index, icon("scene"))
             self.scene_tabs.setTabData(index, scene.id)
             if scene.id == self.editor.scene_id:
                 self.scene_tabs.setCurrentIndex(index)
         self.scene_tabs.blockSignals(False)
 
-    def _update_title(self) -> None:
-        name = self.document.path.name if self.document.path else tr("window.untitled")
-        dirty = "*" if self.document.is_dirty else ""
-        self.setWindowTitle(f"{name}{dirty} – {APP_NAME}")
+    def _update_title(self, *_args: object) -> None:
+        name = self.document.path.stem if self.document.path else tr("window.untitled")
+        dirty = " •" if self.document.is_dirty else ""
+        self.title_label.setText(f"{name}{dirty}")
+        self.setWindowTitle(f"{name}{'*' if self.document.is_dirty else ''} – {APP_NAME}")
 
     def show_status(self, message: str) -> None:
         """Show a temporary message in the status bar."""
         if message:
             self.statusBar().showMessage(message, STATUS_TIMEOUT_MS)
 
-    # --- scenes ------------------------------------------------------------------
+    def _on_cursor_changed(self) -> None:
+        self.refresh_stage()
+
+    def _on_selection_changed(self) -> None:
+        self.stage.set_selection(self.editor.selected_objects)
+
+    def _on_tex_ready(self, _latex: str) -> None:
+        self.refresh_stage()
+        self.properties.refresh()
+
+    def _on_cursor_moved(self, x: float, y: float) -> None:
+        self.coordinates.setText(tr("status.coordinates", x=f"{x:.2f}", y=f"{y:.2f}"))
+
+    def _on_zoom_changed(self, factor: float) -> None:
+        self.zoom_label.setText(f"{round(factor * 100)} %")
+        QTimer.singleShot(0, self._place_banner)
+
+    def _on_library_request(self, kind: str) -> None:
+        self.set_center_mode(MODE_STAGE)
+        self.controller.add_object(ObjectKind(kind))
+
+    def _on_drop(self, kind: str, x: float, y: float) -> None:
+        self.controller.add_object(ObjectKind(kind), x, y)
+
+    def set_center_mode(self, mode: int) -> None:
+        """Switch the center between stage editing and the rendered preview."""
+        self.center_stack.setCurrentIndex(mode)
+        self.mode_switch.set_current(mode)
+        self.stage_tools.setVisible(mode == MODE_STAGE)
+
+    # --- scenes ---------------------------------------------------------------------------------
 
     def _on_tab_changed(self, index: int) -> None:
         scene_id = self.scene_tabs.tabData(index)
@@ -445,11 +547,11 @@ class MainWindow(QMainWindow):
         self.editor.set_scene(scene_id)
         menu = QMenu(self)
         menu.addAction(tr("action.rename_scene"), lambda: self.controller.rename_scene(scene_id))
-        menu.addAction(tr("action.duplicate_scene"), self.controller.duplicate_scene)
-        menu.addAction(tr("action.delete_scene"), lambda: self.controller.delete_scene(scene_id))
+        menu.addAction(icon("duplicate"), tr("action.duplicate_scene"), self.controller.duplicate_scene)
+        menu.addAction(icon("trash"), tr("action.delete_scene"), lambda: self.controller.delete_scene(scene_id))
         menu.exec(self.scene_tabs.mapToGlobal(position))
 
-    # --- edit dispatch -------------------------------------------------------------------
+    # --- edit dispatch ----------------------------------------------------------------------------
 
     def _timeline_has_focus(self) -> bool:
         focus = QApplication.focusWidget()
@@ -470,10 +572,10 @@ class MainWindow(QMainWindow):
             self.controller.duplicate_objects()
 
     def show_object_menu(self, global_position: QPoint, object_id: str) -> None:
-        """Context menu for objects on the stage or in the object list."""
+        """Context menu for objects on the stage or in the layer list."""
         menu = QMenu(self)
         if object_id:
-            animate = menu.addMenu(tr("menu.add_animation"))
+            animate = menu.addMenu(icon("sparkle"), tr("menu.add_animation"))
             build_animation_menu(animate, self.controller, False)
             simultaneous = menu.addMenu(tr("menu.add_simultaneous"))
             build_animation_menu(simultaneous, self.controller, True)
@@ -482,11 +584,11 @@ class MainWindow(QMainWindow):
             menu.addSeparator()
             menu.addActions([self.act_forward, self.act_backward])
         else:
-            add = menu.addMenu(tr("menu.insert"))
+            add = menu.addMenu(icon("plus"), tr("menu.insert"))
             scene_pos = self.stage.mapToScene(self.stage.mapFromGlobal(global_position))
-            x, y = round(scene_pos.x() / 100.0 * 4) / 4, round(-scene_pos.y() / 100.0 * 4) / 4
+            x, y = round(scene_pos.x() / PX * 4) / 4, round(-scene_pos.y() / PX * 4) / 4
             for kind in LIBRARY_ORDER:
-                action = add.addAction(kind_icon(kind, 20), tr(f"kind.{kind.value}"))
+                action = add.addAction(kind_icon(kind), tr(f"kind.{kind.value}"))
                 action.triggered.connect(lambda _checked=False, k=kind: self.controller.add_object(k, x, y))
             menu.addAction(self.act_paste)
             menu.addAction(self.act_select_all)
@@ -501,7 +603,7 @@ class MainWindow(QMainWindow):
         self.stage.set_grid(self.settings.show_grid, self.settings.grid_step, self.settings.snap)
         self.refresh_stage()
 
-    # --- files ---------------------------------------------------------------------------
+    # --- files -------------------------------------------------------------------------------------
 
     def maybe_save(self) -> bool:
         """Ask to save unsaved changes; return ``False`` if the user cancels."""
@@ -548,6 +650,7 @@ class MainWindow(QMainWindow):
         self.settings.add_recent_file(path)
         self.settings.set_last_directory("project", str(Path(path).parent))
         self.show_status(tr("status.opened", path=path))
+        log.info("Opened %s", path)
 
     def save(self) -> bool:
         """Save the project (asks for a file name the first time)."""
@@ -634,7 +737,17 @@ class MainWindow(QMainWindow):
         if path:
             Path(path).write_text(self.log.text(), encoding="utf-8")
 
-    # --- rendering -------------------------------------------------------------------------
+    def open_log_folder(self) -> None:
+        """Open the folder with the application log."""
+        from manim_studio.ui.context import data_dir
+
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(data_dir() / "logs")))
+
+    # --- rendering -------------------------------------------------------------------------------------
+
+    def start_preview(self) -> None:
+        """Render a quick preview of the active scene."""
+        self.render.preview()
 
     def export_media(self) -> None:
         """Open the export dialog and start the export."""
@@ -653,86 +766,85 @@ class MainWindow(QMainWindow):
         self.act_preview.setEnabled(not busy)
         self.act_export.setEnabled(not busy)
 
+    def _on_render_progress(self, value: float) -> None:
+        self.progress.setValue(round(value * 1000))
+
     def _on_preview_ready(self, path: Path) -> None:
-        self.player_dock.show()
-        self.player_dock.raise_()
+        self.set_center_mode(MODE_PREVIEW)
         self.player.load(path)
 
-    # --- environment -----------------------------------------------------------------------
+    def _show_log(self) -> None:
+        self.bottom_tabs.setCurrentIndex(BOTTOM_LOG)
 
-    def latex_available(self) -> bool:
-        """Return whether LaTeX can be used (for MathTex)."""
-        if self.environment is not None:
-            return self.environment.latex.found
-        return shutil.which("latex") is not None and shutil.which("dvisvgm") is not None
-
-    def latex_status(self, latex: str) -> str:
-        """Explain why a formula cannot be previewed, if it cannot."""
-        if not self.latex_available():
-            return tr("prop.latex_missing")
-        error = self.tex_cache.error(latex)
-        return tr("prop.latex_error", error=error) if error else ""
+    # --- environment --------------------------------------------------------------------------------------
 
     def check_environment(self, interactive: bool = False) -> None:
-        """Check Manim, FFmpeg and LaTeX in the background."""
+        """Run the system check; ``interactive`` always shows the result."""
         self._interactive_check = interactive
-        self.environment_label.setText(tr("env.checking"))
-        QThreadPool.globalInstance().start(_EnvironmentJob(self.settings.python_path, self._env_signals))
+        self.environment_button.setText(tr("env.checking"))
+        self.environment_button.setIcon(icon("clock"))
+        self.context.check_environment()
 
-    def _on_environment(self, report: EnvironmentReport) -> None:
-        self.environment = report
+    def _on_environment(self) -> None:
+        report = self.context.environment
+        if report is None:
+            self.environment_button.setText(tr("env.checking"))
+            self.environment_button.setIcon(icon("clock"))
+            return
         self.library.set_latex_available(report.latex.found)
-        self.tex_cache.enabled = self.settings.latex_preview and report.latex.found
         missing = report.missing_names()
         if missing:
             names = ", ".join(tr(f"env.tool.{name}") for name in missing)
-            self.environment_label.setText(tr("env.status_missing", names=names))
+            self.environment_button.setText(tr("env.status_missing", names=names))
+            self.environment_button.setIcon(icon("warning", current_palette().warning))
         else:
-            self.environment_label.setText(tr("env.status_ok", version=report.manim.version))
+            self.environment_button.setText(tr("env.status_ok", version=report.manim.version))
+            self.environment_button.setIcon(icon("check", current_palette().success))
         self.refresh_stage()
         self.properties.refresh()
         key = ",".join(missing)
-        interactive = getattr(self, "_interactive_check", False)
+        interactive = self._interactive_check
+        self._interactive_check = False
         if interactive or (missing and self.settings.hidden_environment_warning != key):
             dialog = EnvironmentDialog(report, show_checkbox=not interactive, parent=self)
             dialog.exec()
             if dialog.dont_show.isChecked():
                 self.settings.hidden_environment_warning = key
 
-    # --- misc ---------------------------------------------------------------------------------
+    # --- misc -------------------------------------------------------------------------------------------------
 
     def open_settings(self) -> None:
         """Show the preferences dialog."""
         dialog = SettingsDialog(self.settings, self)
         if not dialog.exec():
             return
-        language_changed = dialog.apply()
+        needs_rebuild = dialog.apply()
         self.stage.set_grid(self.settings.show_grid, self.settings.grid_step, self.settings.snap)
-        self.tex_cache.enabled = self.settings.latex_preview and self.latex_available()
+        self.tex_cache.enabled = self.settings.latex_preview and self.context.latex_available()
         self.refresh_stage()
-        if language_changed:
-            self._offer_restart()
-
-    def _offer_restart(self) -> None:
-        answer = QMessageBox.question(self, tr("settings.restart_title"), tr("settings.restart_text"))
-        if answer != QMessageBox.StandardButton.Yes or not self.maybe_save():
-            return
-        arguments = ["-m", "manim_studio"] + ([str(self.document.path)] if self.document.path else [])
-        self.document.undo_stack.setClean()
-        if QProcess.startDetached(sys.executable, arguments):
-            self.close()
+        if needs_rebuild:
+            QTimer.singleShot(0, self._on_preferences_changed)
 
     def show_about(self) -> None:
         """Show version information."""
         QMessageBox.about(self, tr("about.title"), tr("about.text", version=__version__))
 
+    def close_for_rebuild(self) -> None:
+        """Close without asking (the window is replaced by a new one)."""
+        self._closing_for_rebuild = True
+        self.save_layout()
+        self.teardown()
+        self.close()
+
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 - Qt API
+        if self._closing_for_rebuild:
+            event.accept()
+            return
         if not self.maybe_save():
             event.ignore()
             return
         if self.render.is_busy():
             self.render.cancel()
-        self.player.stop()
-        self.controller.release_clipboard()
-        self.settings.save_window_state(self.saveGeometry(), self.saveState())
+        self.save_layout()
+        self.teardown()
         event.accept()

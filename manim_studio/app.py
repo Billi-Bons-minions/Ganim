@@ -1,42 +1,104 @@
-"""Application start-up."""
+"""Application start-up and live rebuilding of the main window."""
 
 from __future__ import annotations
 
 import sys
 
-from PySide6.QtCore import QLocale
-from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QLocale, QTimer
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 from manim_studio import APP_NAME, ORGANIZATION, __version__
-from manim_studio.i18n import set_language
+from manim_studio.i18n import set_language, tr
+from manim_studio.logging_setup import (
+    install_exception_hook,
+    install_qt_message_handler,
+    log,
+    quiet_qt_logging,
+    setup_logging,
+)
 
 
-def _apply_locale(language: str) -> None:
-    locale = QLocale(QLocale.Language.German if language == "de" else QLocale.Language.English)
-    QLocale.setDefault(locale)
+def apply_locale(language: str) -> None:
+    """Set the number format (decimal comma in German)."""
+    QLocale.setDefault(QLocale(QLocale.Language.German if language == "de" else QLocale.Language.English))
+
+
+class StudioApplication:
+    """Owns the long-lived :class:`AppContext` and the (replaceable) main window."""
+
+    def __init__(self, app: QApplication, initial_file: str | None) -> None:
+        from manim_studio.ui.context import AppContext, cache_dir
+        from manim_studio.ui.settings import AppSettings
+
+        self.app = app
+        self.settings = AppSettings()
+        self._image_dir = cache_dir() / "style"
+        self._apply_preferences()
+        self.context = AppContext(self.settings)
+        self.window = None
+        self._create_window()
+        if initial_file:
+            QTimer.singleShot(0, lambda: self.window.open_file(initial_file, ask=False))
+        QTimer.singleShot(300, self.context.check_environment)
+
+    def _apply_preferences(self) -> None:
+        from manim_studio.ui.theme import apply_theme
+
+        set_language(self.settings.language)
+        apply_locale(self.settings.language)
+        apply_theme(self.app, self.settings.theme, self.settings.ui_scale, self._image_dir)
+
+    def _create_window(self) -> None:
+        from manim_studio.ui.main_window import MainWindow
+
+        self.window = MainWindow(self.context, self.rebuild)
+        self.context.set_window(self.window)
+        self.window.show()
+
+    def rebuild(self) -> None:
+        """Re-create the window after language, theme or scale changed."""
+        old = self.window
+        if self.context.render.is_busy():
+            QMessageBox.information(old, tr("settings.title"), tr("settings.rebuild_busy"))
+            return
+        old.close_for_rebuild()
+        self._apply_preferences()
+        self._create_window()
+        old.deleteLater()
+        log.info("Window rebuilt (language=%s, theme=%s, scale=%s)", self.settings.language, self.settings.theme, self.settings.ui_scale)
+
+
+def _show_crash(text: str) -> None:
+    box = QMessageBox(QApplication.activeWindow())
+    box.setIcon(QMessageBox.Icon.Critical)
+    box.setWindowTitle(tr("crash.title"))
+    box.setText(tr("crash.text"))
+    box.setDetailedText(text)
+    box.exec()
 
 
 def main(argv: list[str] | None = None) -> int:
     """Start Manim Studio; an optional first argument is a project file to open."""
     arguments = list(sys.argv if argv is None else argv)
+    quiet_qt_logging()
     QApplication.setOrganizationName(ORGANIZATION)
     QApplication.setApplicationName(APP_NAME)
     QApplication.setApplicationVersion(__version__)
     app = QApplication.instance() or QApplication(arguments)
 
+    from manim_studio.ui.context import data_dir
     from manim_studio.ui.icons import app_icon
-    from manim_studio.ui.main_window import MainWindow
-    from manim_studio.ui.settings import AppSettings
 
-    settings = AppSettings()
-    set_language(settings.language)
-    _apply_locale(settings.language)
+    setup_logging(data_dir() / "logs")
+    install_qt_message_handler()
+    install_exception_hook(_show_crash)
     app.setWindowIcon(app_icon())
     initial_file = arguments[1] if len(arguments) > 1 else None
-    window = MainWindow(settings, initial_file)
-    app.aboutToQuit.connect(window.controller.release_clipboard)
-    window.show()
-    return app.exec()
+    studio = StudioApplication(app, initial_file)
+    code = app.exec()
+    log.info("Manim Studio closed (exit code %s)", code)
+    del studio
+    return code
 
 
 if __name__ == "__main__":

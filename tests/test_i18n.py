@@ -12,7 +12,7 @@ from manim_studio.i18n import LANGUAGES, catalog, set_language, tr
 from manim_studio.model.expression import ExpressionError
 from manim_studio.model.schema import ANIMATION_PARAMS, KIND_INFO, ParamType
 from manim_studio.model.stage_edits import MOVE, ROTATE, SCALE
-from manim_studio.model.types import RATE_FUNCTIONS, AnimationKind, ObjectKind, Visibility
+from manim_studio.model.types import MANIM_COLORS, RATE_FUNCTIONS, AnimationKind, ObjectKind, Visibility
 from manim_studio.render.command import QUALITY_PRESETS
 
 SOURCE = Path(__file__).resolve().parent.parent / "manim_studio"
@@ -49,6 +49,9 @@ def dynamic_keys() -> set[str]:
     tools = ("manim", "ffmpeg", "latex")
     keys |= {f"env.tool.{tool}" for tool in tools} | {f"env.missing.{tool}" for tool in tools}
     keys |= {f"env.hint.{tool}.{platform}" for tool in tools for platform in ("windows", "macos", "linux")}
+    keys |= {f"color.{name}" for name in MANIM_COLORS}
+    keys |= {f"library.category.{key}" for key in ("shapes", "lines", "text", "math", "media")}
+    keys |= {f"settings.theme.{name}" for name in ("dark", "light")}
     keys |= {f"dock.{dock}" for dock in ("library", "objects", "properties", "preview", "code", "log", "timeline")}
     keys |= {f"expr.{code}" for code in ("empty", "too_long", "too_complex", "invalid_character", "syntax", "not_allowed",
                                           "missing_parenthesis", "unknown_name", "unknown_function", "wrong_argument_count")}

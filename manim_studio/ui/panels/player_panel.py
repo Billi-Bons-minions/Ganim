@@ -13,13 +13,13 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSlider,
     QStackedLayout,
-    QStyle,
     QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
 from manim_studio.i18n import tr
+from manim_studio.ui.icon_set import icon
 
 try:
     from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer, QVideoFrame, QVideoSink
@@ -95,14 +95,14 @@ class PlayerPanel(QWidget):
             self.player.mediaStatusChanged.connect(self._on_media_status)
             self.stack.addWidget(self.video)
         self.play_button = QToolButton()
-        self.play_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
+        self.play_button.setIcon(icon("play"))
         self.play_button.clicked.connect(self.toggle)
         self.slider = QSlider(Qt.Orientation.Horizontal)
         self.slider.sliderMoved.connect(self._seek)
         self.time_label = QLabel(_time(0))
         self.loop = QCheckBox(tr("player.loop"))
         self.loop.setChecked(True)
-        self.external = QPushButton(tr("player.external"))
+        self.external = QPushButton(icon("export"), tr("player.external"))
         self.external.clicked.connect(self.open_external)
         controls = QHBoxLayout()
         controls.addWidget(self.play_button)
@@ -168,8 +168,8 @@ class PlayerPanel(QWidget):
         self.slider.setRange(0, duration)
 
     def _on_state(self, state) -> None:
-        icon = QStyle.StandardPixmap.SP_MediaPause if state == QMediaPlayer.PlaybackState.PlayingState else QStyle.StandardPixmap.SP_MediaPlay
-        self.play_button.setIcon(self.style().standardIcon(icon))
+        playing = state == QMediaPlayer.PlaybackState.PlayingState
+        self.play_button.setIcon(icon("pause" if playing else "play"))
 
     def _on_media_status(self, status) -> None:
         if status == QMediaPlayer.MediaStatus.EndOfMedia and self.loop.isChecked():

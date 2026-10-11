@@ -12,8 +12,8 @@ from PySide6.QtWidgets import (
 )
 
 from manim_studio.ui.stage.drawing import Drawing
+from manim_studio.ui.theme import color as theme_color
 
-SELECTION_COLOR = QColor("#3D9BFF")
 HANDLE_SIZE = 9.0
 ROTATE_HANDLE_DISTANCE = 28.0
 
@@ -70,7 +70,7 @@ class ObjectItem(QGraphicsObject):
         if self.ghost:
             self._paint_outline(painter, QColor(170, 170, 170), Qt.PenStyle.DotLine)
         if self.isSelected():
-            self._paint_outline(painter, SELECTION_COLOR, Qt.PenStyle.DashLine)
+            self._paint_outline(painter, theme_color("accent"), Qt.PenStyle.DashLine)
 
     def _paint_primitive(self, painter: QPainter, primitive) -> None:
         if primitive.image is not None and primitive.rect is not None:
@@ -112,7 +112,7 @@ class HandleItem(QGraphicsItem):
 
     def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: QWidget | None = None) -> None:
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        painter.setPen(QPen(SELECTION_COLOR, 1.5))
+        painter.setPen(QPen(theme_color("accent"), 1.5))
         painter.setBrush(QBrush(QColor("#FFFFFF")))
         half = HANDLE_SIZE / 2
         if self.role == ROLE_ROTATE:

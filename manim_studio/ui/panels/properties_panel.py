@@ -10,14 +10,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFontDatabase
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QFont, QFontDatabase, QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
     QFormLayout,
-    QFrame,
+    QHBoxLayout,
     QLabel,
     QScrollArea,
     QSpinBox,
@@ -48,6 +48,9 @@ from manim_studio.ui.editor_state import (
     EditorState,
 )
 from manim_studio.ui.settings import AppSettings
+from manim_studio.ui.icon_set import icon
+from manim_studio.ui.icons import kind_icon
+from manim_studio.ui.theme import px
 from manim_studio.ui.widgets import (
     ColorButton,
     DebouncedLineEdit,
@@ -129,27 +132,44 @@ class _Form:
 
     def __init__(self) -> None:
         self.widget = QWidget()
+        self.widget.setObjectName("Inspector")
         self.layout = QFormLayout(self.widget)
         self.layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
-        self.layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.layout.setLabelAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self.layout.setContentsMargins(px(14), px(12), px(14), px(14))
+        self.layout.setHorizontalSpacing(px(10))
+        self.layout.setVerticalSpacing(px(7))
         self.bindings: list[Binding] = []
 
-    def header(self, text: str) -> None:
+    def header(self, text: str, header_icon: QIcon | None = None) -> None:
+        row = QWidget()
+        line = QHBoxLayout(row)
+        line.setContentsMargins(0, 0, 0, px(4))
+        line.setSpacing(px(8))
+        if header_icon is not None:
+            picture = QLabel()
+            picture.setPixmap(header_icon.pixmap(QSize(px(22), px(22))))
+            line.addWidget(picture)
         label = QLabel(text)
+        label.setProperty("role", "title")
         font = label.font()
-        font.setBold(True)
-        font.setPointSizeF(font.pointSizeF() * 1.15)
+        font.setPointSizeF(font.pointSizeF() * 1.2)
         label.setFont(font)
-        self.layout.addRow(label)
+        line.addWidget(label, 1)
+        self.layout.addRow(row)
+
+    def header_widget(self, widget: QWidget) -> None:
+        self.layout.addRow(widget)
 
     def section(self, text: str) -> None:
-        line = QFrame()
-        line.setFrameShape(QFrame.Shape.HLine)
-        line.setFrameShadow(QFrame.Shadow.Sunken)
-        self.layout.addRow(line)
-        label = QLabel(text)
+        spacer = QWidget()
+        spacer.setFixedHeight(px(6))
+        self.layout.addRow(spacer)
+        label = QLabel(text.upper())
+        label.setProperty("role", "section")
         font = label.font()
-        font.setBold(True)
+        font.setPointSizeF(font.pointSizeF() * 0.85)
+        font.setLetterSpacing(QFont.SpacingType.PercentageSpacing, 108)
         label.setFont(font)
         self.layout.addRow(label)
 
@@ -164,8 +184,7 @@ class _Form:
         label = QLabel()
         label.setWordWrap(True)
         label.setTextFormat(Qt.TextFormat.PlainText)
-        style = "color: #E8A33D;" if warning else "color: palette(mid);"
-        label.setStyleSheet(style)
+        label.setProperty("role", "warning" if warning else "muted")
 
         def show(text: str) -> None:
             label.setText(text)
@@ -195,7 +214,8 @@ class PropertiesPanel(QScrollArea):
         self.settings = settings
         self.latex_status = latex_status
         self.setWidgetResizable(True)
-        self.setMinimumWidth(280)
+        self.setObjectName("Inspector")
+        self.setMinimumWidth(px(280))
         self._key: tuple | None = None
         self._form: _Form | None = None
         document.changed.connect(self.refresh)
@@ -410,7 +430,7 @@ class PropertiesPanel(QScrollArea):
     def _build_object(self, form: _Form, key: tuple) -> None:
         object_id, kind = key[2], key[3]
         info = kind_info(kind)
-        form.header(f"{tr(f'kind.{kind.value}')}")
+        form.header(tr(f"kind.{kind.value}"), kind_icon(kind))
         name_edit = DebouncedLineEdit()
         name_edit.committed.connect(
             lambda text: text.strip()
@@ -454,7 +474,7 @@ class PropertiesPanel(QScrollArea):
 
     def _build_multi(self, form: _Form, key: tuple) -> None:
         ids = list(key[2])
-        form.header(tr("prop.multi_header", count=len(ids)))
+        form.header(tr("prop.multi_header", count=len(ids)), icon("group"))
         form.note(lambda: tr("prop.multi_note"))
         for field in ("stroke_color", "fill_color", "fill_opacity"):
             spec = _STYLE_SPECS[field]
@@ -479,7 +499,7 @@ class PropertiesPanel(QScrollArea):
         scene = self.editor.scene()
         found = scene.find_animation(animation_id)
         step_number = scene.step_index(found[0].id) + 1 if found else 0
-        form.header(tr("prop.animation_header", name=tr(f"anim.{kind.value}"), step=step_number))
+        form.header(tr("prop.animation_header", name=tr(f"anim.{kind.value}"), step=step_number), icon("sparkle"))
         form.note(lambda: tr(f"anim_help.{kind.value}"))
         target_spec = ParamSpec("target_id", ParamType.OBJECT_REF, None)
 
@@ -541,7 +561,7 @@ class PropertiesPanel(QScrollArea):
         step_id, kind = key[2], key[3]
         number = self.editor.scene().step_index(step_id) + 1
         if kind == StepKind.WAIT:
-            form.header(tr("prop.wait_header", step=number))
+            form.header(tr("prop.wait_header", step=number), icon("clock"))
             spec = ParamSpec("wait_time", ParamType.FLOAT, 1.0, minimum=0.05, maximum=600.0, step=0.25)
 
             def commit(value: Any) -> None:
@@ -550,7 +570,7 @@ class PropertiesPanel(QScrollArea):
             widget, show = self._float_editor(spec, commit)
             form.row(tr("prop.wait_time"), widget, lambda: self._step(step_id).wait_time, show)
             return
-        form.header(tr("prop.step_header", step=number))
+        form.header(tr("prop.step_header", step=number), icon("layers"))
         form.note(lambda: self._step_summary(step_id))
         form.note(lambda: tr("prop.step_hint"))
 
@@ -558,7 +578,7 @@ class PropertiesPanel(QScrollArea):
 
     def _build_scene(self, form: _Form, key: tuple) -> None:
         scene_id = key[1]
-        form.header(tr("prop.scene_header"))
+        form.header(tr("prop.scene_header"), icon("scene"))
         name_edit = DebouncedLineEdit()
         name_edit.committed.connect(
             lambda text: text.strip()

@@ -14,14 +14,19 @@ def window(tmp_path, qapp):
     from PySide6.QtCore import QSettings, QThreadPool
 
     from manim_studio.i18n import set_language
+    from manim_studio.ui.context import AppContext
     from manim_studio.ui.main_window import MainWindow
     from manim_studio.ui.settings import AppSettings
+    from manim_studio.ui.theme import apply_theme
 
     app = qapp
     set_language("de")
     settings = AppSettings(QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat))
     settings.hidden_environment_warning = "manim,ffmpeg,latex"
-    main = MainWindow(settings)
+    apply_theme(app, "dark", 1.0, tmp_path / "style")
+    context = AppContext(settings)
+    main = MainWindow(context, lambda: None)
+    context.set_window(main)
     main.show()
     app.processEvents()
     yield main
@@ -112,3 +117,32 @@ def test_drop_from_library_creates_object(window) -> None:
     assert [obj.kind.value for obj in objects] == ["triangle"]
     assert (objects[0].x, objects[0].y) == (2.0, -1.0)
     assert window.editor.selected_objects == [objects[0].id]
+
+
+def test_window_rebuild_keeps_project_and_switches_language(window, qapp, monkeypatch) -> None:
+    import sys
+
+    from manim_studio.i18n import set_language
+    from manim_studio.model.types import ObjectKind
+    from manim_studio.ui.main_window import MainWindow
+
+    errors = []
+    monkeypatch.setattr(sys, "excepthook", lambda *info: errors.append(info))
+    context = window.context
+    context.controller.add_object(ObjectKind.CIRCLE)
+    window.close_for_rebuild()
+    window.deleteLater()
+    qapp.processEvents()
+    set_language("en")
+    rebuilt = MainWindow(context, lambda: None)
+    context.set_window(rebuilt)
+    rebuilt.show()
+    context.controller.add_object(ObjectKind.SQUARE)
+    qapp.processEvents()
+    assert [obj.name for obj in context.editor.scene().objects] == ["Kreis 1", "Square 1"]
+    assert rebuilt.menuBar().actions()[0].text() == "&File"
+    assert len(rebuilt.stage._items) == 2
+    assert not errors
+    rebuilt.document.undo_stack.setClean()
+    rebuilt.close()
+    set_language("de")

@@ -49,7 +49,7 @@ class ColorButton(QToolButton):
         self.setIconSize(QSize(18, 18))
         menu = QMenu(self)
         for name, value in MANIM_COLORS.items():
-            action = menu.addAction(color_icon(value), name)
+            action = menu.addAction(color_icon(value), tr(f"color.{name}"))
             action.triggered.connect(lambda _checked=False, v=value: self._choose(v))
         menu.addSeparator()
         custom = QAction(tr("widget.color_more"), menu)
@@ -70,7 +70,7 @@ class ColorButton(QToolButton):
     def _refresh(self) -> None:
         self.setIcon(color_icon(self._color, 18))
         names = [name for name, value in MANIM_COLORS.items() if value.upper() == self._color.upper()]
-        self.setText(names[0] if names else self._color.upper())
+        self.setText(tr(f"color.{names[0]}") if names else self._color.upper())
 
     def _choose(self, color: str) -> None:
         self._color = color.upper()

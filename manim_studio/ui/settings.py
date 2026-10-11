@@ -39,6 +39,44 @@ class AppSettings:
         self._settings.setValue("language", value)
 
     @property
+    def theme(self) -> str:
+        """Color theme: ``dark`` or ``light``."""
+        return str(self._get("theme", "dark"))
+
+    @theme.setter
+    def theme(self, value: str) -> None:
+        self._settings.setValue("theme", value)
+
+    @property
+    def ui_scale(self) -> float:
+        """Interface scale factor (fonts and controls)."""
+        try:
+            return float(self._get("ui_scale", 1.0))
+        except (TypeError, ValueError):
+            return 1.0
+
+    @ui_scale.setter
+    def ui_scale(self, value: float) -> None:
+        self._settings.setValue("ui_scale", float(value))
+
+    @property
+    def first_run_done(self) -> bool:
+        """Whether the welcome dialog was already shown."""
+        return _to_bool(self._settings.value("first_run_done"), False)
+
+    @first_run_done.setter
+    def first_run_done(self, value: bool) -> None:
+        self._settings.setValue("first_run_done", value)
+
+    def splitter_state(self, key: str) -> object:
+        """Return the saved state of a splitter."""
+        return self._settings.value(f"layout/{key}")
+
+    def set_splitter_state(self, key: str, state: object) -> None:
+        """Remember the state of a splitter."""
+        self._settings.setValue(f"layout/{key}", state)
+
+    @property
     def python_path(self) -> str:
         """Interpreter used to run Manim (defaults to the current one)."""
         return str(self._get("python_path", "")) or sys.executable

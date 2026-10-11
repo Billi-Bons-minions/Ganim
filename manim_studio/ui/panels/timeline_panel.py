@@ -26,6 +26,9 @@ from manim_studio.model.state import START
 from manim_studio.model.types import AnimationKind, StepKind
 from manim_studio.ui.controller import EditorController
 from manim_studio.ui.document import ProjectDocument
+from manim_studio.ui.icon_set import icon
+from manim_studio.ui.theme import color as theme_color
+from manim_studio.ui.theme import px
 from manim_studio.ui.editor_state import INSPECT_ANIMATION, EditorState
 
 ID_ROLE = Qt.ItemDataRole.UserRole
@@ -36,7 +39,9 @@ DURATION_ROLE = Qt.ItemDataRole.UserRole + 4
 
 CARD_SIZE = QSize(178, 100)
 MAX_CARD_LINES = 3
-_KIND_COLORS = {"start": QColor("#5C6370"), "play": QColor("#2E7DBA"), "wait": QColor("#B07D2B")}
+def _kind_color(kind: str) -> QColor:
+    names = {"start": "text_faint", "play": "accent", "wait": "warning"}
+    return theme_color(names.get(kind, "accent"))
 
 #: Order of animations in the menus.
 ANIMATION_MENU = (
@@ -77,9 +82,9 @@ class StepCardDelegate(QStyledItemDelegate):
         rect = QRectF(option.rect).adjusted(4, 4, -4, -4)
         palette = option.palette
         selected = bool(option.state & QStyle.StateFlag.State_Selected)
-        accent = _KIND_COLORS.get(index.data(KIND_ROLE), _KIND_COLORS["play"])
-        painter.setPen(QPen(palette.highlight().color() if selected else palette.mid().color(), 2.4 if selected else 1.0))
-        painter.setBrush(palette.base())
+        accent = _kind_color(index.data(KIND_ROLE))
+        painter.setPen(QPen(theme_color("accent") if selected else theme_color("border_strong"), 2.0 if selected else 1.0))
+        painter.setBrush(theme_color("raised"))
         painter.drawRoundedRect(rect, 7, 7)
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(accent)
@@ -161,11 +166,17 @@ class TimelinePanel(QWidget):
 
     # --- layout ----------------------------------------------------------------
 
-    def _tool_button(self, text: str, tooltip: str, slot=None, menu: QMenu | None = None) -> QToolButton:
+    def _tool_button(self, text: str, tooltip: str, slot=None, menu: QMenu | None = None, icon_name: str = "") -> QToolButton:
         button = QToolButton()
         button.setText(text)
         button.setToolTip(tooltip)
-        button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        if icon_name:
+            button.setIcon(icon(icon_name))
+            button.setIconSize(QSize(px(16), px(16)))
+        style = Qt.ToolButtonStyle.ToolButtonTextBesideIcon if text and icon_name else (
+            Qt.ToolButtonStyle.ToolButtonIconOnly if icon_name else Qt.ToolButtonStyle.ToolButtonTextOnly
+        )
+        button.setToolButtonStyle(style)
         if slot is not None:
             button.clicked.connect(slot)
         if menu is not None:
@@ -180,19 +191,19 @@ class TimelinePanel(QWidget):
 
     def _build_layout(self) -> None:
         toolbar = QHBoxLayout()
-        toolbar.addWidget(self._tool_button(tr("timeline.add_animation"), tr("timeline.add_animation_tip"), menu=self._animation_menu(False)))
-        toolbar.addWidget(self._tool_button(tr("timeline.add_step"), tr("timeline.add_step_tip"), lambda: self.controller.add_step(StepKind.PLAY)))
-        toolbar.addWidget(self._tool_button(tr("timeline.add_wait"), tr("timeline.add_wait_tip"), lambda: self.controller.add_step(StepKind.WAIT)))
-        toolbar.addWidget(self._tool_button(tr("timeline.duplicate"), tr("timeline.duplicate_tip"), self.controller.duplicate_step))
-        toolbar.addWidget(self._tool_button(tr("timeline.delete"), tr("timeline.delete_tip"), self.controller.delete_step))
+        toolbar.addWidget(self._tool_button(tr("timeline.add_animation"), tr("timeline.add_animation_tip"), menu=self._animation_menu(False), icon_name="sparkle"))
+        toolbar.addWidget(self._tool_button(tr("timeline.add_step"), tr("timeline.add_step_tip"), lambda: self.controller.add_step(StepKind.PLAY), icon_name="plus"))
+        toolbar.addWidget(self._tool_button(tr("timeline.add_wait"), tr("timeline.add_wait_tip"), lambda: self.controller.add_step(StepKind.WAIT), icon_name="clock"))
+        toolbar.addWidget(self._tool_button(tr("timeline.duplicate"), tr("timeline.duplicate_tip"), self.controller.duplicate_step, icon_name="duplicate"))
+        toolbar.addWidget(self._tool_button(tr("timeline.delete"), tr("timeline.delete_tip"), self.controller.delete_step, icon_name="trash"))
         toolbar.addSpacing(16)
         toolbar.addWidget(self.view_label)
         toolbar.addStretch(1)
         animation_header = QHBoxLayout()
         self.animation_title = QLabel()
         animation_header.addWidget(self.animation_title, 1)
-        animation_header.addWidget(self._tool_button("+", tr("timeline.add_simultaneous_tip"), menu=self._animation_menu(True)))
-        animation_header.addWidget(self._tool_button("−", tr("timeline.remove_animation_tip"), self._remove_animation))
+        animation_header.addWidget(self._tool_button("", tr("timeline.add_simultaneous_tip"), menu=self._animation_menu(True), icon_name="plus"))
+        animation_header.addWidget(self._tool_button("", tr("timeline.remove_animation_tip"), self._remove_animation, icon_name="minus"))
         animation_box = QVBoxLayout()
         animation_box.setContentsMargins(0, 0, 0, 0)
         animation_box.addLayout(animation_header)

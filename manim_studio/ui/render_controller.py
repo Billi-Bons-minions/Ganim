@@ -65,9 +65,10 @@ class RenderController(QObject):
         editor: EditorState,
         settings: AppSettings,
         latex_available: Callable[[], bool],
-        window: QWidget,
+        window: Callable[[], QWidget | None],
+        parent: QObject | None = None,
     ) -> None:
-        super().__init__(window)
+        super().__init__(parent)
         self.document = document
         self.editor = editor
         self.settings = settings
@@ -99,7 +100,7 @@ class RenderController(QObject):
         for issue in issues:
             self.logLine.emit(f"[{issue.severity}] {issue_text(scene, issue)}")
         if has_errors(issues):
-            show_issues(self.window, scene, issues)
+            show_issues(self.window(), scene, issues)
             return False
         return True
 
@@ -108,7 +109,7 @@ class RenderController(QObject):
         try:
             script = generate_script(self.document.project, options)
         except CodegenError as error:
-            QMessageBox.warning(self.window, tr("render.failed_title"), codegen_error_text(error))
+            QMessageBox.warning(self.window(), tr("render.failed_title"), codegen_error_text(error))
             return None
         path = self.work_dir() / SCRIPT_NAME
         path.write_text(script, encoding="utf-8")
@@ -191,7 +192,7 @@ class RenderController(QObject):
     def _report_failure(self, result: RenderResult) -> None:
         message = render_error_text(result.error) if result.error else tr("render_error.unknown", detail="")
         self.statusMessage.emit(tr("render.failed_status"))
-        box = QMessageBox(self.window)
+        box = QMessageBox(self.window())
         box.setIcon(QMessageBox.Icon.Critical)
         box.setWindowTitle(tr("render.failed_title"))
         box.setText(message)
@@ -207,10 +208,10 @@ class RenderController(QObject):
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(output, target)
         except OSError as error:
-            QMessageBox.critical(self.window, tr("render.failed_title"), tr("render.copy_failed", error=str(error)))
+            QMessageBox.critical(self.window(), tr("render.failed_title"), tr("render.copy_failed", error=str(error)))
             return
         self.statusMessage.emit(tr("render.export_done", path=str(target)))
-        box = QMessageBox(self.window)
+        box = QMessageBox(self.window())
         box.setIcon(QMessageBox.Icon.Information)
         box.setWindowTitle(tr("render.export_done_title"))
         box.setText(tr("render.export_done", path=str(target)))

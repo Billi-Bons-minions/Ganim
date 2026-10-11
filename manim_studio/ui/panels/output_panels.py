@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from manim_studio.i18n import tr
+from manim_studio.ui.icon_set import icon
 
 LOG_LIMIT = 20_000
 
@@ -73,9 +74,9 @@ class CodePanel(QWidget):
         self.highlighter = PythonHighlighter(self.editor.document())
         self.status = QLabel()
         self.status.setWordWrap(True)
-        copy_button = QPushButton(tr("code.copy"))
+        copy_button = QPushButton(icon("copy"), tr("code.copy"))
         copy_button.clicked.connect(self.copyRequested.emit)
-        export_button = QPushButton(tr("code.export"))
+        export_button = QPushButton(icon("code"), tr("code.export"))
         export_button.clicked.connect(self.exportRequested.emit)
         buttons = QHBoxLayout()
         buttons.addWidget(self.status, 1)
@@ -113,9 +114,9 @@ class LogPanel(QWidget):
         self._pending: list[str] = []
         self._timer = QTimer(self, interval=100)
         self._timer.timeout.connect(self._flush)
-        clear_button = QPushButton(tr("log.clear"))
+        clear_button = QPushButton(icon("trash"), tr("log.clear"))
         clear_button.clicked.connect(self.clear)
-        save_button = QPushButton(tr("log.save"))
+        save_button = QPushButton(icon("save"), tr("log.save"))
         save_button.clicked.connect(self.saveRequested.emit)
         buttons = QHBoxLayout()
         buttons.addStretch(1)

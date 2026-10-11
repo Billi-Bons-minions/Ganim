@@ -575,6 +575,10 @@ def is_bound(scene: Scene, obj: SceneObject) -> bool:
         return bound_axes(scene, obj) is not None
     if obj.kind == ObjectKind.DATA_PLOT:
         return data_axes(scene, obj) is not None
+    if obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D):
+        from manim_studio.model.three_d import axes_of
+
+        return axes_of(scene, obj) is not None
     if obj.kind in GRAPH_TOOL_KINDS:
         return tool_graph(scene, obj) is not None
     return False
@@ -611,6 +615,17 @@ def bound_anchor(scene: Scene, obj: SceneObject, values: Values | None = None) -
         if center is not None:
             return center
         return (axes.x, axes.y) if axes is not None else (obj.x, obj.y)
+    if obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D):
+        from manim_studio.model import three_d
+
+        view = three_d.view_of(scene)
+        if obj.kind == ObjectKind.SURFACE:
+            points3 = [point for line in three_d.surface_grid(scene, obj) for point in line]
+        else:
+            points3 = three_d.curve_points(scene, obj)
+        flat = three_d.project(points3, view)
+        center = bbox_center([flat]) if flat else None
+        return center if center is not None else (obj.x, obj.y)
     if obj.kind == ObjectKind.DATA_PLOT:
         from manim_studio.model.data import data_points
 

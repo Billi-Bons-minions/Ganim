@@ -61,7 +61,7 @@ def dynamic_keys() -> set[str]:
     keys |= {f"color.{name}" for name in MANIM_COLORS}
     keys |= {f"example.{example.key}.{part}" for example in EXAMPLES for part in ("name", "text", "scene")}
     keys |= {f"tour.{step}" for step in ("intro", "add_circle", "animate", "timeline", "new_step", "drag", "preview", "done")}
-    keys |= {f"library.category.{key}" for key in ("shapes", "lines", "text", "math", "analysis", "media")}
+    keys |= {f"library.category.{key}" for key in ("shapes", "lines", "text", "math", "analysis", "three_d", "media")}
     keys |= {f"settings.theme.{name}" for name in ("dark", "light")}
     keys |= {f"{prefix}.arrange.{mode}" for prefix in ("action", "undo") for mode in ALIGN_MODES + DISTRIBUTE_MODES}
     keys |= {f"graph_action.{key}{suffix}" for key, _action, _params in GRAPH_ACTIONS for suffix in ("", "_tip")}

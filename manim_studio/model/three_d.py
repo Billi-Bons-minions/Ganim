@@ -1,0 +1,223 @@
+"""Limited 3D: 3D axes, surfaces z = f(x, y), 3D curves and the 3D camera.
+
+The projection mirrors Manim's ``ThreeDCamera`` (rotation by ``theta`` and
+``phi``, perspective with ``focal_distance`` 20), so the stage shows the same
+picture as the rendered video.
+"""
+
+from __future__ import annotations
+
+import math
+from dataclasses import dataclass
+
+from manim_studio.model.entities import Scene, SceneObject
+from manim_studio.model.expression import Expression, ExpressionError, parse_expression
+from manim_studio.model.geometry import param_float
+from manim_studio.model.types import ObjectKind
+
+THREE_D_KINDS = frozenset({ObjectKind.AXES_3D, ObjectKind.SURFACE, ObjectKind.CURVE_3D})
+DEFAULT_PHI = 70.0
+DEFAULT_THETA = -45.0
+FOCAL_DISTANCE = 20.0
+
+Point3 = tuple[float, float, float]
+
+
+def is_3d(scene: Scene) -> bool:
+    """Return ``True`` if the scene needs Manim's ``ThreeDScene``."""
+    return any(obj.kind in THREE_D_KINDS for obj in scene.objects)
+
+
+@dataclass(frozen=True)
+class View:
+    """Camera orientation in degrees (Manim's ``phi`` and ``theta``) and zoom."""
+
+    phi: float = DEFAULT_PHI
+    theta: float = DEFAULT_THETA
+    zoom: float = 1.0
+
+
+def _matrix(view: View) -> list[list[float]]:
+    """``rotation_matrix(-phi, RIGHT) · rotation_about_z(-theta - 90°)``."""
+    a = math.radians(-view.theta - 90.0)
+    b = math.radians(-view.phi)
+    rz = [[math.cos(a), -math.sin(a), 0.0], [math.sin(a), math.cos(a), 0.0], [0.0, 0.0, 1.0]]
+    rx = [[1.0, 0.0, 0.0], [0.0, math.cos(b), -math.sin(b)], [0.0, math.sin(b), math.cos(b)]]
+    return [[sum(rx[i][k] * rz[k][j] for k in range(3)) for j in range(3)] for i in range(3)]
+
+
+def project(points: list[Point3], view: View) -> list[tuple[float, float]]:
+    """Project 3D points onto the screen like Manim's ``ThreeDCamera.project_points``."""
+    matrix = _matrix(view)
+    result = []
+    for x, y, z in points:
+        px = matrix[0][0] * x + matrix[0][1] * y + matrix[0][2] * z
+        py = matrix[1][0] * x + matrix[1][1] * y + matrix[1][2] * z
+        pz = matrix[2][0] * x + matrix[2][1] * y + matrix[2][2] * z
+        denominator = FOCAL_DISTANCE - pz
+        factor = FOCAL_DISTANCE / denominator if denominator > 0 else 1e6
+        result.append((px * factor * view.zoom, py * factor * view.zoom))
+    return result
+
+
+# --- axes ----------------------------------------------------------------------------------
+
+
+def axes_ranges(axes: SceneObject) -> dict[str, tuple[float, float, float]]:
+    """``{"x": (min, max, length), ...}`` of 3D axes."""
+    result = {}
+    for axis, (low, high, length) in {"x": (-5.0, 5.0, 8.0), "y": (-5.0, 5.0, 8.0), "z": (-3.0, 3.0, 5.0)}.items():
+        result[axis] = (
+            param_float(axes.params, f"{axis}_min", low),
+            param_float(axes.params, f"{axis}_max", high),
+            param_float(axes.params, f"{axis}_length", length),
+        )
+    return result
+
+
+def _origin_shift(low: float, high: float) -> float:
+    if low > 0:
+        return low
+    if high < 0:
+        return high
+    return 0.0
+
+
+def to_space(axes: SceneObject, x: float, y: float, z: float) -> Point3:
+    """Axes coordinates → scene coordinates (like ``ThreeDAxes.c2p``, centered on the object)."""
+    ranges = axes_ranges(axes)
+    coordinates = {"x": x, "y": y, "z": z}
+    values = []
+    for axis in ("x", "y", "z"):
+        low, high, length = ranges[axis]
+        span = high - low or 1.0
+        values.append((coordinates[axis] - (low + high) / 2) / span * length)
+    return values[0] + axes.x, values[1] + axes.y, values[2]
+
+
+def axes_lines(axes: SceneObject) -> list[list[Point3]]:
+    """Axis lines and tick marks in scene coordinates."""
+    ranges = axes_ranges(axes)
+    origin = {axis: _origin_shift(low, high) for axis, (low, high, _length) in ranges.items()}
+    lines = []
+    for axis in ("x", "y", "z"):
+        low, high, _length = ranges[axis]
+        start = dict(origin)
+        end = dict(origin)
+        start[axis], end[axis] = low, high
+        lines.append([to_space(axes, start["x"], start["y"], start["z"]), to_space(axes, end["x"], end["y"], end["z"])])
+        step = param_float(axes.params, f"{axis}_step", 1.0)
+        if step > 0 and (high - low) / step <= 60:
+            other = "y" if axis == "x" else "x"
+            tick = 0.1 * (ranges[other][1] - ranges[other][0]) / max(ranges[other][2], 0.01)
+            value = math.ceil(low / step) * step
+            while value <= high + 1e-9:
+                if abs(value - origin[axis]) > 1e-9:
+                    a, b = dict(origin), dict(origin)
+                    a[axis] = b[axis] = value
+                    a[other] -= tick
+                    b[other] += tick
+                    lines.append([to_space(axes, a["x"], a["y"], a["z"]), to_space(axes, b["x"], b["y"], b["z"])])
+                value += step
+    return lines
+
+
+def axis_tips(axes: SceneObject) -> list[tuple[Point3, Point3]]:
+    """``(end, point just before the end)`` of the positive x, y and z axes."""
+    ranges = axes_ranges(axes)
+    origin = {axis: _origin_shift(low, high) for axis, (low, high, _length) in ranges.items()}
+    tips = []
+    for axis in ("x", "y", "z"):
+        low, high, length = ranges[axis]
+        back = 0.3 * (high - low) / max(length, 0.01)
+        end, before = dict(origin), dict(origin)
+        end[axis], before[axis] = high, high - back
+        tips.append((to_space(axes, end["x"], end["y"], end["z"]), to_space(axes, before["x"], before["y"], before["z"])))
+    return tips
+
+
+def axes_of(scene: Scene, obj: SceneObject) -> SceneObject | None:
+    """The 3D axes a surface or curve belongs to."""
+    axes = scene.object_by_id(obj.params.get("axes_id"))
+    return axes if axes is not None and axes.kind == ObjectKind.AXES_3D else None
+
+
+# --- surfaces and curves -----------------------------------------------------------------------
+
+
+def surface_expression(obj: SceneObject, parameters: tuple[str, ...] = ()) -> Expression | None:
+    """``z = f(x, y)`` (``y`` is passed as an extra name)."""
+    try:
+        return parse_expression(str(obj.params.get("expression", "")), "x", ("y", *parameters))
+    except ExpressionError:
+        return None
+
+
+def _value(expression: Expression, x: float, y: float, values: dict[str, float]) -> float:
+    try:
+        result = expression.evaluate(x, {**values, "y": y})
+    except (ArithmeticError, ValueError, OverflowError):
+        return math.nan
+    return result if math.isfinite(result) else math.nan
+
+
+def surface_grid(scene: Scene, obj: SceneObject, values: dict[str, float] | None = None) -> list[list[Point3]]:
+    """Grid lines of a surface in scene coordinates (rows and columns)."""
+    from manim_studio.model.graphs import parameter_symbols, scene_values
+
+    axes = axes_of(scene, obj)
+    expression = surface_expression(obj, parameter_symbols(scene))
+    if axes is None or expression is None:
+        return []
+    values = scene_values(scene, values)
+    u0, u1 = param_float(obj.params, "x_min", -2.0), param_float(obj.params, "x_max", 2.0)
+    v0, v1 = param_float(obj.params, "y_min", -2.0), param_float(obj.params, "y_max", 2.0)
+    steps = max(2, min(64, int(param_float(obj.params, "resolution", 16))))
+    us = [u0 + (u1 - u0) * i / steps for i in range(steps + 1)]
+    vs = [v0 + (v1 - v0) * j / steps for j in range(steps + 1)]
+    lines = []
+    for u in us:
+        lines.append([to_space(axes, u, v, _value(expression, u, v, values)) for v in vs])
+    for v in vs:
+        lines.append([to_space(axes, u, v, _value(expression, u, v, values)) for u in us])
+    return [[point for point in line if math.isfinite(point[2])] for line in lines]
+
+
+def curve_points(scene: Scene, obj: SceneObject, values: dict[str, float] | None = None) -> list[Point3]:
+    """A 3D parametric curve ``(x(t), y(t), z(t))`` in scene coordinates."""
+    from manim_studio.model.graphs import parameter_symbols, scene_values
+
+    axes = axes_of(scene, obj)
+    if axes is None:
+        return []
+    values = scene_values(scene, values)
+    parameters = parameter_symbols(scene)
+    try:
+        functions = [parse_expression(str(obj.params.get(key, "")), "t", parameters) for key in ("x_expression", "y_expression", "z_expression")]
+    except ExpressionError:
+        return []
+    t0, t1 = param_float(obj.params, "t_min", 0.0), param_float(obj.params, "t_max", 6.2832)
+    points = []
+    for index in range(301):
+        t = t0 + (t1 - t0) * index / 300
+        try:
+            x, y, z = (function.evaluate(t, values) for function in functions)
+        except (ArithmeticError, ValueError, OverflowError):
+            continue
+        if all(math.isfinite(value) for value in (x, y, z)):
+            points.append(to_space(axes, x, y, z))
+    return points
+
+
+# --- camera ------------------------------------------------------------------------------------
+
+
+def view_of(scene: Scene, states: dict | None = None) -> View:
+    """Current 3D camera orientation (from the camera object and its animations)."""
+    camera = next((obj for obj in scene.objects if obj.kind == ObjectKind.CAMERA), None)
+    if camera is None:
+        return View()
+    state = (states or {}).get(camera.id)
+    if state is not None:
+        return View(state.phi, state.theta, 1.0)
+    return View(param_float(camera.params, "phi", DEFAULT_PHI), param_float(camera.params, "theta", DEFAULT_THETA), 1.0)

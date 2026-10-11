@@ -9,6 +9,7 @@ from pathlib import Path
 from manim_studio.codegen.errors import CodegenError
 from manim_studio.codegen.formatting import INDENT, MAX_LINE
 from manim_studio.codegen.literals import LiteralError, fmt_float, py_color, py_degrees, py_point, py_str
+from manim_studio.codegen.three_d_code import orbit_call
 from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import STEP_LAGGED, STEP_SEQUENCE, Animation, Scene, Step
 from manim_studio.model.schema import animation_allowed
@@ -408,6 +409,16 @@ def step_code(
             raise CodegenError("wait_time_invalid", str(number))
         caption = [f"self.add_subcaption({py_str(subcaption)}, duration={fmt_float(step.wait_time)})"] if subcaption else []
         return [header] + extras + caption + [f"self.wait({fmt_float(step.wait_time)})"]
+    orbit = next((anim for anim in step.animations if anim.kind == AnimationKind.ORBIT), None)
+    if orbit is not None:
+        others = Step(step.id, step.kind, [anim for anim in step.animations if anim.kind != AnimationKind.ORBIT], step.wait_time, step.mode, step.lag_ratio)
+        try:
+            added = step_animation_codes(others, scene, names, helpers) if others.animations else []
+        except LiteralError as error:
+            raise CodegenError("value_invalid", f"step {number}: {error}") from None
+        if any("\n" in code for code in added):
+            added = [code.replace("\n", " ") for code in added]
+        return [header] + extras + [orbit_call(orbit, plain_timing(orbit).args(), added)]
     try:
         codes = step_animation_codes(step, scene, names, helpers)
     except LiteralError as error:

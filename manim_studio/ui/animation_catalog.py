@@ -28,6 +28,7 @@ ANIMATION_GROUPS: tuple[tuple[str, tuple[AnimationKind, ...]], ...] = (
             AnimationKind.MOVE_ALONG_PATH,
             AnimationKind.SWAP,
             AnimationKind.SET_VALUE,
+            AnimationKind.ORBIT,
         ),
     ),
     ("transform", (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM, AnimationKind.FADE_TRANSFORM, AnimationKind.TRANSFORM_MATCHING)),
@@ -46,4 +47,4 @@ ANIMATION_GROUPS: tuple[tuple[str, tuple[AnimationKind, ...]], ...] = (
 )
 
 #: Buttons that are hidden (instead of disabled) where they do not apply.
-ONLY_WHEN_ALLOWED = frozenset({AnimationKind.SET_VALUE, AnimationKind.ADD_LETTERS, AnimationKind.GROW_ARROW})
+ONLY_WHEN_ALLOWED = frozenset({AnimationKind.SET_VALUE, AnimationKind.ADD_LETTERS, AnimationKind.GROW_ARROW, AnimationKind.ORBIT})

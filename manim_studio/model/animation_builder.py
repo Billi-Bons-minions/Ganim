@@ -50,6 +50,8 @@ def default_transform_target(scene: Scene, source_id: str, states: dict[str, Obj
 def _defaults(kind: AnimationKind, state: ObjectState | None) -> dict[str, object]:
     if kind == AnimationKind.MOVE and state is not None:
         return {"x": round(state.x + 1.0, 4), "y": round(state.y, 4)}
+    if kind == AnimationKind.ORBIT and state is not None:
+        return {"phi": round(state.phi, 4), "theta": round(state.theta + 45.0, 4)}
     if kind == AnimationKind.SET_VALUE and state is not None:
         return {"value": round(state.value + (1.0 if abs(state.value) < 10 else abs(state.value)), 4)}
     return {}

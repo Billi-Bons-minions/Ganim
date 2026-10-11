@@ -642,6 +642,17 @@ def _a_swap(p: QPainter) -> None:
     _arrow_head(p, 5.9, 17.5, math.radians(240), 3)
 
 
+def _a_orbit(p: QPainter) -> None:
+    p.save()
+    pen = p.pen()
+    pen.setStyle(Qt.PenStyle.DashLine)
+    p.setPen(pen)
+    p.drawEllipse(QRectF(2, 8, 20, 9))
+    p.restore()
+    _rect(p, 8, 2, 8, 6, 1)
+    _arrow_head(p, 20.5, 14.5, math.radians(110), 3)
+
+
 def _a_value(p: QPainter) -> None:
     _line(p, 3, 17, 21, 17)
     _circle(p, 15, 17, 2.6, fill=True)
@@ -845,6 +856,7 @@ ICONS: dict[str, Drawer] = {
     "a_transform_matching": _a_matching,
     "a_move_along_path": _a_path,
     "a_swap": _a_swap,
+    "a_orbit": _a_orbit,
     "a_indicate": _sparkle,
     "a_circumscribe": _a_circumscribe,
     "a_fade_out": _a_fade_out,

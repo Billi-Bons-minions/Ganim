@@ -326,6 +326,34 @@ def _camera_kind(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill
     p.drawEllipse(QPointF(body.center().x(), body.center().y()), s * 0.1, s * 0.1)
 
 
+def _axes_3d(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    origin = QPointF(s * 0.45, s * 0.6)
+    p.setPen(QPen(neutral, w))
+    for end in (QPointF(s - m * 0.6, s * 0.72), QPointF(s * 0.45, m * 0.6), QPointF(m * 0.6, s - m * 0.6)):
+        _arrow(p, origin, end, neutral)
+
+
+def _surface(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    path = QPainterPath(QPointF(m, s * 0.55))
+    path.cubicTo(QPointF(s * 0.3, s * 0.25), QPointF(s * 0.45, s * 0.75), QPointF(s * 0.62, s * 0.4))
+    path.lineTo(QPointF(s - m, s * 0.3))
+    path.cubicTo(QPointF(s * 0.75, s * 0.55), QPointF(s * 0.6, s * 0.95), QPointF(s * 0.38, s * 0.72))
+    path.closeSubpath()
+    p.drawPath(path)
+    p.setPen(QPen(stroke, w * 0.5))
+    p.drawLine(QPointF(s * 0.3, s * 0.42), QPointF(s * 0.5, s * 0.82))
+    p.drawLine(QPointF(s * 0.5, s * 0.5), QPointF(s * 0.68, s * 0.72))
+
+
+def _curve_3d(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    path = QPainterPath(QPointF(s / 2 + s * 0.3, s - m))
+    for index in range(1, 81):
+        t = index / 80 * 4 * math.pi
+        path.lineTo(QPointF(s / 2 + s * 0.3 * math.cos(t), s - m - (s - 2 * m) * index / 80 + s * 0.08 * math.sin(t)))
+    p.drawPath(path)
+
+
 _EXTRA_DRAWERS = {
     ObjectKind.NUMBER_LINE: _number_line,
     ObjectKind.VECTOR: _vector,
@@ -355,6 +383,9 @@ _EXTRA_DRAWERS = {
     ObjectKind.DATA_PLOT: _data_plot,
     ObjectKind.BAR_CHART: _bar_chart,
     ObjectKind.CAMERA: _camera_kind,
+    ObjectKind.AXES_3D: _axes_3d,
+    ObjectKind.SURFACE: _surface,
+    ObjectKind.CURVE_3D: _curve_3d,
 }
 
 

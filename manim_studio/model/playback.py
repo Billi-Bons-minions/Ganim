@@ -184,6 +184,9 @@ def apply_partial(states: dict[str, ObjectState], anim: Animation, progress: flo
     elif kind == AnimationKind.SET_VALUE:
         target = float(anim.params.get("value", state.value))
         states[anim.target_id] = replace(state, value=state.value + (target - state.value) * progress)
+    elif kind == AnimationKind.ORBIT:
+        phi, theta = float(anim.params.get("phi", state.phi)), float(anim.params.get("theta", state.theta))
+        states[anim.target_id] = replace(state, phi=state.phi + (phi - state.phi) * progress, theta=state.theta + (theta - state.theta) * progress)
     else:
         states[anim.target_id] = _partial_modifier(state, anim, progress)
 

@@ -83,6 +83,8 @@ class StageResources:
     values: dict[str, float] | None = None
     #: Size of the video frame in Manim units (depends on the project's format).
     frame_size: tuple[float, float] = (8.0 * 16 / 9, 8.0)
+    #: Orientation of the 3D camera (``None`` for the default view).
+    view3d: object = None
 
 
 def pt(x: float, y: float) -> QPointF:
@@ -453,6 +455,7 @@ def _image_primitives(obj: SceneObject, resources: StageResources) -> list[Primi
 
 
 def _shape_drawing(obj: SceneObject, state: ObjectState, scene: Scene, resources: StageResources) -> tuple[list[Primitive], bool]:
+    from manim_studio.ui.stage.drawing_3d import three_d_primitives
     from manim_studio.ui.stage.drawing_data import bar_chart_primitives, data_primitives
     from manim_studio.ui.stage.drawing_extra import extra_drawing
     from manim_studio.ui.stage.drawing_graph import graph_primitives, label_primitives, tool_primitives
@@ -501,6 +504,8 @@ def _shape_drawing(obj: SceneObject, state: ObjectState, scene: Scene, resources
         return camera_primitives(obj, resources.frame_size), True
     if kind == ObjectKind.DATA_PLOT:
         return data_primitives(scene, obj, state)
+    if kind in (ObjectKind.AXES_3D, ObjectKind.SURFACE, ObjectKind.CURVE_3D):
+        return three_d_primitives(scene, obj, state, resources)
     if kind == ObjectKind.BAR_CHART:
         return bar_chart_primitives(obj, state)
     return _image_primitives(obj, resources), True

@@ -160,6 +160,10 @@ class EditorController(QObject):
             axes = [o for o in scene.objects if o.kind in (ObjectKind.AXES, ObjectKind.NUMBER_PLANE)]
             if axes:
                 obj.params["axes_id"] = axes[-1].id
+        if obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D) and not obj.params.get("axes_id"):
+            axes = [o for o in scene.objects if o.kind == ObjectKind.AXES_3D]
+            if axes:
+                obj.params["axes_id"] = axes[-1].id
         if obj.kind not in GRAPH_TOOL_KINDS or obj.params.get("graph_id"):
             return
         candidates = self._function_graphs()

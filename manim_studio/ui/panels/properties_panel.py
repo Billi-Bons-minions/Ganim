@@ -517,7 +517,7 @@ class PropertiesPanel(QScrollArea):
     def _expression_message(self, object_id: str, spec: ParamSpec) -> str:
         scene = self.editor.scene()
         text = str(self._object(object_id).params.get(spec.key, ""))
-        error = check_expression(text, spec.variable, graphs.parameter_symbols(scene))
+        error = check_expression(text, spec.variable, (*spec.extra_names, *graphs.parameter_symbols(scene)))
         if error is None:
             return ""
         return tr(f"expr.{error.code}", detail=error.detail)

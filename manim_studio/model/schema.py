@@ -65,6 +65,8 @@ class ParamSpec:
     optional: bool = False
     visible_when: tuple[str, tuple[Any, ...]] | None = None
     variable: str = "x"
+    #: Further names a term may use (e.g. ``y`` for surfaces z = f(x, y)).
+    extra_names: tuple[str, ...] = ()
 
     def is_visible(self, params: dict[str, Any], defaults: dict[str, Any] | None = None) -> bool:
         """Return ``True`` if the parameter applies with the given other values."""
@@ -509,8 +511,45 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
     ),
     ObjectKind.CAMERA: KindInfo(
         ObjectKind.CAMERA,
-        (ParamSpec("width", ParamType.FLOAT, 0.0, minimum=0.0, maximum=1000.0, step=0.5, decimals=3),),
+        (
+            ParamSpec("width", ParamType.FLOAT, 0.0, minimum=0.0, maximum=1000.0, step=0.5, decimals=3),
+            ParamSpec("phi", ParamType.FLOAT, 70.0, minimum=0.0, maximum=180.0, step=5.0, decimals=1),
+            ParamSpec("theta", ParamType.FLOAT, -45.0, minimum=-360.0, maximum=360.0, step=5.0, decimals=1),
+        ),
         frozenset(),
+    ),
+    ObjectKind.AXES_3D: KindInfo(
+        ObjectKind.AXES_3D,
+        _range_params("x", -4.0, 4.0, 1.0, 6.0) + _range_params("y", -4.0, 4.0, 1.0, 6.0) + _range_params("z", -3.0, 3.0, 1.0, 4.0),
+        _AXES_STYLE,
+        (("stroke_color", _WHITE), ("stroke_width", 2.0)),
+    ),
+    ObjectKind.SURFACE: KindInfo(
+        ObjectKind.SURFACE,
+        (
+            ParamSpec("axes_id", ParamType.OBJECT_REF, None, ref_kinds=(ObjectKind.AXES_3D,)),
+            ParamSpec("expression", ParamType.EXPRESSION, "sin(x) cos(y)", extra_names=("y",)),
+            ParamSpec("x_min", ParamType.FLOAT, -3.0, minimum=-1000.0, maximum=1000.0, step=0.5),
+            ParamSpec("x_max", ParamType.FLOAT, 3.0, minimum=-1000.0, maximum=1000.0, step=0.5),
+            ParamSpec("y_min", ParamType.FLOAT, -3.0, minimum=-1000.0, maximum=1000.0, step=0.5),
+            ParamSpec("y_max", ParamType.FLOAT, 3.0, minimum=-1000.0, maximum=1000.0, step=0.5),
+            ParamSpec("resolution", ParamType.INT, 24, minimum=4, maximum=64),
+        ),
+        frozenset({"stroke_color", "stroke_width", "fill_color", "fill_opacity"}),
+        (("stroke_color", "#29ABCA"), ("stroke_width", 0.5), ("fill_color", "#58C4DD"), ("fill_opacity", 0.75)),
+    ),
+    ObjectKind.CURVE_3D: KindInfo(
+        ObjectKind.CURVE_3D,
+        (
+            ParamSpec("axes_id", ParamType.OBJECT_REF, None, ref_kinds=(ObjectKind.AXES_3D,)),
+            ParamSpec("x_expression", ParamType.EXPRESSION, "2cos(t)", variable="t"),
+            ParamSpec("y_expression", ParamType.EXPRESSION, "2sin(t)", variable="t"),
+            ParamSpec("z_expression", ParamType.EXPRESSION, "t/4", variable="t"),
+            ParamSpec("t_min", ParamType.FLOAT, -6.2832, minimum=-1000.0, maximum=1000.0, step=0.5, decimals=4),
+            ParamSpec("t_max", ParamType.FLOAT, 6.2832, minimum=-1000.0, maximum=1000.0, step=0.5, decimals=4),
+        ),
+        _LINE_STYLE,
+        (("stroke_color", _YELLOW), ("stroke_width", 4.0)),
     ),
     ObjectKind.PARAMETER: KindInfo(
         ObjectKind.PARAMETER,
@@ -556,6 +595,10 @@ ANIMATION_PARAMS: dict[AnimationKind, tuple[ParamSpec, ...]] = {
     AnimationKind.SWAP: (ParamSpec("partner", ParamType.OBJECT_REF, None),),
     AnimationKind.FLASH: (ParamSpec("color", ParamType.COLOR, _YELLOW),),
     AnimationKind.APPLY_WAVE: (ParamSpec("amplitude", ParamType.FLOAT, 0.2, minimum=0.01, maximum=5.0, step=0.05),),
+    AnimationKind.ORBIT: (
+        ParamSpec("phi", ParamType.FLOAT, 60.0, minimum=0.0, maximum=180.0, step=5.0, decimals=1),
+        ParamSpec("theta", ParamType.FLOAT, 30.0, minimum=-3600.0, maximum=3600.0, step=15.0, decimals=1),
+    ),
 }
 
 #: Manim's default rate function per animation where it differs from ``smooth``.
@@ -625,6 +668,8 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
         return False
     if obj_kind == ObjectKind.CAMERA:
         return anim_kind in CAMERA_ANIMATIONS
+    if anim_kind == AnimationKind.ORBIT:
+        return False
     if anim_kind == AnimationKind.ADD_LETTERS:
         return obj_kind == ObjectKind.TEXT
     if anim_kind == AnimationKind.GROW_ARROW:

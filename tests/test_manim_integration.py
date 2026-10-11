@@ -365,3 +365,11 @@ def test_builtin_templates_run_in_manim(tmp_path) -> None:
     script = generate_script(project, CodegenOptions(joined=True))
     result = run_manim(tmp_path, script, "AllScenes", "--dry_run")
     assert result.returncode == 0, result.stdout + result.stderr + script
+
+
+def test_three_d_scene_renders(tmp_path) -> None:
+    from tests.test_three_d import space_scene
+
+    script = generate_script(make_project(space_scene()))
+    result = run_manim(tmp_path, script, "Raum", "--format", "png")
+    assert result.returncode == 0, result.stdout + result.stderr + script

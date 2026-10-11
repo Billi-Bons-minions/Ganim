@@ -8,7 +8,7 @@ from typing import Callable
 from manim_studio.codegen.data_code import bar_chart_code, bar_label_lines, data_plot_code
 from manim_studio.codegen.errors import CodegenError
 from manim_studio.codegen.formatting import assign, call
-from manim_studio.codegen.graph_code import axis_label_lines, graph_object_code
+from manim_studio.codegen.graph_code import axis_label_lines, graph_object_code, renames
 from manim_studio.codegen.literals import (
     LiteralError,
     fmt_float,
@@ -26,11 +26,14 @@ from manim_studio.codegen.objects_extra import (
     group_code,
 )
 from manim_studio.codegen.objects_extra import text as extra_text
+from manim_studio.codegen.three_d_code import axes_3d_code, curve_3d_code, surface_code
+from manim_studio.model import graphs
 from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.latex import colored_parts, colorize
 from manim_studio.model.schema import is_vector_image_path
-from manim_studio.model.types import GRAPH_TOOL_KINDS, INVISIBLE_KINDS, ObjectKind
+from manim_studio.model.three_d import THREE_D_KINDS, is_3d
+from manim_studio.model.types import GRAPH_TOOL_KINDS, INVISIBLE_KINDS, UNADDED_KINDS, ObjectKind
 
 Kwargs = list[tuple[str, str]]
 
@@ -258,9 +261,18 @@ def object_code(
     try:
         special = _special_code(scene, obj, names) or graph_object_code(scene, obj, names, helpers)
         if obj.kind == ObjectKind.CAMERA:
-            return camera_code(obj, variable)
+            return [] if is_3d(scene) else camera_code(obj, variable)
         if special is not None:
             lines, place = special
+        elif obj.kind == ObjectKind.AXES_3D:
+            lines, place = assign(variable, axes_3d_code(obj)), True
+        elif obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D):
+            rename = renames(scene, names)
+            build = surface_code if obj.kind == ObjectKind.SURFACE else curve_3d_code
+            expression_lines = build(scene, obj, names, rename)
+            if graphs.parameter_users(scene, obj):
+                expression_lines = ["always_redraw(", "    lambda: " + expression_lines[0]] + ["    " + line for line in expression_lines[1:]] + [")"]
+            lines, place = assign(variable, expression_lines), False
         elif obj.kind == ObjectKind.DATA_PLOT:
             lines, place = assign(variable, data_plot_code(scene, obj, names)), False
         elif obj.kind == ObjectKind.BAR_CHART:
@@ -287,6 +299,8 @@ def object_code(
         if isinstance(error, CodegenError):
             raise
         raise CodegenError("value_invalid", f"{obj.name}: {error}") from None
+    if is_3d(scene) and obj.kind not in UNADDED_KINDS and obj.kind not in THREE_D_KINDS:
+        lines.append(f"self.renderer.camera.add_fixed_in_frame_mobjects({variable})")
     if obj.z_index and obj.kind not in INVISIBLE_KINDS:
         lines.append(f"{variable}.set_z_index({fmt_int(obj.z_index)})")
     return lines
@@ -295,7 +309,7 @@ def object_code(
 def dependencies(scene: Scene, obj: SceneObject) -> list[str]:
     """Return ids of objects that must be created before ``obj``."""
     result: list[str] = []
-    if obj.kind in (ObjectKind.FUNCTION_GRAPH, ObjectKind.DATA_PLOT) and obj.params.get("axes_id"):
+    if obj.kind in (ObjectKind.FUNCTION_GRAPH, ObjectKind.DATA_PLOT, ObjectKind.SURFACE, ObjectKind.CURVE_3D) and obj.params.get("axes_id"):
         result.append(str(obj.params.get("axes_id")))
     if obj.kind in GRAPH_TOOL_KINDS:
         for key in ("x_parameter",):

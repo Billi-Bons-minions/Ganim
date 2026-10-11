@@ -96,6 +96,17 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
         _graph_issues(scene, obj, add)
     if obj.kind in GRAPH_TOOL_KINDS:
         _tool_issues(scene, obj, add)
+    if obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D):
+        from manim_studio.model.three_d import axes_of
+
+        if axes_of(scene, obj) is None:
+            add(ERROR, "axes_3d_missing")
+        if obj.kind == ObjectKind.SURFACE:
+            _expression_issue_names(scene, str(params.get("expression", "")), "x", ("y",), add)
+        else:
+            for key in ("x_expression", "y_expression", "z_expression"):
+                if _expression_issue(scene, str(params.get(key, "")), "t", add):
+                    break
     if obj.kind == ObjectKind.DATA_PLOT:
         if graphs.data_axes(scene, obj) is None:
             add(ERROR, "data_needs_axes")
@@ -120,6 +131,14 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
         elif not resolve_asset_path(path, base_dir).is_file():
             add(ERROR, "image_not_found", path)
     return issues
+
+
+def _expression_issue_names(scene: Scene, text: str, variable: str, extra: tuple[str, ...], add) -> bool:
+    error = check_expression(text, variable, (*extra, *graphs.parameter_symbols(scene)))
+    if error is not None:
+        add(ERROR, "expression_invalid", error.code + (f": {error.detail}" if error.detail else ""))
+        return True
+    return False
 
 
 def _expression_issue(scene: Scene, text: str, variable: str, add) -> bool:
@@ -220,6 +239,13 @@ def _animation_issues(scene: Scene, step_index: int, anim: Animation) -> list[Is
             add(ERROR, "transform_target_self", object_id=target.id)
         elif not animation_allowed(anim.kind, other.kind, other.params):
             add(ERROR, "animation_incompatible", anim.kind.value, other.id)
+    if target.kind == ObjectKind.CAMERA:
+        from manim_studio.model.three_d import is_3d
+
+        if anim.kind == AnimationKind.ORBIT and not is_3d(scene):
+            add(ERROR, "orbit_needs_3d", object_id=target.id)
+        elif anim.kind != AnimationKind.ORBIT and is_3d(scene):
+            add(ERROR, "camera_3d_orbit_only", object_id=target.id)
     if anim.kind in (AnimationKind.MOVE_ALONG_PATH, AnimationKind.SWAP):
         key = REFERENCE_PARAMS[anim.kind]
         other = scene.object_by_id(anim.params.get(key))

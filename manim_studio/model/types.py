@@ -50,6 +50,9 @@ class ObjectKind(str, Enum):
     DATA_PLOT = "data_plot"
     BAR_CHART = "bar_chart"
     CAMERA = "camera"
+    AXES_3D = "axes_3d"
+    SURFACE = "surface"
+    CURVE_3D = "curve_3d"
 
 
 class AnimationKind(str, Enum):
@@ -83,6 +86,7 @@ class AnimationKind(str, Enum):
     TRANSFORM_MATCHING = "transform_matching"
     MOVE_ALONG_PATH = "move_along_path"
     SWAP = "swap"
+    ORBIT = "orbit"
 
 
 class StepKind(str, Enum):
@@ -203,7 +207,7 @@ INVISIBLE_KINDS = frozenset({ObjectKind.GROUP, ObjectKind.PARAMETER})
 #: Kinds that are not added to the Manim scene (the camera is shown on the stage only).
 UNADDED_KINDS = INVISIBLE_KINDS | {ObjectKind.CAMERA}
 #: Animations a camera understands.
-CAMERA_ANIMATIONS = frozenset({AnimationKind.MOVE, AnimationKind.SCALE, AnimationKind.ROTATE})
+CAMERA_ANIMATIONS = frozenset({AnimationKind.MOVE, AnimationKind.SCALE, AnimationKind.ROTATE, AnimationKind.ORBIT})
 
 #: Curve types of a function graph.
 CURVE_FUNCTION = "function"

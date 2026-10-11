@@ -55,6 +55,7 @@ from manim_studio.model.playback import state_at_time, step_start_time
 from manim_studio.model.serialization import FILE_SUFFIX, ProjectFormatError
 from manim_studio.model.stage_edits import is_recording
 from manim_studio.model.state import START, parameter_values, states_after
+from manim_studio.model.three_d import is_3d, view_of
 from manim_studio.model.types import AnimationKind, ObjectKind, StepKind
 from manim_studio.templates import BUILTIN_TEMPLATES
 from manim_studio.ui.chrome import PanelFrame, SegmentedControl, StageBanner, Toast, action_button, separator, tool_button
@@ -589,6 +590,7 @@ class MainWindow(QMainWindow):
         states = state_at_time(scene, playhead) if playhead is not None else states_after(scene, cursor)
         self.resources.values = parameter_values(scene, states)
         self.resources.frame_size = frame_size(self.document.project.aspect)
+        self.resources.view3d = view_of(scene, states) if is_3d(scene) else None
         self.stage.set_frame_size(*self.resources.frame_size)
         self.stage.set_point_editing(cursor == START and playhead is None)
         self.stage.set_content(scene, states, self.resources, self.editor.selected_objects, self.act_show_hidden.isChecked())

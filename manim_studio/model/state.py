@@ -49,6 +49,9 @@ class ObjectState:
     outline: float = 0.0
     outline_color: str = "#F7D96F"
     value: float = 0.0
+    #: Orientation of a 3D camera (degrees).
+    phi: float = 0.0
+    theta: float = 0.0
 
 
 def first_reference(scene: Scene, object_id: str) -> tuple[Animation, bool] | None:
@@ -154,6 +157,8 @@ def initial_state(scene: Scene, obj: SceneObject) -> ObjectState:
         stroke_color=obj.stroke_color,
         fill_color=obj.fill_color,
         value=_initial_value(obj),
+        phi=float(obj.params.get("phi", 70.0)) if obj.kind == ObjectKind.CAMERA else 0.0,
+        theta=float(obj.params.get("theta", -45.0)) if obj.kind == ObjectKind.CAMERA else 0.0,
     )
 
 
@@ -234,6 +239,9 @@ def apply_animation(states: dict[str, ObjectState], anim: Animation, scene: Scen
     elif kind == AnimationKind.SET_VALUE:
         if not returns:
             states[anim.target_id] = replace(current, value=float(anim.params.get("value", current.value)))
+    elif kind == AnimationKind.ORBIT:
+        if not returns:
+            states[anim.target_id] = replace(current, phi=float(anim.params.get("phi", current.phi)), theta=float(anim.params.get("theta", current.theta)))
     elif not returns:
         states[anim.target_id] = _apply_modifier(current, anim)
     else:

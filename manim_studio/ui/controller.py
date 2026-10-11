@@ -362,6 +362,37 @@ class EditorController(QObject):
         elif kind == INSPECT_STEP or self.current_step_id():
             self.delete_step()
 
+    # --- timeline editing -------------------------------------------------------------
+
+    def set_animation_timing(self, animation_id: str, delay: float | None = None, run_time: float | None = None) -> None:
+        """Change the delay and/or duration of an animation (from the timeline)."""
+        key = "delay" if run_time is None else "duration"
+        self._edit(tr(f"undo.animation_{key}"), lambda s: ops.set_animation_timing(s, animation_id, delay, run_time), f"timing:{animation_id}:{key}")
+
+    def set_wait_time(self, step_id: str, seconds: float) -> None:
+        """Change the length of a wait step."""
+        self._edit(tr("undo.wait_time"), lambda s: ops.set_wait_time(s, step_id, seconds), f"wait:{step_id}")
+
+    def move_animation(self, animation_id: str, step_id: str) -> None:
+        """Move an animation into another step."""
+        self._edit(tr("undo.move_animation"), lambda s: ops.move_animation(s, animation_id, step_id))
+        self.editor.inspect_animation(animation_id)
+
+    def move_animation_to_new_step(self, animation_id: str, index: int) -> None:
+        """Move an animation into a new step at ``index``."""
+        self._edit(tr("undo.move_animation"), lambda s: ops.move_animation_to_new_step(s, animation_id, index))
+        self.editor.inspect_animation(animation_id)
+
+    def duplicate_animation(self, animation_id: str) -> None:
+        """Copy an animation within its step."""
+        new_id = self._edit(tr("undo.duplicate_animation"), lambda s: ops.duplicate_animation(s, animation_id))
+        if new_id:
+            self.editor.inspect_animation(new_id)
+
+    def set_step_mode(self, step_id: str, mode: str, lag_ratio: float | None = None) -> None:
+        """Run a step's animations together, staggered or one after another."""
+        self._edit(tr("undo.step_mode"), lambda s: ops.set_step_mode(s, step_id, mode, lag_ratio), f"mode:{step_id}")
+
     # --- scenes ---------------------------------------------------------------------
 
     def add_scene(self) -> None:

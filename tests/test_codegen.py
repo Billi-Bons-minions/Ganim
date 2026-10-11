@@ -301,15 +301,63 @@ def test_simultaneous_animations_become_one_play_call() -> None:
 
 def test_modifiers_on_one_object_are_merged() -> None:
     move = make_animation(AnimationKind.MOVE, "c", "m", x=1.0, y=2.0)
-    scale = make_animation(AnimationKind.SCALE, "c", "s", factor=0.5, run_time=2.0)
+    scale = make_animation(AnimationKind.SCALE, "c", "s", factor=0.5)
     rotate = make_animation(AnimationKind.ROTATE, "c", "r", angle=90.0)
     color = make_animation(AnimationKind.CHANGE_COLOR, "c", "k", color="#00FF00")
     scene = scene_with(make_object(ObjectKind.CIRCLE, "Kreis", "c"), steps=[play(move, scale, rotate, color)])
     expected = (
-        "self.play(kreis.animate(run_time=2.0, rate_func=smooth, path_arc=90.0 * DEGREES)"
+        "self.play(kreis.animate(run_time=1.0, rate_func=smooth, path_arc=90.0 * DEGREES)"
         '.move_to([1.0, 2.0, 0.0]).scale(0.5).rotate(90.0 * DEGREES).set_color("#00FF00"))'
     )
     assert expected in construct_lines(script_for(scene))
+
+
+def test_modifiers_with_different_timing_use_studio_transform() -> None:
+    move = make_animation(AnimationKind.MOVE, "c", "m", x=1.0, y=2.0)
+    scale = make_animation(AnimationKind.SCALE, "c", "s", factor=0.5)
+    scale.run_time, scale.delay, scale.rate_func = 2.0, 0.5, "linear"
+    scene = scene_with(make_object(ObjectKind.CIRCLE, "Kreis", "c"), steps=[play(move, scale)])
+    script = script_for(scene)
+    assert "class StudioTransform(Animation):" in script
+    assert (
+        'self.play(StudioTransform(kreis, [("move", 0.0, 1.0, smooth, [1.0, 2.0, 0.0]), '
+        '("scale", 0.5, 2.0, linear, 0.5)], run_time=2.5))'
+    ) in construct_lines(script)
+    assert script.count("class StudioTransform") == 1
+    assert "class StudioTransform" not in script_for(acceptance_scene())
+
+
+def test_delayed_animation_uses_squish_rate_func() -> None:
+    create = make_animation(AnimationKind.CREATE, "a")
+    fade = make_animation(AnimationKind.FADE_IN, "b")
+    fade.delay = 1.0
+    scene = scene_with(make_object(ObjectKind.CIRCLE, "A", "a"), make_object(ObjectKind.CIRCLE, "B", "b"), steps=[play(create, fade)])
+    lines = construct_lines(script_for(scene))
+    assert "Create(a, run_time=1.0, rate_func=smooth)," in lines
+    assert "FadeIn(b, run_time=2.0, rate_func=squish_rate_func(smooth, 0.5, 1.0))," in lines
+
+
+def test_lagged_and_sequential_steps() -> None:
+    from manim_studio.model.entities import STEP_LAGGED, STEP_SEQUENCE
+
+    objects = [make_object(ObjectKind.DOT, name, name.lower()) for name in ("A", "B")]
+    lagged = play(make_animation(AnimationKind.FADE_IN, "a"), make_animation(AnimationKind.FADE_IN, "b"), step_id="l")
+    lagged.mode, lagged.lag_ratio = STEP_LAGGED, 0.5
+    sequence = play(make_animation(AnimationKind.MOVE, "a", "m1", x=1.0, y=0.0), make_animation(AnimationKind.SCALE, "a", "s1", factor=2.0), step_id="s")
+    sequence.mode = STEP_SEQUENCE
+    sequence.animations[1].delay = 0.5
+    script = script_for(scene_with(*objects, steps=[lagged, sequence]))
+    lines = construct_lines(script)
+    assert (
+        "LaggedStart(FadeIn(a, run_time=1.0, rate_func=smooth), FadeIn(b, run_time=1.0, rate_func=smooth), lag_ratio=0.5)"
+        in flat(script).replace("( ", "(").replace(", )", ")").replace(",  ", ", ")
+    )
+    start = lines.index("Succession(")
+    assert lines[start + 1 : start + 4] == [
+        "a.animate(run_time=1.0, rate_func=smooth).move_to([1.0, 0.0, 0.0]),",
+        "Wait(run_time=0.5),",
+        'StudioTransform(a, [("scale", 0.0, 1.0, smooth, 2.0)], run_time=1.0),',
+    ]
 
 
 def test_wait_and_empty_steps() -> None:

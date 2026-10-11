@@ -8,14 +8,15 @@ from typing import Callable
 
 import shiboken6
 from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPen, QWheelEvent
-from PySide6.QtWidgets import QGraphicsScene, QGraphicsView, QWidget
+from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPen, QPixmap, QWheelEvent
+from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QWidget
 
 from manim_studio.model.entities import Scene
 from manim_studio.model.stage_edits import MOVE, ROTATE, SCALE
 from manim_studio.model.state import ObjectState
 from manim_studio.model.types import FRAME_HEIGHT, FRAME_WIDTH
 from manim_studio.ui.stage.drawing import PX, StageResources, build_drawing, pt
+from manim_studio.ui.stage.effects import Effects
 from manim_studio.ui.theme import color as theme_color
 from manim_studio.ui.stage.items import (
     ROLE_ROTATE,
@@ -85,12 +86,44 @@ class StageView(QGraphicsView):
         self._snap = True
         self._auto_fit = True
         self._motion_paths: list[tuple[QPointF, QPointF]] = []
+        self._exact_item: QGraphicsPixmapItem | None = None
 
     # --- configuration --------------------------------------------------------
 
     def set_policy(self, policy: EditPolicy) -> None:
         """Install the function that decides which edits are allowed."""
         self._policy = policy
+
+    def set_exact_image(self, path: object) -> None:
+        """Show a Manim-rendered PNG of the frame instead of the approximate drawing."""
+        if path is None:
+            if self._exact_item is not None:
+                self._scene.removeItem(self._exact_item)
+                self._exact_item = None
+            for item in self._items.values():
+                item.content_hidden = False
+                item.update()
+            return
+        pixmap = QPixmap(str(path))
+        if pixmap.isNull():
+            return
+        if self._exact_item is None:
+            self._exact_item = QGraphicsPixmapItem()
+            self._exact_item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+            self._exact_item.setZValue(-1_000_000)
+            self._exact_item.setTransformationMode(Qt.TransformationMode.SmoothTransformation)
+            self._scene.addItem(self._exact_item)
+        frame = QRectF(pt(-FRAME_WIDTH / 2, FRAME_HEIGHT / 2), pt(FRAME_WIDTH / 2, -FRAME_HEIGHT / 2))
+        self._exact_item.setPixmap(pixmap)
+        self._exact_item.setPos(frame.topLeft())
+        self._exact_item.setScale(frame.width() / max(1, pixmap.width()))
+        for item in self._items.values():
+            item.content_hidden = True
+            item.update()
+
+    def has_exact_image(self) -> bool:
+        """Return ``True`` while the exact image is shown."""
+        return self._exact_item is not None
 
     def set_motion_paths(self, paths: list[tuple[tuple[float, float], tuple[float, float]]]) -> None:
         """Show dashed arrows for Move animations of the selected step."""
@@ -153,12 +186,17 @@ class StageView(QGraphicsView):
                 self._items[obj.id] = item
                 self._scene.addItem(item)
             shape = scene.object_by_id(state.shape_id) or obj
-            item.set_drawing(build_drawing(scene, shape, state, resources), ghost=not state.visible)
+            effects = Effects(state.opacity, state.draw, state.fill, None, state.morph_t, state.outline, state.outline_color)
+            morph_shape = scene.object_by_id(state.morph_to) if state.morph_to else None
+            if morph_shape is not None:
+                effects.morph = build_drawing(scene, morph_shape, state, resources)
+            item.set_drawing(build_drawing(scene, shape, state, resources), ghost=not state.visible, effects=effects)
             item.setVisible(state.visible or show_hidden)
             item.setPos(pt(state.x, state.y))
             item.setRotation(-state.rotation)
             item.setScale(state.scale)
             item.setZValue(obj.z_index * 10_000 + index)
+            item.content_hidden = self._exact_item is not None
         for object_id in [object_id for object_id in self._items if object_id not in known]:
             self._scene.removeItem(self._items.pop(object_id))
         self._apply_selection(selected)

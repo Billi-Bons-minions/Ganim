@@ -52,7 +52,7 @@ def test_acceptance_workflow_without_code(window, tmp_path) -> None:
     window.refresh_code()
     code = window.code.editor.toPlainText()
     assert "Create(kreis_1" in code and "Transform(kreis_1, quadrat_1" in code and "Write(text_1" in code
-    assert window.timeline.steps.count() == 4
+    assert len(window.timeline.canvas._blocks) == 3
 
     project_file = tmp_path / "test.msproj"
     assert window._write(project_file)
@@ -191,3 +191,77 @@ def test_examples_open_from_window(window) -> None:
     window.open_example(EXAMPLES[0].key)
     assert window.document.path is None and window.editor.scene().objects
     assert not window.document.is_dirty
+
+
+
+def _mouse(canvas, kind, point, buttons):
+    from PySide6.QtCore import QPointF, Qt
+    from PySide6.QtGui import QMouseEvent
+    from PySide6.QtWidgets import QApplication
+
+    event = QMouseEvent(kind, QPointF(point), QPointF(canvas.mapToGlobal(point.toPoint())), Qt.MouseButton.LeftButton, buttons, Qt.KeyboardModifier.NoModifier)
+    QApplication.sendEvent(canvas, event)
+
+
+def _drag(canvas, start, end):
+    from PySide6.QtCore import QEvent, Qt
+
+    _mouse(canvas, QEvent.Type.MouseButtonPress, start, Qt.MouseButton.LeftButton)
+    for index in range(1, 6):
+        _mouse(canvas, QEvent.Type.MouseMove, start + (end - start) * (index / 5), Qt.MouseButton.LeftButton)
+    _mouse(canvas, QEvent.Type.MouseButtonRelease, end, Qt.MouseButton.NoButton)
+
+
+def test_timeline_canvas_editing(window) -> None:
+    from PySide6.QtCore import QPointF
+
+    from manim_studio.model.types import AnimationKind, ObjectKind
+
+    controller = window.controller
+    a = controller.add_object(ObjectKind.CIRCLE)
+    b = controller.add_object(ObjectKind.SQUARE, 2.0, 0.0)
+    window.editor.select_objects([a])
+    controller.add_animation(AnimationKind.CREATE, False)
+    window.editor.select_objects([b])
+    controller.add_animation(AnimationKind.FADE_IN, False)
+    canvas = window.timeline.canvas
+    first_bar = canvas._blocks[0].bars[0][1]
+    _drag(canvas, first_bar.center(), first_bar.center() + QPointF(canvas.pps * 0.5, 0))
+    step0 = window.editor.scene().steps[0]
+    assert step0.animations[0].delay == 0.5
+    bar = canvas._blocks[0].bars[0][1]
+    _drag(canvas, QPointF(bar.right() - 2, bar.center().y()), QPointF(bar.right() - 2 + canvas.pps, bar.center().y()))
+    assert window.editor.scene().steps[0].animations[0].run_time == 2.0
+    window.document.undo_stack.undo()
+    assert window.editor.scene().steps[0].animations[0].run_time == 1.0
+    second_bar = canvas._blocks[1].bars[0][1]
+    target_header = canvas._blocks[0].header
+    _drag(canvas, second_bar.center(), QPointF(target_header.center().x(), second_bar.center().y() + canvas.lane_height * 2))
+    steps = window.editor.scene().steps
+    assert len(steps) == 1 and [anim.kind for anim in steps[0].animations] == [AnimationKind.CREATE, AnimationKind.FADE_IN]
+
+
+def test_step_reorder_and_scrubbing(window) -> None:
+    from PySide6.QtCore import QPointF
+
+    from manim_studio.model.types import AnimationKind, ObjectKind
+
+    controller = window.controller
+    circle = controller.add_object(ObjectKind.CIRCLE)
+    window.editor.select_objects([circle])
+    controller.add_animation(AnimationKind.CREATE, False)
+    controller.add_animation(AnimationKind.MOVE, False)
+    canvas = window.timeline.canvas
+    ids = [step.id for step in window.editor.scene().steps]
+    header = canvas._blocks[1].header
+    _drag(canvas, header.center(), QPointF(canvas.time_to_x(0) + 2, header.center().y()))
+    assert [step.id for step in window.editor.scene().steps] == list(reversed(ids))
+    _drag(canvas, QPointF(canvas.time_to_x(0.2), 5), QPointF(canvas.time_to_x(1.5), 5))
+    assert window.editor.playhead == pytest.approx(1.5, abs=0.02)
+    item = window.stage._items[circle]
+    assert 0.0 < item.effects.draw < 1.0
+    window.playback.play()
+    window.playback._tick()
+    assert window.editor.playhead >= 1.5
+    window.playback.stop()
+    assert window.editor.playhead is None

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from manim_studio.model.assets import resolve_asset_path
-from manim_studio.model.entities import Animation, Scene, SceneObject, Step
+from manim_studio.model.entities import STEP_TOGETHER, Animation, Scene, SceneObject, Step
 from manim_studio.model.expression import check_expression
 from manim_studio.model.schema import animation_allowed
 from manim_studio.model.types import (
@@ -123,10 +123,11 @@ def _step_issues(scene: Scene, index: int, step: Step) -> list[Issue]:
     issues: list[Issue] = []
     for anim in step.animations:
         issues.extend(_animation_issues(scene, index, anim))
-    modifier_targets = [anim.target_id for anim in step.animations if anim.kind in MODIFIER_ANIMATIONS]
-    for target_id in sorted(set(modifier_targets)):
-        if modifier_targets.count(target_id) > 1:
-            issues.append(Issue(WARNING, "animations_merged", scene.id, target_id, index))
+    if step.mode == STEP_TOGETHER:
+        transformed = {anim.target_id for anim in step.animations if anim.kind in TRANSFORM_ANIMATIONS}
+        moved = {anim.target_id for anim in step.animations if anim.kind in MODIFIER_ANIMATIONS}
+        for target_id in sorted(transformed & moved):
+            issues.append(Issue(ERROR, "transform_conflict", scene.id, target_id, index))
     return issues
 
 

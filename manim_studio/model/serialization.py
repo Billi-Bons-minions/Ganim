@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from manim_studio.model.entities import (
+    STEP_MODES,
+    STEP_TOGETHER,
     Animation,
     Project,
     RenderSettings,
@@ -57,6 +59,7 @@ def animation_to_dict(anim: Animation) -> dict[str, Any]:
         "run_time": anim.run_time,
         "rate_func": anim.rate_func,
         "params": dict(anim.params),
+        "delay": anim.delay,
     }
 
 
@@ -66,6 +69,8 @@ def step_to_dict(step: Step) -> dict[str, Any]:
         "id": step.id,
         "kind": step.kind.value,
         "wait_time": step.wait_time,
+        "mode": step.mode,
+        "lag_ratio": step.lag_ratio,
         "animations": [animation_to_dict(anim) for anim in step.animations],
     }
 
@@ -145,6 +150,7 @@ def animation_from_dict(data: dict[str, Any]) -> Animation:
         run_time=float(data.get("run_time", 1.0)),
         rate_func=str(data.get("rate_func", "smooth")),
         params=dict(data.get("params", {})),
+        delay=float(data.get("delay", 0.0)),
     )
 
 
@@ -155,6 +161,8 @@ def step_from_dict(data: dict[str, Any]) -> Step:
         kind=_enum(StepKind, data.get("kind", "play")),
         wait_time=float(data.get("wait_time", 1.0)),
         animations=[animation_from_dict(item) for item in data.get("animations", [])],
+        mode=str(data.get("mode", STEP_TOGETHER)) if data.get("mode") in STEP_MODES else STEP_TOGETHER,
+        lag_ratio=float(data.get("lag_ratio", 0.25)),
     )
 
 

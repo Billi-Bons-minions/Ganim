@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from manim_studio import __version__
-from manim_studio.codegen.animations import step_code
+from manim_studio.codegen.animations import STUDIO_TRANSFORM, STUDIO_TRANSFORM_SOURCE, step_code
 from manim_studio.codegen.errors import CodegenError
 from manim_studio.codegen.formatting import indent_lines
 from manim_studio.codegen.literals import LiteralError, py_color
@@ -48,12 +48,12 @@ def _initial_add_line(scene: Scene, names: dict[str, str]) -> list[str]:
     return [f"self.add({', '.join(shown)})"] if shown else []
 
 
-def _timeline_lines(scene: Scene, names: dict[str, str], stop_after_step: int | None) -> list[str]:
+def _timeline_lines(scene: Scene, names: dict[str, str], stop_after_step: int | None, helpers: set[str]) -> list[str]:
     steps = scene.steps if stop_after_step is None else scene.steps[: stop_after_step + 1]
     lines: list[str] = []
     played = False
     for number, step in enumerate(steps, start=1):
-        block = step_code(step, number, scene, names)
+        block = step_code(step, number, scene, names, helpers)
         played = played or len(block) > 1
         if lines:
             lines.append("")
@@ -65,8 +65,12 @@ def _timeline_lines(scene: Scene, names: dict[str, str], stop_after_step: int | 
     return lines
 
 
-def construct_body(scene: Scene, options: CodegenOptions = DEFAULT_OPTIONS) -> list[str]:
-    """Return the statements inside ``construct`` (without indentation)."""
+def construct_body(scene: Scene, options: CodegenOptions = DEFAULT_OPTIONS, helpers: set[str] | None = None) -> list[str]:
+    """Return the statements inside ``construct`` (without indentation).
+
+    Names of helper definitions the body needs are added to ``helpers``.
+    """
+    helpers = helpers if helpers is not None else set()
     names = variable_names(scene)
     try:
         background = py_color(scene.background_color)
@@ -79,14 +83,16 @@ def construct_body(scene: Scene, options: CodegenOptions = DEFAULT_OPTIONS) -> l
     add_line = _initial_add_line(scene, names)
     if add_line:
         lines += [""] + add_line
-    lines += [""] + _timeline_lines(scene, names, options.stop_after_step)
+    lines += [""] + _timeline_lines(scene, names, options.stop_after_step, helpers)
     return lines
 
 
-def scene_class_code(scene: Scene, class_name: str, options: CodegenOptions = DEFAULT_OPTIONS) -> list[str]:
+def scene_class_code(
+    scene: Scene, class_name: str, options: CodegenOptions = DEFAULT_OPTIONS, helpers: set[str] | None = None
+) -> list[str]:
     """Return the full ``class ...(Scene)`` block of one scene."""
     header = [f"class {class_name}(Scene):", "    def construct(self):"]
-    return header + indent_lines(construct_body(scene, options), 2)
+    return header + indent_lines(construct_body(scene, options, helpers), 2)
 
 
 def header_lines(first_class: str | None) -> list[str]:
@@ -107,7 +113,11 @@ def generate_script(project: Project, options: CodegenOptions = DEFAULT_OPTIONS)
     scenes = [s for s in project.scenes if options.scene_ids is None or s.id in options.scene_ids]
     if not scenes:
         raise CodegenError("no_scene")
-    lines = header_lines(names[scenes[0].id])
+    helpers: set[str] = set()
+    blocks: list[str] = []
     for scene in scenes:
-        lines += ["", ""] + scene_class_code(scene, names[scene.id], options)
-    return "\n".join(lines) + "\n"
+        blocks += ["", ""] + scene_class_code(scene, names[scene.id], options, helpers)
+    lines = header_lines(names[scenes[0].id])
+    if STUDIO_TRANSFORM in helpers:
+        lines += ["", ""] + STUDIO_TRANSFORM_SOURCE.split("\n")
+    return "\n".join(lines + blocks) + "\n"

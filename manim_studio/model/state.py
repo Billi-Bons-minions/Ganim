@@ -35,6 +35,13 @@ class ObjectState:
     scale: float
     stroke_color: str
     fill_color: str
+    opacity: float = 1.0
+    draw: float = 1.0
+    fill: float = 1.0
+    morph_to: str | None = None
+    morph_t: float = 0.0
+    outline: float = 0.0
+    outline_color: str = "#F7D96F"
 
 
 def first_reference(scene: Scene, object_id: str) -> tuple[Animation, bool] | None:

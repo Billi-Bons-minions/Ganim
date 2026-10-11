@@ -166,3 +166,49 @@ def app_icon() -> QIcon:
     painter.drawRoundedRect(QRectF(62, 26, 42, 42), 4, 4)
     painter.end()
     return QIcon(pixmap)
+
+
+class _RateIconEngine(QIconEngine):
+    def __init__(self, name: str) -> None:
+        super().__init__()
+        self.name = name
+
+    def paint(self, painter: QPainter, rect, mode: QIcon.Mode, state: QIcon.State) -> None:
+        from manim_studio.model.rate_functions import rate
+        from manim_studio.ui.theme import current_palette
+
+        palette = current_palette()
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        box = QRectF(rect).adjusted(2, 4, -2, -4)
+        painter.setPen(QPen(QColor(palette.border_strong), 1))
+        painter.drawLine(box.bottomLeft(), box.bottomRight())
+        values = [rate(self.name, index / 40) for index in range(41)]
+        low, high = min(min(values), 0.0), max(max(values), 1.0)
+        path = QPainterPath()
+        for index, value in enumerate(values):
+            point = QPointF(box.left() + box.width() * index / 40, box.bottom() - (value - low) / (high - low) * box.height())
+            if index == 0:
+                path.moveTo(point)
+            else:
+                path.lineTo(point)
+        painter.setPen(QPen(QColor(palette.accent), 1.6))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawPath(path)
+        painter.restore()
+
+    def pixmap(self, size: QSize, mode: QIcon.Mode, state: QIcon.State) -> QPixmap:
+        image = QImage(size, QImage.Format.Format_ARGB32_Premultiplied)
+        image.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(image)
+        self.paint(painter, image.rect(), mode, state)
+        painter.end()
+        return QPixmap.fromImage(image)
+
+    def clone(self) -> "_RateIconEngine":
+        return _RateIconEngine(self.name)
+
+
+def rate_icon(name: str) -> QIcon:
+    """Return a small plot of a rate function."""
+    return QIcon(_RateIconEngine(name))

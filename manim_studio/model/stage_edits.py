@@ -16,7 +16,7 @@ from manim_studio.model.entities import Animation, Scene
 from manim_studio.model.factory import create_animation
 from manim_studio.model.geometry import is_bound_graph
 from manim_studio.model.state import START, states_after
-from manim_studio.model.types import AnimationKind, StepKind
+from manim_studio.model.types import TRANSFORM_ANIMATIONS, AnimationKind, StepKind
 
 MOVE = "move"
 SCALE = "scale"
@@ -69,6 +69,11 @@ def check_edit(scene: Scene, cursor: int, object_ids: Iterable[str], action: str
             return EditCheck(False, "bound_graph", object_id)
     if 0 <= cursor < len(scene.steps) and scene.steps[cursor].kind == StepKind.WAIT:
         return EditCheck(False, "wait_step")
+    if is_recording(scene, cursor):
+        transformed = {anim.target_id for anim in scene.steps[cursor].animations if anim.kind in TRANSFORM_ANIMATIONS}
+        for object_id in ids:
+            if object_id in transformed:
+                return EditCheck(False, "transform_conflict", object_id)
     return EditCheck(True)
 
 

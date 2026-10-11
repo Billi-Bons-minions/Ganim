@@ -49,22 +49,53 @@ class Animation:
     run_time: float = 1.0
     rate_func: str = "smooth"
     params: dict[str, Any] = field(default_factory=dict)
+    delay: float = 0.0
+
+
+#: How the animations of a play step are arranged in time.
+STEP_TOGETHER = "together"
+STEP_LAGGED = "lagged"
+STEP_SEQUENCE = "sequence"
+STEP_MODES = (STEP_TOGETHER, STEP_LAGGED, STEP_SEQUENCE)
 
 
 @dataclass
 class Step:
-    """A timeline step: one ``self.play(...)`` or one ``self.wait(...)``."""
+    """A timeline step: one ``self.play(...)`` or one ``self.wait(...)``.
+
+    ``mode`` decides whether the animations run together (each with its own
+    ``delay``), staggered by ``lag_ratio`` (``LaggedStart``) or one after
+    another (``Succession``).
+    """
 
     id: str
     kind: StepKind = StepKind.PLAY
     animations: list[Animation] = field(default_factory=list)
     wait_time: float = 1.0
+    mode: str = STEP_TOGETHER
+    lag_ratio: float = 0.25
+
+    def windows(self) -> list[tuple[float, float]]:
+        """Return ``(start, end)`` in seconds of every animation within the step."""
+        windows: list[tuple[float, float]] = []
+        cursor = 0.0
+        for anim in self.animations:
+            if self.mode == STEP_SEQUENCE:
+                start = cursor + anim.delay
+                cursor = start + anim.run_time
+            elif self.mode == STEP_LAGGED:
+                start = cursor
+                cursor = start + self.lag_ratio * anim.run_time
+            else:
+                start = anim.delay
+            windows.append((start, start + anim.run_time))
+        return windows
 
     def duration(self) -> float:
         """Return how long the step lasts in seconds."""
         if self.kind == StepKind.WAIT:
             return self.wait_time
-        return max((anim.run_time for anim in self.animations), default=0.0)
+        return max((end for _start, end in self.windows()), default=0.0)
 
 
 @dataclass

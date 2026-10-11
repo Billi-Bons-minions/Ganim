@@ -33,11 +33,12 @@ from manim_studio.i18n import tr
 from manim_studio.logging_setup import log
 from manim_studio.model.assets import relative_asset_path, resolve_asset_path
 from manim_studio.model.serialization import FILE_SUFFIX, ProjectFormatError
+from manim_studio.model.playback import state_at_time, step_start_time
 from manim_studio.model.state import START, states_after
 from manim_studio.model.stage_edits import is_recording
 from manim_studio.model.types import AnimationKind, ObjectKind, StepKind
 from manim_studio.ui.chrome import PanelFrame, SegmentedControl, StageBanner, Toast, action_button, separator, tool_button
-from manim_studio.ui.context import AppContext
+from manim_studio.ui.context import AppContext, cache_dir
 from manim_studio.ui.dialogs.environment_dialog import EnvironmentDialog
 from manim_studio.ui.dialogs.export_dialog import ExportDialog
 from manim_studio.ui.dialogs.messages import codegen_error_text
@@ -58,7 +59,9 @@ from manim_studio.ui.panels.objects_panel import ObjectsPanel
 from manim_studio.ui.panels.output_panels import CodePanel, LogPanel
 from manim_studio.ui.panels.player_panel import PlayerPanel
 from manim_studio.ui.panels.properties_panel import PropertiesPanel
-from manim_studio.ui.panels.timeline_panel import TimelinePanel, build_animation_menu
+from manim_studio.ui.panels.timeline_panel import TimelinePanel, build_animation_menu, format_time
+from manim_studio.ui.playback import PlaybackController
+from manim_studio.ui.still_preview import StillPreview
 from manim_studio.ui.stage.drawing import PX, StageResources
 from manim_studio.ui.stage.view import StageView
 from manim_studio.ui.theme import current_palette, px
@@ -91,6 +94,9 @@ class MainWindow(QMainWindow):
         self._preview_seen = False
         self.setWindowIcon(app_icon())
         self.resources = StageResources(tex=self.tex_cache)
+        self.playback = PlaybackController(self.editor, self)
+        self.still = StillPreview(self.document, self.editor, self.settings, cache_dir() / "still", self)
+        self.still.latex_available = self.context.latex_available
         self._code_timer = QTimer(self, singleShot=True, interval=CODE_REFRESH_MS)
         self._code_timer.timeout.connect(self.refresh_code)
         self._build_actions()
@@ -116,6 +122,7 @@ class MainWindow(QMainWindow):
             except (RuntimeError, TypeError):
                 pass
         self._links = []
+        self.playback.pause()
         self.player.stop()
 
     # --- actions and menus ----------------------------------------------------------------
@@ -174,10 +181,14 @@ class MainWindow(QMainWindow):
         self.act_snap.setChecked(self.settings.snap)
         self.act_show_hidden = self._action("show_hidden", self._on_view_options, "Ctrl+H", "eye", checkable=True)
         self.act_show_hidden.setChecked(self.settings.show_hidden)
+        self.act_exact = self._action("exact_view", self._on_exact_toggled, "Ctrl+Shift+X", "render", checkable=True)
         self.act_fit = self._action("fit", lambda: self.stage.fit_frame(), "Ctrl+0", "fit")
         self.act_zoom_in = self._action("zoom_in", lambda: self.stage.zoom(1.25), std.ZoomIn, "zoom_in")
         self.act_zoom_out = self._action("zoom_out", lambda: self.stage.zoom(0.8), std.ZoomOut, "zoom_out")
-        self.act_preview = self._action("preview", self.start_preview, "F5", "play")
+        self.act_preview = self._action("preview", self.start_preview, "F5", "render")
+        self.act_preview_from = self._action("preview_from_step", self.start_preview_from_step, "Ctrl+F5", "render")
+        self.act_play = self._action("play_stage", lambda: self.playback.toggle(), "Space", "play")
+        self.act_stop_playback = self._action("stop_stage", lambda: self.playback.stop(), "Shift+Space", "stop")
         self.act_cancel = self._action("cancel_render", self.render.cancel, "Shift+F5", "stop")
         self.act_cancel.setEnabled(False)
         self.act_environment = self._action("check_environment", lambda: self.check_environment(interactive=True), None, "info")
@@ -230,13 +241,15 @@ class MainWindow(QMainWindow):
         timeline_menu.addActions([self.act_add_step, self.act_add_wait, self.act_duplicate_step, self.act_delete_step])
         timeline_menu.addSeparator()
         timeline_menu.addActions([self.act_start, self.act_prev_step, self.act_next_step, self.act_end])
+        timeline_menu.addSeparator()
+        timeline_menu.addActions([self.act_play, self.act_stop_playback])
         view_menu = bar.addMenu(tr("menu.view"))
-        view_menu.addActions([self.act_grid, self.act_snap, self.act_show_hidden])
+        view_menu.addActions([self.act_grid, self.act_snap, self.act_show_hidden, self.act_exact])
         view_menu.addSeparator()
         view_menu.addActions([self.act_fit, self.act_zoom_in, self.act_zoom_out])
         self.panels_menu = view_menu.addMenu(tr("menu.panels"))
         render_menu = bar.addMenu(tr("menu.render"))
-        render_menu.addActions([self.act_preview, self.act_cancel, self.act_export])
+        render_menu.addActions([self.act_preview, self.act_preview_from, self.act_cancel, self.act_export])
         render_menu.addSeparator()
         render_menu.addAction(self.act_environment)
         help_menu = bar.addMenu(tr("menu.help"))
@@ -302,7 +315,7 @@ class MainWindow(QMainWindow):
         tools = QHBoxLayout(self.stage_tools)
         tools.setContentsMargins(0, 0, 0, 0)
         tools.setSpacing(px(2))
-        for action in (self.act_grid, self.act_snap, self.act_show_hidden):
+        for action in (self.act_grid, self.act_snap, self.act_show_hidden, self.act_exact):
             tools.addWidget(action_button(action))
         tools.addWidget(separator(vertical=True))
         tools.addWidget(action_button(self.act_zoom_out))
@@ -339,7 +352,7 @@ class MainWindow(QMainWindow):
         return area
 
     def _build_bottom_area(self) -> QTabWidget:
-        self.timeline = TimelinePanel(self.document, self.editor, self.controller)
+        self.timeline = TimelinePanel(self.document, self.editor, self.controller, self.playback)
         self.code = CodePanel()
         self.log = LogPanel()
         tabs = QTabWidget()
@@ -409,6 +422,7 @@ class MainWindow(QMainWindow):
         link(self.document.pathChanged, self._update_title)
         link(self.editor.sceneChanged, self.refresh_all)
         link(self.editor.cursorChanged, self._on_cursor_changed)
+        link(self.editor.playheadChanged, self._on_playhead_changed)
         link(self.editor.selectionChanged, self._on_selection_changed)
         link(self.tex_cache.ready, self._on_tex_ready)
         link(self.controller.statusMessage, self.show_status)
@@ -423,9 +437,11 @@ class MainWindow(QMainWindow):
         link(self.render.previewReady, self._on_preview_ready)
         link(self.render.showLogRequested, self._show_log)
         self.stage.selectionEdited.connect(self.editor.select_objects)
-        self.stage.moveRequested.connect(self.controller.move_objects)
-        self.stage.scaleRequested.connect(self.controller.scale_object)
-        self.stage.rotateRequested.connect(self.controller.rotate_object)
+        self.still.imageReady.connect(self._on_exact_image)
+        self.still.busyChanged.connect(self._on_exact_busy)
+        self.stage.moveRequested.connect(lambda ids, dx, dy: (self._before_stage_edit(), self.controller.move_objects(ids, dx, dy)))
+        self.stage.scaleRequested.connect(lambda object_id, f: (self._before_stage_edit(), self.controller.scale_object(object_id, f)))
+        self.stage.rotateRequested.connect(lambda object_id, a: (self._before_stage_edit(), self.controller.rotate_object(object_id, a)))
         self.stage.dropRequested.connect(self._on_drop)
         self.stage.contextMenuRequested.connect(self.show_object_menu)
         self.stage.cursorMoved.connect(self._on_cursor_moved)
@@ -472,11 +488,17 @@ class MainWindow(QMainWindow):
         scene = self.editor.scene()
         cursor = self.editor.cursor
         self.resources.base_dir = self.document.base_dir
-        states = states_after(scene, cursor)
+        playhead = self.editor.playhead
+        states = state_at_time(scene, playhead) if playhead is not None else states_after(scene, cursor)
         self.stage.set_content(scene, states, self.resources, self.editor.selected_objects, self.act_show_hidden.isChecked())
-        self.stage.set_motion_paths(self._motion_paths(scene, cursor))
+        self.stage.set_motion_paths(self._motion_paths(scene, cursor) if playhead is None else [])
         self.empty_hint.setVisible(not scene.objects)
         self._update_banner()
+        if self.act_exact.isChecked():
+            if playhead is None:
+                self.still.request()
+            else:
+                self.stage.set_exact_image(None)
 
     def _motion_paths(self, scene, cursor: int) -> list:
         if not is_recording(scene, cursor):
@@ -493,7 +515,9 @@ class MainWindow(QMainWindow):
 
     def _update_banner(self) -> None:
         cursor = self.editor.cursor
-        if cursor == START:
+        if self.editor.playhead is not None:
+            self.banner.show_message(tr("banner.playback", time=format_time(self.editor.playhead)), recording=False)
+        elif cursor == START:
             self.banner.show_message(tr("banner.start"), recording=False)
         else:
             step = self.editor.scene().steps[cursor]
@@ -556,6 +580,35 @@ class MainWindow(QMainWindow):
 
     def _on_cursor_changed(self) -> None:
         self.refresh_stage()
+        if self.center_stack.currentIndex() == MODE_PREVIEW and self.editor.playhead is None:
+            time = step_start_time(self.editor.scene(), self.editor.cursor) if self.editor.cursor != START else 0.0
+            self.player.seek(round((time - self.render.preview_offset) * 1000))
+
+    def _on_playhead_changed(self) -> None:
+        self.refresh_stage()
+        playhead = self.editor.playhead
+        if playhead is not None and self.center_stack.currentIndex() == MODE_PREVIEW and not self.playback.is_playing():
+            self.player.seek(round((playhead - self.render.preview_offset) * 1000))
+
+    def _on_exact_toggled(self, checked: bool) -> None:
+        self.still.set_enabled(checked)
+        if checked:
+            self.show_toast(tr("exact.started"))
+
+    def _on_exact_image(self, path: object) -> None:
+        if self.act_exact.isChecked() and self.editor.playhead is None:
+            self.stage.set_exact_image(path)
+        else:
+            self.stage.set_exact_image(None)
+
+    def _on_exact_busy(self, busy: bool) -> None:
+        if busy:
+            self.stage.set_exact_image(None)
+            self.show_status(tr("exact.rendering"))
+
+    def _before_stage_edit(self) -> None:
+        self.playback.pause()
+        self.editor.clear_playhead()
 
     def _on_selection_changed(self) -> None:
         self.stage.set_selection(self.editor.selected_objects)
@@ -804,7 +857,13 @@ class MainWindow(QMainWindow):
 
     def start_preview(self) -> None:
         """Render a quick preview of the active scene."""
+        self.playback.pause()
         self.render.preview()
+
+    def start_preview_from_step(self) -> None:
+        """Render a quick preview starting at the selected step."""
+        self.playback.pause()
+        self.render.preview(self.editor.cursor if self.editor.cursor > 0 else None)
 
     def export_media(self) -> None:
         """Open the export dialog and start the export."""

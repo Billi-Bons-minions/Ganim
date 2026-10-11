@@ -181,3 +181,20 @@ def test_runner_exports_gif_and_png(tmp_path, qapp, file_format: str) -> None:
     results = _run_until_finished(runner, app, 300)
     assert results and results[0].success, results[0].log if results else "timeout"
     assert results[0].output.suffix == f".{file_format}"
+
+
+@pytest.mark.manim
+@pytest.mark.skipif(importlib.util.find_spec("manim") is None, reason="Manim is not installed")
+def test_runner_renders_from_a_later_step(tmp_path, qapp) -> None:
+    from manim_studio.render.runner import ManimRunner
+
+    script = tmp_path / "szene.py"
+    script.write_text(generate_script(make_project(acceptance_scene())), encoding="utf-8")
+    runner = ManimRunner()
+    progress = []
+    runner.progressChanged.connect(progress.append)
+    runner.start(job(tmp_path, script_path=script, from_animation=2, total_animations=1), sys.executable)
+    results = _run_until_finished(runner, qapp, 300)
+    assert results and results[0].success, results[0].log if results else "timeout"
+    assert "-n" in results[0].log_lines[0]
+    assert progress and max(progress) <= 1.0

@@ -5,6 +5,7 @@ from __future__ import annotations
 from PySide6.QtCore import QObject, Signal
 
 from manim_studio.model.entities import Scene
+from manim_studio.model.playback import step_at_time, total_duration
 from manim_studio.model.state import START
 from manim_studio.ui.document import ProjectDocument
 
@@ -26,6 +27,7 @@ class EditorState(QObject):
     cursorChanged = Signal()
     selectionChanged = Signal()
     inspectorChanged = Signal()
+    playheadChanged = Signal()
 
     def __init__(self, document: ProjectDocument, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -34,6 +36,7 @@ class EditorState(QObject):
         self.cursor = START
         self.selected_objects: list[str] = []
         self.inspected: tuple[str, str | None] = (INSPECT_SCENE, None)
+        self.playhead: float | None = None
         document.changed.connect(self.sanitize)
 
     # --- accessors -----------------------------------------------------------
@@ -50,6 +53,7 @@ class EditorState(QObject):
 
     def reset(self) -> None:
         """Start fresh after a project was created or opened."""
+        self.clear_playhead()
         self.scene_id = self.document.project.scenes[0].id
         self.cursor = START
         self.selected_objects = []
@@ -63,6 +67,7 @@ class EditorState(QObject):
         """Activate another scene."""
         if scene_id == self.scene_id or self.document.scene(scene_id) is None:
             return
+        self.clear_playhead()
         self.scene_id = scene_id
         self.cursor = START
         self.selected_objects = []
@@ -73,11 +78,29 @@ class EditorState(QObject):
         self.inspectorChanged.emit()
 
     def set_cursor(self, index: int) -> None:
-        """Show the state after timeline step ``index``."""
+        """Show the state after timeline step ``index`` (leaves playback time)."""
+        self.clear_playhead()
         index = max(START, min(index, len(self.scene().steps) - 1))
         if index != self.cursor:
             self.cursor = index
             self.cursorChanged.emit()
+
+    def set_playhead(self, time: float) -> None:
+        """Show the scene at ``time`` seconds; the cursor follows the running step."""
+        scene = self.scene()
+        time = max(0.0, min(time, total_duration(scene)))
+        self.playhead = time
+        index = step_at_time(scene, time)
+        if index != self.cursor:
+            self.cursor = index
+            self.cursorChanged.emit()
+        self.playheadChanged.emit()
+
+    def clear_playhead(self) -> None:
+        """Return to showing the end state of the cursor step."""
+        if self.playhead is not None:
+            self.playhead = None
+            self.playheadChanged.emit()
 
     def select_objects(self, object_ids: list[str], inspect: bool = True) -> None:
         """Select objects on the stage (order is kept for transforms)."""
@@ -98,6 +121,7 @@ class EditorState(QObject):
     def inspect_step(self, index: int) -> None:
         """Select a timeline step (or the start) and show it in the inspector."""
         self.set_cursor(index)
+
         steps = self.scene().steps
         if 0 <= index < len(steps):
             self.inspect(INSPECT_STEP, steps[index].id)

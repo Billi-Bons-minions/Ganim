@@ -32,6 +32,7 @@ class RenderJob:
     height: int = 1080
     fps: int = 60
     total_animations: int = 1
+    from_animation: int | None = None
 
 
 def build_arguments(job: RenderJob) -> list[str]:
@@ -53,6 +54,8 @@ def build_arguments(job: RenderJob) -> list[str]:
         arguments += ["-q", job.quality]
     else:
         arguments += ["-r", f"{int(job.width)},{int(job.height)}", "--fps", str(int(job.fps))]
+    if job.from_animation:
+        arguments += ["-n", str(int(job.from_animation))]
     return arguments + [str(job.script_path), job.scene_class]
 
 

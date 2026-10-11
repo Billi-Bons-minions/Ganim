@@ -20,6 +20,7 @@ from manim_studio.codegen import (
 from manim_studio.i18n import tr
 from manim_studio.model import operations as ops
 from manim_studio.model.entities import RenderSettings, Scene
+from manim_studio.model.playback import step_start_time
 from manim_studio.model.types import StepKind
 from manim_studio.model.validation import has_errors, validate_scene
 from manim_studio.render.command import RenderJob
@@ -40,11 +41,15 @@ PREVIEW = "preview"
 EXPORT = "export"
 
 
+def emitted_calls(steps) -> int:
+    """Return how many ``self.play``/``self.wait`` calls the steps produce."""
+    return sum(1 for step in steps if step.kind == StepKind.WAIT or step.animations)
+
+
 def count_rendered_steps(scene: Scene, stop_after_step: int | None) -> int:
     """Return how many Manim animations (play/wait calls) a render will run."""
     steps = scene.steps if stop_after_step is None else scene.steps[: stop_after_step + 1]
-    count = sum(1 for step in steps if step.kind == StepKind.WAIT or step.animations)
-    return max(1, count)
+    return max(1, emitted_calls(steps))
 
 
 class RenderController(QObject):
@@ -80,6 +85,7 @@ class RenderController(QObject):
         self.runner.finished.connect(self._on_finished)
         self._mode = ""
         self._target: Path | None = None
+        self.preview_offset = 0.0
 
     def is_busy(self) -> bool:
         """Return ``True`` while Manim is running."""
@@ -115,7 +121,15 @@ class RenderController(QObject):
         path.write_text(script, encoding="utf-8")
         return path, class_names(self.document.project)[scene.id]
 
-    def _start(self, scene: Scene, settings: RenderSettings, mode: str, output_name: str, stop_after_step: int | None) -> bool:
+    def _start(
+        self,
+        scene: Scene,
+        settings: RenderSettings,
+        mode: str,
+        output_name: str,
+        stop_after_step: int | None,
+        from_step: int | None = None,
+    ) -> bool:
         if self.is_busy():
             self.statusMessage.emit(tr("render.busy"))
             return False
@@ -135,7 +149,8 @@ class RenderController(QObject):
             width=settings.width,
             height=settings.height,
             fps=settings.fps,
-            total_animations=count_rendered_steps(scene, stop_after_step),
+            total_animations=count_rendered_steps(scene, stop_after_step) - (emitted_calls(scene.steps[:from_step]) if from_step else 0),
+            from_animation=emitted_calls(scene.steps[:from_step]) if from_step else None,
         )
         self._mode = mode
         self.aboutToRender.emit()
@@ -147,11 +162,15 @@ class RenderController(QObject):
 
     # --- public actions -----------------------------------------------------------------
 
-    def preview(self) -> None:
-        """Render the active scene quickly and show it in the player."""
+    def preview(self, from_step: int | None = None) -> None:
+        """Render the active scene quickly (optionally from a step) and show it in the player."""
         settings = RenderSettings(quality="l", format="mp4")
         self._target = None
-        self._start(self.editor.scene(), settings, PREVIEW, "preview", None)
+        scene = self.editor.scene()
+        if from_step is not None and (from_step <= 0 or emitted_calls(scene.steps[:from_step]) == 0):
+            from_step = None
+        self.preview_offset = step_start_time(scene, from_step) if from_step else 0.0
+        self._start(scene, settings, PREVIEW, "preview", None, from_step)
 
     def export(self, request: ExportRequest) -> None:
         """Render a scene with the export settings and copy it to the target."""

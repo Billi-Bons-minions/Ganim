@@ -134,6 +134,18 @@ class PlayerPanel(QWidget):
         self.player.setSource(QUrl.fromLocalFile(str(path)))
         self.player.play()
 
+    def seek(self, milliseconds: int, pause: bool = True) -> None:
+        """Jump to a position of the loaded video."""
+        if self.player is None or self._file is None:
+            return
+        self.player.setPosition(max(0, milliseconds))
+        if pause:
+            self.player.pause()
+
+    def has_video(self) -> bool:
+        """Return ``True`` if a video is loaded."""
+        return self._file is not None and self.player is not None
+
     def stop(self) -> None:
         """Stop playback and release the file (e.g. before re-rendering)."""
         if self.player is not None:

@@ -1,0 +1,183 @@
+"""Scene state at an arbitrary point in time (for playback on the stage)."""
+
+from __future__ import annotations
+
+from dataclasses import replace
+
+from manim_studio.model.entities import Animation, Scene, Step
+from manim_studio.model.rate_functions import rate
+from manim_studio.model.state import START, ObjectState, apply_animation, states_after
+from manim_studio.model.types import AnimationKind, StepKind
+
+_SHIFTS = {"up": (0.0, 1.0), "down": (0.0, -1.0), "left": (-1.0, 0.0), "right": (1.0, 0.0)}
+
+
+def step_spans(scene: Scene) -> list[tuple[float, float]]:
+    """Return ``(start, end)`` in seconds of every step."""
+    spans: list[tuple[float, float]] = []
+    time = 0.0
+    for step in scene.steps:
+        duration = step.duration()
+        spans.append((time, time + duration))
+        time += duration
+    return spans
+
+
+def total_duration(scene: Scene) -> float:
+    """Return the length of the scene in seconds."""
+    return sum(step.duration() for step in scene.steps)
+
+
+def step_end_time(scene: Scene, index: int) -> float:
+    """Return the time at which step ``index`` ends (``START`` → 0)."""
+    spans = step_spans(scene)
+    if index < 0 or not spans:
+        return 0.0
+    return spans[min(index, len(spans) - 1)][1]
+
+
+def step_start_time(scene: Scene, index: int) -> float:
+    """Return the time at which step ``index`` starts."""
+    spans = step_spans(scene)
+    if index < 0 or not spans:
+        return 0.0
+    return spans[min(index, len(spans) - 1)][0]
+
+
+def step_at_time(scene: Scene, time: float) -> int:
+    """Return the index of the step running at ``time`` (``START`` before the first)."""
+    if time <= 0:
+        return START
+    spans = step_spans(scene)
+    for index, (start, end) in enumerate(spans):
+        if start <= time < end:
+            return index
+    return len(spans) - 1
+
+
+def _mix(first: str, second: str, t: float) -> str:
+    def channels(value: str) -> tuple[int, int, int]:
+        value = value.lstrip("#")
+        try:
+            return int(value[0:2], 16), int(value[2:4], 16), int(value[4:6], 16)
+        except (ValueError, IndexError):
+            return 255, 255, 255
+
+    a, b = channels(first), channels(second)
+    return "#" + "".join(f"{round(x + (y - x) * t):02X}" for x, y in zip(a, b))
+
+
+def _partial_entrance(state: ObjectState, anim: Animation, progress: float) -> ObjectState:
+    kind = anim.kind
+    if kind == AnimationKind.DRAW_BORDER_THEN_FILL:
+        return replace(state, visible=True, draw=min(1.0, 2 * progress), fill=max(0.0, 2 * progress - 1))
+    if kind in (AnimationKind.CREATE, AnimationKind.WRITE):
+        return replace(state, visible=True, draw=progress, fill=progress if kind == AnimationKind.WRITE else state.fill)
+    if kind == AnimationKind.UNCREATE:
+        return replace(state, draw=1 - progress)
+    if kind == AnimationKind.GROW_FROM_CENTER:
+        return replace(state, visible=True, scale=state.scale * max(progress, 0.001))
+    dx, dy = _SHIFTS.get(str(anim.params.get("shift", "none")), (0.0, 0.0))
+    if kind == AnimationKind.FADE_IN:
+        return replace(state, visible=True, opacity=progress, x=state.x - dx * (1 - progress), y=state.y - dy * (1 - progress))
+    return replace(state, opacity=1 - progress, x=state.x + dx * progress, y=state.y + dy * progress)
+
+
+def _partial_transform(states: dict[str, ObjectState], anim: Animation, progress: float) -> None:
+    source = states[anim.target_id]
+    target = states.get(str(anim.params.get("target")))
+    if target is None:
+        return
+    states[anim.target_id] = replace(
+        source,
+        visible=True,
+        morph_to=target.shape_id,
+        morph_t=progress,
+        x=source.x + (target.x - source.x) * progress,
+        y=source.y + (target.y - source.y) * progress,
+        rotation=source.rotation + (target.rotation - source.rotation) * progress,
+        scale=source.scale + (target.scale - source.scale) * progress,
+        stroke_color=_mix(source.stroke_color, target.stroke_color, progress),
+        fill_color=_mix(source.fill_color, target.fill_color, progress),
+    )
+
+
+def _partial_modifier(state: ObjectState, anim: Animation, progress: float) -> ObjectState:
+    params = anim.params
+    kind = anim.kind
+    if kind == AnimationKind.MOVE:
+        x, y = float(params.get("x", state.x)), float(params.get("y", state.y))
+        return replace(state, visible=True, x=state.x + (x - state.x) * progress, y=state.y + (y - state.y) * progress)
+    if kind == AnimationKind.SCALE:
+        return replace(state, visible=True, scale=state.scale * (1 + (float(params.get("factor", 1.0)) - 1) * progress))
+    if kind == AnimationKind.ROTATE:
+        return replace(state, visible=True, rotation=state.rotation + float(params.get("angle", 0.0)) * progress)
+    color = str(params.get("color", state.stroke_color))
+    apply_to = params.get("apply_to", "both")
+    stroke = _mix(state.stroke_color, color, progress) if apply_to in ("both", "stroke") else state.stroke_color
+    fill = _mix(state.fill_color, color, progress) if apply_to in ("both", "fill") else state.fill_color
+    return replace(state, visible=True, stroke_color=stroke, fill_color=fill)
+
+
+def apply_partial(states: dict[str, ObjectState], anim: Animation, progress: float) -> None:
+    """Update ``states`` with an animation that is ``progress`` (0…1, eased) done."""
+    state = states.get(anim.target_id)
+    if state is None:
+        return
+    kind = anim.kind
+    if kind in (
+        AnimationKind.CREATE,
+        AnimationKind.WRITE,
+        AnimationKind.DRAW_BORDER_THEN_FILL,
+        AnimationKind.UNCREATE,
+        AnimationKind.GROW_FROM_CENTER,
+        AnimationKind.FADE_IN,
+        AnimationKind.FADE_OUT,
+    ):
+        states[anim.target_id] = _partial_entrance(state, anim, progress)
+    elif kind in (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM):
+        _partial_transform(states, anim, progress)
+    elif kind == AnimationKind.INDICATE:
+        color = str(anim.params.get("color", state.fill_color))
+        factor = 1 + (float(anim.params.get("scale_factor", 1.2)) - 1) * progress
+        states[anim.target_id] = replace(
+            state,
+            visible=True,
+            scale=state.scale * factor,
+            stroke_color=_mix(state.stroke_color, color, progress),
+            fill_color=_mix(state.fill_color, color, progress),
+        )
+    elif kind == AnimationKind.CIRCUMSCRIBE:
+        states[anim.target_id] = replace(state, outline=progress, outline_color=str(anim.params.get("color", "#F7D96F")))
+    else:
+        states[anim.target_id] = _partial_modifier(state, anim, progress)
+
+
+def _step_state(scene: Scene, index: int, step: Step, local_time: float) -> dict[str, ObjectState]:
+    states = states_after(scene, index - 1)
+    if step.kind != StepKind.PLAY:
+        return states
+    for anim, (start, end) in zip(step.animations, step.windows()):
+        if local_time >= end:
+            apply_animation(states, anim)
+        elif local_time > start:
+            linear_progress = (local_time - start) / max(end - start, 1e-9)
+            if anim.kind == AnimationKind.CIRCUMSCRIBE:
+                apply_partial(states, anim, linear_progress)
+            else:
+                apply_partial(states, anim, rate(anim.rate_func, linear_progress))
+        elif anim.kind in (AnimationKind.CREATE, AnimationKind.WRITE, AnimationKind.DRAW_BORDER_THEN_FILL, AnimationKind.FADE_IN, AnimationKind.GROW_FROM_CENTER):
+            apply_partial(states, anim, 0.0)
+    return states
+
+
+def state_at_time(scene: Scene, time: float) -> dict[str, ObjectState]:
+    """Return the state of every object at ``time`` seconds."""
+    if time <= 0 or not scene.steps:
+        return states_after(scene, START)
+    spans = step_spans(scene)
+    if time >= spans[-1][1]:
+        return states_after(scene, len(scene.steps) - 1)
+    index = step_at_time(scene, time)
+    start, _end = spans[index]
+    return _step_state(scene, index, scene.steps[index], time - start)

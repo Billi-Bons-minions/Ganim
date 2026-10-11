@@ -31,7 +31,7 @@ from manim_studio.codegen.naming import class_names
 from manim_studio.i18n import has, tr
 from manim_studio.model import operations as ops
 from manim_studio.model.assets import relative_asset_path
-from manim_studio.model.entities import Animation, SceneObject, Step
+from manim_studio.model.entities import STEP_LAGGED, STEP_MODES, STEP_TOGETHER, Animation, SceneObject, Step
 from manim_studio.model.expression import check_expression
 from manim_studio.model.geometry import is_bound_graph
 from manim_studio.model.schema import (
@@ -56,7 +56,7 @@ from manim_studio.ui.editor_state import (
 )
 from manim_studio.ui.settings import AppSettings
 from manim_studio.ui.icon_set import icon
-from manim_studio.ui.icons import kind_icon
+from manim_studio.ui.icons import kind_icon, rate_icon
 from manim_studio.ui.theme import px
 from manim_studio.ui.widgets import (
     ColorButton,
@@ -90,6 +90,7 @@ ANIMATION_GROUPS: tuple[tuple[str, tuple[AnimationKind, ...]], ...] = (
 TRANSFORM_TARGET_KINDS = (
     ObjectKind.SQUARE, ObjectKind.CIRCLE, ObjectKind.RECTANGLE, ObjectKind.TRIANGLE, ObjectKind.ELLIPSE, ObjectKind.TEXT, ObjectKind.MATH_TEX
 )
+_DELAY_SPEC = ParamSpec("delay", ParamType.FLOAT, 0.0, minimum=0.0, maximum=600.0, step=0.1)
 _RUN_TIME_SPEC = ParamSpec("run_time", ParamType.FLOAT, 1.0, minimum=0.05, maximum=120.0, step=0.25)
 
 
@@ -660,9 +661,19 @@ class PropertiesPanel(QScrollArea):
 
         widget, show = self._float_editor(_RUN_TIME_SPEC, commit_run_time)
         form.row(tr("prop.run_time"), widget, lambda: self._animation(animation_id).run_time, show)
+        step_mode = found[0].mode if found else STEP_TOGETHER
+
+        def commit_delay(value: Any) -> None:
+            self._edit(tr("prop.delay"), lambda s: ops.set_animation_timing(s, animation_id, delay=value), f"anim:{animation_id}:delay")
+
+        widget, show = self._float_editor(_DELAY_SPEC, commit_delay)
+        widget.setEnabled(step_mode != STEP_LAGGED)
+        widget.setToolTip(tr("prop.delay_tip") if step_mode != STEP_LAGGED else tr("prop.delay_lagged"))
+        form.row(tr("prop.delay"), widget, lambda: self._animation(animation_id).delay, show)
         rate = QComboBox()
+        rate.setIconSize(QSize(px(34), px(18)))
         for name in RATE_FUNCTIONS:
-            rate.addItem(tr(f"rate.{name}"), name)
+            rate.addItem(rate_icon(name), tr(f"rate.{name}"), name)
         rate.currentIndexChanged.connect(
             lambda _i: self._edit(
                 tr("prop.rate_func"), lambda s: ops.update_animation(s, animation_id, rate_func=rate.currentData()), None
@@ -713,6 +724,27 @@ class PropertiesPanel(QScrollArea):
             form.row(tr("prop.wait_time"), widget, lambda: self._step(step_id).wait_time, show)
             return
         form.header(tr("prop.step_header", step=number), icon("layers"))
+        mode_spec = ParamSpec("mode", ParamType.CHOICE, STEP_TOGETHER, choices=STEP_MODES)
+
+        def commit_mode(value: Any) -> None:
+            self._edit(tr("undo.step_mode"), lambda s: ops.set_step_mode(s, step_id, str(value)), None)
+
+        widget, show = self._param_editor(mode_spec, commit_mode)
+        form.row(tr("timeline.mode"), widget, lambda: self._step(step_id).mode, show)
+        lag_spec = ParamSpec("lag_ratio", ParamType.FLOAT, 0.25, minimum=0.0, maximum=1.0, step=0.05)
+
+        def commit_lag(value: Any) -> None:
+            step = self._step(step_id)
+            self._edit(tr("undo.step_mode"), lambda s: ops.set_step_mode(s, step_id, step.mode, value), f"step:{step_id}:lag")
+
+        lag_widget, lag_show = self._float_editor(lag_spec, commit_lag)
+
+        def show_lag(value: Any) -> None:
+            lag_show(value)
+            form.layout.setRowVisible(lag_widget, self._step(step_id).mode == STEP_LAGGED)
+
+        form.row(tr("prop.lag_ratio"), lag_widget, lambda: self._step(step_id).lag_ratio, show_lag)
+        form.note(lambda: tr(f"step_mode_help.{self._step(step_id).mode}"))
         form.note(lambda: self._step_summary(step_id))
         form.note(lambda: tr("prop.step_hint"))
 

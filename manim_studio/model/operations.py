@@ -18,6 +18,7 @@ from manim_studio.model.factory import (
     unique_name,
 )
 from manim_studio.model.schema import kind_info
+from manim_studio.model.types import StepKind
 
 _OBJECT_FIELDS = {f.name for f in fields(SceneObject)} - {"id", "kind", "params"}
 _ANIMATION_FIELDS = {"run_time", "rate_func", "target_id", "kind"}
@@ -228,6 +229,66 @@ def update_animation(scene: Scene, animation_id: str, **values: Any) -> None:
 def set_animation_param(scene: Scene, animation_id: str, key: str, value: Any) -> None:
     """Set a kind-specific parameter of an animation."""
     require_animation(scene, animation_id).params[key] = value
+
+
+def set_animation_timing(scene: Scene, animation_id: str, delay: float | None = None, run_time: float | None = None) -> None:
+    """Change the delay and/or duration of an animation."""
+    anim = require_animation(scene, animation_id)
+    if delay is not None:
+        anim.delay = round(max(0.0, float(delay)), 4)
+    if run_time is not None:
+        anim.run_time = round(max(0.05, float(run_time)), 4)
+
+
+def move_animation(scene: Scene, animation_id: str, step_id: str, index: int | None = None) -> None:
+    """Move an animation into another step; an emptied play step is removed."""
+    found = scene.find_animation(animation_id)
+    target = require_step(scene, step_id)
+    if found is None:
+        raise ModelError(f"unknown animation {animation_id}")
+    source, anim = found
+    if target.kind != StepKind.PLAY:
+        raise ModelError("animations can only be moved into play steps")
+    source.animations.remove(anim)
+    position = len(target.animations) if index is None else max(0, min(index, len(target.animations)))
+    target.animations.insert(position, anim)
+    if source is not target and not source.animations:
+        scene.steps.remove(source)
+
+
+def move_animation_to_new_step(scene: Scene, animation_id: str, step_index: int) -> str:
+    """Put an animation into a new play step at ``step_index`` and return the step id."""
+    from manim_studio.model.factory import create_play_step
+
+    step = create_play_step()
+    add_step(scene, step, step_index)
+    move_animation(scene, animation_id, step.id)
+    return step.id
+
+
+def duplicate_animation(scene: Scene, animation_id: str) -> str:
+    """Insert a copy of an animation right after it and return the new id."""
+    from manim_studio.model.factory import clone_animation
+
+    found = scene.find_animation(animation_id)
+    if found is None:
+        raise ModelError(f"unknown animation {animation_id}")
+    step, anim = found
+    clone = clone_animation(anim)
+    step.animations.insert(step.animations.index(anim) + 1, clone)
+    return clone.id
+
+
+def set_step_mode(scene: Scene, step_id: str, mode: str, lag_ratio: float | None = None) -> None:
+    """Change how the animations of a step are arranged in time."""
+    from manim_studio.model.entities import STEP_MODES
+
+    step = require_step(scene, step_id)
+    if mode not in STEP_MODES:
+        raise ModelError(f"unknown step mode {mode}")
+    step.mode = mode
+    if lag_ratio is not None:
+        step.lag_ratio = round(max(0.0, min(1.0, float(lag_ratio))), 4)
 
 
 # --- scenes ------------------------------------------------------------------

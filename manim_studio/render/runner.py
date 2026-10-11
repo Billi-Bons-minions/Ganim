@@ -16,6 +16,7 @@ from manim_studio.render.command import (
 )
 from manim_studio.render.output_parser import (
     ErrorSummary,
+    Progress,
     is_progress_line,
     overall_fraction,
     parse_progress,
@@ -104,6 +105,8 @@ class ManimRunner(QObject):
         line = strip_ansi(raw_line).rstrip()
         progress = parse_progress(line)
         if progress is not None and self._job is not None:
+            offset = self._job.from_animation or 0
+            progress = Progress(max(0, progress.animation - offset), progress.percent)
             self.progressChanged.emit(overall_fraction(progress, self._job.total_animations))
         if is_progress_line(line):
             self._last_progress_line = line.strip()

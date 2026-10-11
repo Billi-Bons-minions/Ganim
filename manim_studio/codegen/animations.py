@@ -9,7 +9,7 @@ from manim_studio.codegen.formatting import INDENT, MAX_LINE
 from manim_studio.codegen.literals import LiteralError, fmt_float, py_color, py_degrees, py_point
 from manim_studio.model.entities import STEP_LAGGED, STEP_SEQUENCE, Animation, Scene, Step
 from manim_studio.model.schema import animation_allowed
-from manim_studio.model.types import MODIFIER_ANIMATIONS, RATE_FUNCTIONS, TRANSFORM_ANIMATIONS, AnimationKind, StepKind
+from manim_studio.model.types import MODIFIER_ANIMATIONS, RATE_FUNCTIONS, TRANSFORM_ANIMATIONS, AnimationKind, ObjectKind, StepKind
 
 #: Manim class for every animation that is generated as a plain call.
 ANIMATION_CLASSES: dict[AnimationKind, str] = {
@@ -117,6 +117,12 @@ def simple_animation_code(anim: Animation, scene: Scene, names: dict[str, str], 
     variable = _variable(names, anim.target_id)
     _check_allowed(anim, scene, names)
     timing = timing or plain_timing(anim)
+    if anim.kind == AnimationKind.SET_VALUE:
+        value = fmt_float(float(anim.params.get("value", 0.0)))
+        target = scene.object_by_id(anim.target_id)
+        if target is not None and target.kind == ObjectKind.DECIMAL_NUMBER:
+            return f"ChangeDecimalToValue({variable}, {value}, {', '.join(timing.args())})"
+        return f"{variable}.animate({', '.join(timing.args())}).set_value({value})"
     arguments = [variable] + _extra_arguments(anim, scene, names) + timing.args()
     return f"{ANIMATION_CLASSES[anim.kind]}({', '.join(arguments)})"
 

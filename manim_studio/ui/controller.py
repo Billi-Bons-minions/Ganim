@@ -10,7 +10,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog, QWidget
 
 from manim_studio.i18n import tr
-from manim_studio.model import groups
+from manim_studio.model import graphs, groups
 from manim_studio.model import operations as ops
 from manim_studio.model.animation_builder import allowed_for_objects, build_animations
 from manim_studio.model.arrange import arrange_deltas, move_layer
@@ -24,12 +24,14 @@ from manim_studio.model.factory import (
     create_wait_step,
     unique_name,
 )
+from manim_studio.model.geometry import bound_axes
 from manim_studio.model.serialization import object_from_dict, object_to_dict
 from manim_studio.model.stage_edits import (
     KIND_FOR_ACTION,
     MOVE,
     ROTATE,
     SCALE,
+    VALUE,
     check_edit,
     color_edit,
     is_recording,
@@ -40,15 +42,18 @@ from manim_studio.model.stage_edits import (
     set_move_target,
     set_rotation_angle,
     set_scale_factor,
+    value_edit,
     would_create,
 )
 from manim_studio.model.state import START
-from manim_studio.model.types import AnimationKind, ObjectKind, StepKind
+from manim_studio.model.types import GRAPH_TOOL_KINDS, AnimationKind, ObjectKind, StepKind
 from manim_studio.ui.document import ProjectDocument
 from manim_studio.ui.editor_state import INSPECT_ANIMATION, INSPECT_STEP, EditorState
 from manim_studio.ui.settings import AppSettings
 
 CLIPBOARD_PREFIX = "manim-studio-objects:"
+PARAMETER_SYMBOLS = ("a", "b", "c", "k", "m", "n", "p", "q", "r", "s", "u", "v", "w")
+DERIVATIVE_COLORS = ("#83C167", "#FC6255", "#9A72AC", "#5CD0B3")
 PASTE_OFFSET = 0.5
 IMAGE_FILTER_KEY = "dialog.image_filter"
 
@@ -104,9 +109,10 @@ class EditorController(QObject):
         self.settings.set_last_directory("image", str(Path(path).parent))
         return relative_asset_path(path, self.document.base_dir)
 
-    def add_object(self, kind: ObjectKind, x: float | None = None, y: float | None = None) -> str | None:
+    def add_object(
+        self, kind: ObjectKind, x: float | None = None, y: float | None = None, name: str | None = None, style: dict | None = None, **params
+    ) -> str | None:
         """Create an object of ``kind`` (at the given position or a free spot)."""
-        params = {}
         if kind == ObjectKind.IMAGE:
             path = self._choose_image()
             if path is None:
@@ -115,15 +121,74 @@ class EditorController(QObject):
         if x is None or y is None:
             x, y = self._free_position()
         scene = self.scene()
-        name = unique_name([obj.name for obj in scene.objects], tr(f"kind.{kind.value}"))
+        if kind == ObjectKind.PARAMETER and "symbol" not in params:
+            params["symbol"] = self._free_symbol()
+        names = [obj.name for obj in scene.objects]
+        if kind == ObjectKind.PARAMETER and not name and str(params["symbol"]) not in names:
+            name = str(params["symbol"])
+        else:
+            name = unique_name(names, name or tr(f"kind.{kind.value}"))
         obj = create_object(kind, name, x, y, **params)
-        if kind == ObjectKind.FUNCTION_GRAPH:
-            axes = [o for o in scene.objects if o.kind in (ObjectKind.AXES, ObjectKind.NUMBER_PLANE)]
-            if axes:
-                obj.params["axes_id"] = axes[-1].id
+        for key, value in (style or {}).items():
+            setattr(obj, key, value)
+        self._attach(obj)
         self._edit(tr("undo.add_object", name=name), lambda s: ops.add_object(s, obj))
         self.editor.select_objects([obj.id])
         return obj.id
+
+    def _free_symbol(self) -> str:
+        used = set(graphs.parameter_symbols(self.scene())) | {graphs.parameter_symbol(o) for o in graphs.parameter_objects(self.scene())}
+        return next((symbol for symbol in PARAMETER_SYMBOLS if symbol not in used), f"p{len(used) + 1}")
+
+    def _function_graphs(self) -> list:
+        return [o for o in self.scene().objects if graphs.is_function_curve(o) and bound_axes(self.scene(), o) is not None]
+
+    def _attach(self, obj) -> None:
+        """Connect a new graph to axes and a new graph tool to a graph (the selected one if possible)."""
+        scene = self.scene()
+        if obj.kind == ObjectKind.FUNCTION_GRAPH and not obj.params.get("axes_id"):
+            axes = [o for o in scene.objects if o.kind in (ObjectKind.AXES, ObjectKind.NUMBER_PLANE)]
+            if axes:
+                obj.params["axes_id"] = axes[-1].id
+        if obj.kind not in GRAPH_TOOL_KINDS or obj.params.get("graph_id"):
+            return
+        candidates = self._function_graphs()
+        selected = [o for o in candidates if o.id in self.editor.selected_objects]
+        graph = (selected or candidates or [None])[-1]
+        if graph is None:
+            return
+        obj.params["graph_id"] = graph.id
+        others = [o for o in candidates if o.id != graph.id]
+        if others and not obj.params.get("other_graph_id"):
+            obj.params["other_graph_id"] = others[-1].id
+
+    def add_graph_tool(self, kind: ObjectKind, graph_id: str, **params) -> str | None:
+        """Add an area, tangent, point, markers ... to a graph."""
+        name = tr(f"feature.{params['feature']}") if kind == ObjectKind.GRAPH_MARKERS and "feature" in params else None
+        graph = self.scene().object_by_id(graph_id)
+        if graph is not None and kind in (ObjectKind.GRAPH_AREA, ObjectKind.RIEMANN):
+            low, high = graphs.x_range(graph)
+            params.setdefault("x_min", max(low, -1.0 if kind == ObjectKind.GRAPH_AREA else 0.0))
+            params.setdefault("x_max", min(high, 2.0 if kind == ObjectKind.GRAPH_AREA else 3.0))
+        return self.add_object(kind, 0.0, 0.0, name=name, graph_id=graph_id, **params)
+
+    def add_derivative(self, graph_id: str, order: int = 1) -> str | None:
+        """Add the graph of the derivative of a function graph."""
+        graph = self.scene().object_by_id(graph_id)
+        if graph is None:
+            return None
+        count = sum(1 for o in self.scene().objects if o.params.get("curve") == "derivative")
+        color = DERIVATIVE_COLORS[count % len(DERIVATIVE_COLORS)]
+        name = tr("graph.derivative_name" if order == 1 else "graph.second_derivative_name", name=graph.name)
+        params = {
+            "curve": "derivative",
+            "derive_from": graph_id,
+            "derive_order": str(order),
+            "axes_id": graph.params.get("axes_id"),
+            "x_min": graph.params.get("x_min", -5.0),
+            "x_max": graph.params.get("x_max", 5.0),
+        }
+        return self.add_object(ObjectKind.FUNCTION_GRAPH, 0.0, 0.0, name=name, style={"stroke_color": color}, **params)
 
     def delete_objects(self, ids: list[str] | None = None) -> None:
         """Delete objects and everything that refers to them."""
@@ -346,6 +411,13 @@ class EditorController(QObject):
         if self.edit_policy(ROTATE, [object_id])[0]:
             self._announce_recording([object_id], ROTATE)
             self._edit(tr("undo.rotate"), rotate_edit(self.editor.cursor, object_id, delta))
+
+    def set_value(self, object_id: str, value: float, merge_key: str | None = None) -> None:
+        """Change a parameter (or number) at the start, or record a "change value" animation."""
+        if not self.edit_policy(VALUE, [object_id])[0]:
+            return
+        self._announce_recording([object_id], VALUE)
+        self._edit(tr("undo.value"), value_edit(self.editor.cursor, object_id, value), merge_key=merge_key)
 
     def recording(self) -> bool:
         """Return ``True`` if edits currently become animations."""

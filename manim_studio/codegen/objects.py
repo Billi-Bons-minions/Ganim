@@ -7,6 +7,7 @@ from typing import Callable
 
 from manim_studio.codegen.errors import CodegenError
 from manim_studio.codegen.formatting import assign, call
+from manim_studio.codegen.graph_code import axis_label_lines, graph_object_code
 from manim_studio.codegen.literals import (
     LiteralError,
     fmt_float,
@@ -26,10 +27,9 @@ from manim_studio.codegen.objects_extra import (
 from manim_studio.codegen.objects_extra import text as extra_text
 from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import Scene, SceneObject
-from manim_studio.model.expression import ExpressionError, parse_expression
 from manim_studio.model.geometry import bound_axes
 from manim_studio.model.schema import is_vector_image_path
-from manim_studio.model.types import ObjectKind
+from manim_studio.model.types import GRAPH_TOOL_KINDS, INVISIBLE_KINDS, ObjectKind
 
 Kwargs = list[tuple[str, str]]
 
@@ -153,28 +153,6 @@ def _number_plane(obj: SceneObject) -> list[str]:
     return call("NumberPlane", [], _axis_ranges(obj) + [("background_line_style", style)], 2)
 
 
-def function_lambda(obj: SceneObject) -> str:
-    """Return the ``lambda x: ...`` code of a function graph."""
-    try:
-        expression = parse_expression(str(obj.params.get("expression", "")))
-    except ExpressionError as error:
-        raise CodegenError("expression_invalid", f"{obj.name}: {error.code} {error.detail}".strip()) from None
-    return f"lambda x: {expression.to_numpy()}"
-
-
-def _graph_kwargs(obj: SceneObject) -> Kwargs:
-    return [("x_range", py_range(_p(obj, "x_min"), _p(obj, "x_max")))] + _line_style(obj)
-
-
-def _function_graph(obj: SceneObject) -> list[str]:
-    return call("FunctionGraph", [function_lambda(obj)], _graph_kwargs(obj), 2)
-
-
-def bound_graph_code(obj: SceneObject, axes_variable: str) -> list[str]:
-    """Return ``axes.plot(...)`` for a graph attached to a coordinate system."""
-    return call(f"{axes_variable}.plot", [function_lambda(obj)], _graph_kwargs(obj), 2)
-
-
 def _image_path(obj: SceneObject, base_dir: str | Path | None) -> str:
     path = str(obj.params.get("path", ""))
     if not path:
@@ -205,7 +183,6 @@ _CONSTRUCTORS: dict[ObjectKind, Callable[[SceneObject], list[str]]] = {
     ObjectKind.MATH_TEX: _math_tex,
     ObjectKind.AXES: _axes,
     ObjectKind.NUMBER_PLANE: _number_plane,
-    ObjectKind.FUNCTION_GRAPH: _function_graph,
 }
 
 
@@ -247,16 +224,16 @@ def _special_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> tupl
     return None
 
 
-def object_code(scene: Scene, obj: SceneObject, names: dict[str, str], base_dir: str | Path | None) -> list[str]:
+def object_code(
+    scene: Scene, obj: SceneObject, names: dict[str, str], base_dir: str | Path | None, helpers: set[str] | None = None
+) -> list[str]:
     """Return the lines that create, place and style one object."""
     variable = names[obj.id]
+    helpers = helpers if helpers is not None else set()
     try:
-        special = _special_code(scene, obj, names)
-        axes = bound_axes(scene, obj) if obj.kind == ObjectKind.FUNCTION_GRAPH else None
+        special = _special_code(scene, obj, names) or graph_object_code(scene, obj, names, helpers)
         if special is not None:
             lines, place = special
-        elif axes is not None:
-            lines, place = assign(variable, bound_graph_code(obj, names[axes.id])), False
         elif obj.kind == ObjectKind.IMAGE:
             lines, place = assign(variable, image_code(obj, base_dir)), True
         else:
@@ -264,13 +241,18 @@ def object_code(scene: Scene, obj: SceneObject, names: dict[str, str], base_dir:
         lines += _post_style(obj, variable)
         if place:
             lines += _placement(obj, variable)
+        if obj.kind == ObjectKind.AXES:
+            lines += axis_label_lines(obj, variable)
+        parameter = scene.object_by_id(obj.params.get("parameter_id")) if obj.kind == ObjectKind.DECIMAL_NUMBER else None
+        if parameter is not None and parameter.kind == ObjectKind.PARAMETER and parameter.id in names:
+            lines.append(f"{variable}.add_updater(lambda number: number.set_value({names[parameter.id]}.get_value()))")
     except LiteralError as error:
         raise CodegenError("value_invalid", f"{obj.name}: {error}") from None
     except (KeyError, TypeError, ValueError) as error:
         if isinstance(error, CodegenError):
             raise
         raise CodegenError("value_invalid", f"{obj.name}: {error}") from None
-    if obj.z_index and obj.kind != ObjectKind.GROUP:
+    if obj.z_index and obj.kind not in INVISIBLE_KINDS:
         lines.append(f"{variable}.set_z_index({fmt_int(obj.z_index)})")
     return lines
 
@@ -280,6 +262,10 @@ def dependencies(scene: Scene, obj: SceneObject) -> list[str]:
     result: list[str] = []
     if obj.kind == ObjectKind.FUNCTION_GRAPH and bound_axes(scene, obj) is not None:
         result.append(str(obj.params.get("axes_id")))
+    if obj.kind in GRAPH_TOOL_KINDS:
+        for key in ("x_parameter",):
+            if obj.params.get(key):
+                result.append(str(obj.params.get(key)))
     if obj.kind == ObjectKind.BRACE and obj.params.get("target"):
         result.append(str(obj.params.get("target")))
     if obj.kind == ObjectKind.GROUP:
@@ -291,8 +277,12 @@ def dependencies(scene: Scene, obj: SceneObject) -> list[str]:
 
 
 def creation_order(scene: Scene) -> list[SceneObject]:
-    """Objects sorted so that every object comes after the ones it depends on."""
-    remaining = list(scene.objects)
+    """Objects sorted so that every object comes after the ones it depends on.
+
+    Parameters (value trackers) come first because terms of any object may use them.
+    """
+    remaining = [obj for obj in scene.objects if obj.kind == ObjectKind.PARAMETER]
+    remaining += [obj for obj in scene.objects if obj.kind != ObjectKind.PARAMETER]
     done: set[str] = set()
     ordered: list[SceneObject] = []
     while remaining:

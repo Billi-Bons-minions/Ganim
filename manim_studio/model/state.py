@@ -8,7 +8,7 @@ from dataclasses import dataclass, replace
 from manim_studio.model import groups
 from manim_studio.model.entities import Animation, Scene, SceneObject
 from manim_studio.model.extents import base_size, rotated_extent
-from manim_studio.model.geometry import graph_anchor, is_bound_graph
+from manim_studio.model.graphs import bound_anchor, is_bound
 from manim_studio.model.types import (
     ENTRANCE_ANIMATIONS,
     EXIT_ANIMATIONS,
@@ -47,6 +47,7 @@ class ObjectState:
     morph_t: float = 0.0
     outline: float = 0.0
     outline_color: str = "#F7D96F"
+    value: float = 0.0
 
 
 def first_reference(scene: Scene, object_id: str) -> tuple[Animation, bool] | None:
@@ -115,7 +116,7 @@ def brace_anchor(scene: Scene, brace: SceneObject) -> tuple[float, float] | None
         })
         width, height = right - left, top - bottom
     else:
-        tx, ty = (graph_anchor(scene, target) if is_bound_graph(scene, target) else (target.x, target.y))
+        tx, ty = bound_anchor(scene, target) if is_bound(scene, target) else (target.x, target.y)
         width, height = rotated_extent(*base_size(scene, target), target.rotation)
     buff = float(brace.params.get("buff", 0.2))
     offset_y = height / 2 + buff + _BRACE_THICKNESS / 2
@@ -131,9 +132,9 @@ def brace_anchor(scene: Scene, brace: SceneObject) -> tuple[float, float] | None
 
 def initial_state(scene: Scene, obj: SceneObject) -> ObjectState:
     """Return the state of an object before the first step."""
-    bound = is_bound_graph(scene, obj)
+    bound = is_bound(scene, obj)
     if bound:
-        x, y = graph_anchor(scene, obj)
+        x, y = bound_anchor(scene, obj)
     elif groups.is_group(obj):
         x, y = groups.group_center_of_objects(scene, obj.id)
     elif obj.kind == ObjectKind.BRACE and brace_anchor(scene, obj) is not None:
@@ -151,7 +152,24 @@ def initial_state(scene: Scene, obj: SceneObject) -> ObjectState:
         scale=1.0,
         stroke_color=obj.stroke_color,
         fill_color=obj.fill_color,
+        value=_initial_value(obj),
     )
+
+
+def _initial_value(obj: SceneObject) -> float:
+    if obj.kind in (ObjectKind.PARAMETER, ObjectKind.DECIMAL_NUMBER):
+        try:
+            return float(obj.params.get("value", 0.0))
+        except (TypeError, ValueError):
+            return 0.0
+    return 0.0
+
+
+def parameter_values(scene: Scene, states: dict[str, ObjectState]) -> dict[str, float]:
+    """Return the current value of every parameter symbol."""
+    from manim_studio.model.graphs import parameter_objects, parameter_symbol
+
+    return {parameter_symbol(obj): states[obj.id].value for obj in parameter_objects(scene) if obj.id in states and parameter_symbol(obj)}
 
 
 def _apply_color(state: ObjectState, anim: Animation) -> ObjectState:
@@ -200,6 +218,9 @@ def apply_animation(states: dict[str, ObjectState], anim: Animation, scene: Scen
         states[anim.target_id] = replace(current, visible=True)
     elif kind == AnimationKind.CIRCUMSCRIBE:
         return
+    elif kind == AnimationKind.SET_VALUE:
+        if not returns:
+            states[anim.target_id] = replace(current, value=float(anim.params.get("value", current.value)))
     elif not returns:
         states[anim.target_id] = _apply_modifier(current, anim)
     else:

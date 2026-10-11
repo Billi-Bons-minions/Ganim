@@ -529,6 +529,12 @@ def _vertex(p: QPainter) -> None:
         _rect(p, x - 2, y - 2, 4, 4, 0.5, fill=True)
 
 
+def _a_value(p: QPainter) -> None:
+    _line(p, 3, 17, 21, 17)
+    _circle(p, 15, 17, 2.6, fill=True)
+    _text(p, "1.5", size=9, rect=QRectF(2, 2, 20, 11))
+
+
 # --- animation kinds ---------------------------------------------------------------------
 
 
@@ -713,6 +719,7 @@ ICONS: dict[str, Drawer] = {
     "a_scale": _scale,
     "a_rotate": _rotate,
     "a_change_color": _a_color,
+    "a_set_value": _a_value,
     "a_indicate": _sparkle,
     "a_circumscribe": _a_circumscribe,
     "a_fade_out": _a_fade_out,

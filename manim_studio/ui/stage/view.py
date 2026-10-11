@@ -15,7 +15,7 @@ from manim_studio.model import groups
 from manim_studio.model.entities import Scene
 from manim_studio.model.stage_edits import MOVE, ROTATE, SCALE
 from manim_studio.model.state import ObjectState
-from manim_studio.model.types import FRAME_HEIGHT, FRAME_WIDTH, LINE_KINDS, ObjectKind
+from manim_studio.model.types import FRAME_HEIGHT, FRAME_WIDTH, INVISIBLE_KINDS, LINE_KINDS, ObjectKind
 from manim_studio.ui.stage.drawing import PX, StageResources, build_drawing, pt
 from manim_studio.ui.stage.effects import Effects
 from manim_studio.ui.stage.items import (
@@ -221,7 +221,7 @@ class StageView(QGraphicsView):
         known = set()
         for index, obj in enumerate(scene.objects):
             state = states.get(obj.id)
-            if state is None or groups.is_group(obj):
+            if state is None or obj.kind in INVISIBLE_KINDS:
                 continue
             known.add(obj.id)
             item = self._items.get(obj.id)

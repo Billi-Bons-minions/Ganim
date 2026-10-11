@@ -251,9 +251,9 @@ def brace_primitives(scene: Scene, obj: SceneObject, state: ObjectState) -> tupl
 # --- text-like -------------------------------------------------------------------------------
 
 
-def decimal_text(obj: SceneObject) -> str:
+def decimal_text(obj: SceneObject, value: float | None = None) -> str:
     """Formatted value of a number object (as Manim shows it)."""
-    value = param_float(obj.params, "value", 0.0)
+    value = param_float(obj.params, "value", 0.0) if value is None else value
     decimals = max(0, int(obj.params.get("decimals", 2)))
     text = f"{value:,.{decimals}f}"
     if obj.params.get("show_sign") and value >= 0:
@@ -261,9 +261,15 @@ def decimal_text(obj: SceneObject) -> str:
     return text + str(obj.params.get("unit", ""))
 
 
-def decimal_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
+def decimal_primitives(scene: Scene, obj: SceneObject, state: ObjectState, resources: StageResources) -> list[Primitive]:
+    value = state.value
+    parameter = scene.object_by_id(obj.params.get("parameter_id"))
+    if parameter is not None and parameter.kind == ObjectKind.PARAMETER:
+        symbol = str(parameter.params.get("symbol", ""))
+        values = resources.values or {}
+        value = values.get(symbol, param_float(parameter.params, "value", 0.0))
     path = QPainterPath()
-    path.addText(QPointF(0, 0), text_font(obj, param_float(obj.params, "font_size", 48.0)), decimal_text(obj))
+    path.addText(QPointF(0, 0), text_font(obj, param_float(obj.params, "font_size", 48.0)), decimal_text(obj, value))
     return [Primitive(path=path, brush=QBrush(_color(state.fill_color, obj.fill_opacity)))]
 
 
@@ -421,7 +427,6 @@ def extra_drawing(scene: Scene, obj: SceneObject, state: ObjectState, resources:
         ObjectKind.POLYGON: polygon_primitives,
         ObjectKind.REGULAR_POLYGON: regular_polygon_primitives,
         ObjectKind.STAR: star_primitives,
-        ObjectKind.DECIMAL_NUMBER: decimal_primitives,
         ObjectKind.TABLE: table_primitives,
         ObjectKind.MATRIX: matrix_primitives,
         ObjectKind.MARKUP_TEXT: markup_primitives,
@@ -430,6 +435,8 @@ def extra_drawing(scene: Scene, obj: SceneObject, state: ObjectState, resources:
         return simple[kind](obj, state), True
     if kind == ObjectKind.CODE:
         return code_primitives(obj), True
+    if kind == ObjectKind.DECIMAL_NUMBER:
+        return decimal_primitives(scene, obj, state, resources), True
     if kind == ObjectKind.TEX:
         return tex_primitives(obj, state, resources), True
     if kind == ObjectKind.BRACE:

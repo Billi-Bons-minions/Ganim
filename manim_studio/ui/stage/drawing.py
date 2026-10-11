@@ -33,16 +33,12 @@ from manim_studio.model.geometry import (
     AXES_TIP_LENGTH,
     AxesLayout,
     axes_layout,
-    graph_anchor,
-    graph_scene_segments,
     origin_shift,
     param_float,
-    sample_function,
-    try_parse,
 )
 from manim_studio.model.schema import is_vector_image_path
 from manim_studio.model.state import ObjectState
-from manim_studio.model.types import ObjectKind
+from manim_studio.model.types import GRAPH_TOOL_KINDS, ObjectKind
 from manim_studio.render.tex_preview import TexPreviewCache
 
 PX = 100.0
@@ -82,6 +78,8 @@ class StageResources:
     base_dir: Path | None = None
     images: dict[tuple[str, float], QImage] = field(default_factory=dict)
     tinted: dict[tuple[str, str, int], QImage] = field(default_factory=dict)
+    #: Current parameter values (symbol -> value); ``None`` uses the start values.
+    values: dict[str, float] | None = None
 
 
 def pt(x: float, y: float) -> QPointF:
@@ -365,7 +363,9 @@ def _axes_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
         primitives.append(Primitive(path=_axis_tips(layout), brush=QBrush(_color(state.stroke_color))))
     if obj.params.get("show_numbers"):
         primitives.append(Primitive(path=_axis_labels(layout, x_step, y_step), brush=QBrush(QColor("#FFFFFF"))))
-    return primitives
+    from manim_studio.ui.stage.drawing_graph import axis_label_primitives
+
+    return primitives + axis_label_primitives(obj, state, layout)
 
 
 def _number_plane_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
@@ -387,26 +387,6 @@ def _number_plane_primitives(obj: SceneObject, state: ObjectState) -> list[Primi
         Primitive(path=grid, pen=grid_pen),
         Primitive(path=_axis_lines(layout), pen=axis_pen),
     ]
-
-
-def _segments_path(segments: list[list[tuple[float, float]]], offset: tuple[float, float]) -> QPainterPath:
-    path = QPainterPath()
-    for segment in segments:
-        path.moveTo(pt(segment[0][0] - offset[0], segment[0][1] - offset[1]))
-        for xv, yv in segment[1:]:
-            path.lineTo(pt(xv - offset[0], yv - offset[1]))
-    return path
-
-
-def _graph_primitives(scene: Scene, obj: SceneObject, state: ObjectState) -> tuple[list[Primitive], bool]:
-    bound = graph_scene_segments(scene, obj)
-    if bound:
-        return [_stroke_primitive(_segments_path(bound, graph_anchor(scene, obj)), obj, state)], False
-    expression = try_parse(str(obj.params.get("expression", "")))
-    if expression is None:
-        return [], True
-    segments = sample_function(expression, param_float(obj.params, "x_min", -5.0), param_float(obj.params, "x_max", 5.0))
-    return [_stroke_primitive(_segments_path(segments, (0.0, 0.0)), obj, state)], True
 
 
 # --- images ----------------------------------------------------------------------------
@@ -462,6 +442,7 @@ def _image_primitives(obj: SceneObject, resources: StageResources) -> list[Primi
 
 def _shape_drawing(obj: SceneObject, state: ObjectState, scene: Scene, resources: StageResources) -> tuple[list[Primitive], bool]:
     from manim_studio.ui.stage.drawing_extra import extra_drawing
+    from manim_studio.ui.stage.drawing_graph import graph_primitives, label_primitives, tool_primitives
 
     extra = extra_drawing(scene, obj, state, resources)
     if extra is not None:
@@ -496,7 +477,13 @@ def _shape_drawing(obj: SceneObject, state: ObjectState, scene: Scene, resources
     if kind == ObjectKind.NUMBER_PLANE:
         return _number_plane_primitives(obj, state), False
     if kind == ObjectKind.FUNCTION_GRAPH:
-        return _graph_primitives(scene, obj, state)
+        return graph_primitives(scene, obj, state, resources.values)
+    if kind == ObjectKind.GRAPH_LABEL:
+        return label_primitives(scene, obj, state, resources)
+    if kind in GRAPH_TOOL_KINDS:
+        return tool_primitives(scene, obj, state, resources.values)
+    if kind == ObjectKind.PARAMETER:
+        return [], False
     return _image_primitives(obj, resources), True
 
 
@@ -516,7 +503,7 @@ def _translate(primitive: Primitive, dx: float, dy: float) -> None:
 
 
 def _hit_path(primitives: list[Primitive], bounds: QRectF, kind: ObjectKind) -> QPainterPath:
-    if kind in (ObjectKind.LINE, ObjectKind.ARROW, ObjectKind.FUNCTION_GRAPH, ObjectKind.VECTOR, ObjectKind.DOUBLE_ARROW, ObjectKind.DASHED_LINE, ObjectKind.ARC):
+    if kind in (ObjectKind.LINE, ObjectKind.ARROW, ObjectKind.FUNCTION_GRAPH, ObjectKind.VECTOR, ObjectKind.DOUBLE_ARROW, ObjectKind.DASHED_LINE, ObjectKind.ARC, ObjectKind.TANGENT):
         combined = QPainterPath()
         for primitive in primitives:
             if primitive.path is not None:

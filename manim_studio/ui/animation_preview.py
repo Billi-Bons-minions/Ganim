@@ -120,6 +120,19 @@ class AnimationPreview(QWidget):
         painter.setBrush(fill)
         painter.drawPath(path)
 
+    def _draw_set_value(self, painter: QPainter, t: float, unit: float) -> None:
+        font = QFont()
+        font.setPixelSize(round(unit * 1.2))
+        font.setBold(True)
+        painter.setFont(font)
+        painter.setPen(QColor("#FFFFFF"))
+        painter.drawText(QRectF(-unit * 2, -unit * 1.6, unit * 4, unit * 1.6), Qt.AlignmentFlag.AlignCenter, f"{smooth(t) * 10:.1f}")
+        painter.setPen(self._pen(QColor("#888888"), 2.0))
+        painter.drawLine(QPointF(-unit * 1.5, unit * 0.6), QPointF(unit * 1.5, unit * 0.6))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(BLUE)
+        painter.drawEllipse(QPointF(-unit * 1.5 + 3 * unit * smooth(t), unit * 0.6), unit * 0.18, unit * 0.18)
+
     def _draw_draw_border_then_fill(self, painter: QPainter, t: float, unit: float) -> None:
         border = min(1.0, t * 2)
         painter.setPen(self._pen(BLUE))

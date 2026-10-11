@@ -203,6 +203,101 @@ def _group(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QCol
     p.drawRect(QRectF(m * 0.6, m * 0.6, s - 1.2 * m, s - 1.2 * m))
 
 
+def _axes_hint(p: QPainter, s: float, m: float, w: float, neutral: QColor) -> None:
+    p.save()
+    p.setPen(QPen(neutral, w * 0.7))
+    p.drawLine(QPointF(m * 0.6, s - m * 1.2), QPointF(s - m * 0.6, s - m * 1.2))
+    p.drawLine(QPointF(m * 1.2, m * 0.6), QPointF(m * 1.2, s - m * 0.6))
+    p.restore()
+
+
+def _parabola(s: float, m: float) -> QPainterPath:
+    path = QPainterPath(QPointF(m * 1.4, m))
+    path.quadTo(QPointF(s * 0.5, s * 1.25), QPointF(s - m * 0.8, m))
+    return path
+
+
+def _area(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    _axes_hint(p, s, m, w, neutral)
+    region = QPainterPath(QPointF(s * 0.35, s - m * 1.2))
+    region.lineTo(QPointF(s * 0.35, s * 0.55))
+    region.quadTo(QPointF(s * 0.55, s * 0.2), QPointF(s * 0.8, s * 0.35))
+    region.lineTo(QPointF(s * 0.8, s - m * 1.2))
+    region.closeSubpath()
+    p.setPen(Qt.PenStyle.NoPen)
+    solid = QColor(stroke)
+    solid.setAlphaF(0.55)
+    p.setBrush(solid)
+    p.drawPath(region)
+    p.setPen(QPen(stroke, w))
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    curve = QPainterPath(QPointF(m * 1.2, s * 0.75))
+    curve.quadTo(QPointF(s * 0.55, s * 0.05), QPointF(s - m * 0.6, s * 0.4))
+    p.drawPath(curve)
+
+
+def _riemann(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    _axes_hint(p, s, m, w, neutral)
+    base = s - m * 1.2
+    for index, height in enumerate((0.25, 0.4, 0.52, 0.6)):
+        x = s * 0.28 + index * s * 0.15
+        p.drawRect(QRectF(x, base - s * height, s * 0.15, s * height))
+
+
+def _tangent(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    p.setPen(QPen(neutral, w))
+    p.drawPath(_parabola(s, m))
+    p.setPen(QPen(stroke, w * 1.1))
+    p.drawLine(QPointF(m * 0.4, s * 0.88), QPointF(s - m * 0.4, s * 0.36))
+    p.setBrush(stroke)
+    p.drawEllipse(QPointF(s * 0.62, s * 0.62), w * 1.6, w * 1.6)
+
+
+def _graph_point(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    _axes_hint(p, s, m, w, neutral)
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    p.setPen(QPen(neutral, w * 0.8))
+    p.drawPath(_parabola(s, m))
+    dashed = QPen(stroke, w * 0.7, Qt.PenStyle.DashLine)
+    p.setPen(dashed)
+    p.drawLine(QPointF(s * 0.7, s * 0.45), QPointF(s * 0.7, s - m * 1.2))
+    p.drawLine(QPointF(s * 0.7, s * 0.45), QPointF(m * 1.2, s * 0.45))
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(stroke)
+    p.drawEllipse(QPointF(s * 0.7, s * 0.45), w * 2, w * 2)
+
+
+def _markers(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.setPen(QPen(neutral, w * 0.7))
+    p.drawLine(QPointF(m * 0.5, s * 0.55), QPointF(s - m * 0.5, s * 0.55))
+    p.setPen(QPen(stroke, w))
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawPath(_sine(m, s, s * 0.28).translated(0, s * 0.05))
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QColor("#FC6255"))
+    for x in (m, s / 2, s - m):
+        p.drawEllipse(QPointF(x, s * 0.55), w * 1.8, w * 1.8)
+
+
+def _graph_label(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.setPen(QPen(neutral, w))
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    curve = QPainterPath(QPointF(m, s - m))
+    curve.quadTo(QPointF(s * 0.45, s - m), QPointF(s * 0.6, s * 0.45))
+    p.drawPath(curve)
+    _text(p, QRectF(s * 0.4, 0, s * 0.6, s * 0.5), "f", stroke, italic=True, size=0.8)
+
+
+def _parameter(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.setPen(QPen(neutral, w))
+    p.drawLine(QPointF(m, s * 0.68), QPointF(s - m, s * 0.68))
+    p.setPen(QPen(stroke, w))
+    p.setBrush(stroke)
+    p.drawEllipse(QPointF(s * 0.6, s * 0.68), s * 0.09, s * 0.09)
+    _text(p, QRectF(0, 0, s, s * 0.55), "a", stroke, italic=True, size=0.75)
+
+
 _EXTRA_DRAWERS = {
     ObjectKind.NUMBER_LINE: _number_line,
     ObjectKind.VECTOR: _vector,
@@ -222,6 +317,13 @@ _EXTRA_DRAWERS = {
     ObjectKind.TEX: _tex,
     ObjectKind.MARKUP_TEXT: _markup,
     ObjectKind.GROUP: _group,
+    ObjectKind.GRAPH_AREA: _area,
+    ObjectKind.RIEMANN: _riemann,
+    ObjectKind.TANGENT: _tangent,
+    ObjectKind.GRAPH_POINT: _graph_point,
+    ObjectKind.GRAPH_MARKERS: _markers,
+    ObjectKind.GRAPH_LABEL: _graph_label,
+    ObjectKind.PARAMETER: _parameter,
 }
 
 

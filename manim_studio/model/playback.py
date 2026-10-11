@@ -160,6 +160,9 @@ def apply_partial(states: dict[str, ObjectState], anim: Animation, progress: flo
         )
     elif kind == AnimationKind.CIRCUMSCRIBE:
         states[anim.target_id] = replace(state, outline=progress, outline_color=str(anim.params.get("color", "#F7D96F")))
+    elif kind == AnimationKind.SET_VALUE:
+        target = float(anim.params.get("value", state.value))
+        states[anim.target_id] = replace(state, value=state.value + (target - state.value) * progress)
     else:
         states[anim.target_id] = _partial_modifier(state, anim, progress)
 

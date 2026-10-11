@@ -403,3 +403,43 @@ def test_inspector_editors_and_multi_selection(window) -> None:
     spin.lineEdit().setText("pi/2")
     spin.interpretText()
     assert spin.value() == pytest.approx(1.571, abs=1e-3)
+
+
+def test_graph_quick_actions_and_parameter_slider(window) -> None:
+    from PySide6.QtWidgets import QToolButton
+
+    from manim_studio.i18n import tr
+    from manim_studio.model.stage_edits import VALUE, step_animation
+    from manim_studio.model.types import ObjectKind
+    from manim_studio.ui.parameter_slider import ParameterSlider
+
+    controller = window.controller
+    controller.add_object(ObjectKind.AXES, 0.0, 0.0)
+    parameter = controller.add_object(ObjectKind.PARAMETER)
+    assert window.editor.scene().object_by_id(parameter).name == "a"
+    graph = controller.add_object(ObjectKind.FUNCTION_GRAPH)
+    controller._edit("term", lambda s: s.object_by_id(graph).params.update(expression="a x^2"))
+    window.editor.select_objects([graph])
+
+    def click(key: str) -> None:
+        button = next(b for b in window.properties.findChildren(QToolButton) if b.text() == tr(f"graph_action.{key}"))
+        button.click()
+        window.editor.select_objects([graph])
+
+    click("derivative")
+    click("zeros")
+    kinds = [(obj.kind, obj.params.get("curve"), obj.params.get("feature")) for obj in window.editor.scene().objects]
+    assert (ObjectKind.FUNCTION_GRAPH, "derivative", None) in kinds
+    assert (ObjectKind.GRAPH_MARKERS, None, "zeros") in kinds
+
+    window.editor.select_objects([parameter])
+    slider = window.properties.findChild(ParameterSlider)
+    slider.slider.setValue(slider.slider.maximum())
+    assert window.editor.scene().object_by_id(parameter).params["value"] == 5.0
+    assert window.resources.values == {"a": 5.0}
+    controller.add_step()
+    window.editor.select_objects([parameter])
+    slider = window.properties.findChild(ParameterSlider)
+    slider.slider.setValue(0)
+    anim = step_animation(window.editor.scene(), window.editor.cursor, parameter, VALUE)
+    assert anim is not None and anim.params["value"] == -5.0

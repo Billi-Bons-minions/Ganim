@@ -40,6 +40,13 @@ class ObjectKind(str, Enum):
     TEX = "tex"
     MARKUP_TEXT = "markup_text"
     GROUP = "group"
+    GRAPH_AREA = "graph_area"
+    RIEMANN = "riemann"
+    TANGENT = "tangent"
+    GRAPH_POINT = "graph_point"
+    GRAPH_MARKERS = "graph_markers"
+    GRAPH_LABEL = "graph_label"
+    PARAMETER = "parameter"
 
 
 class AnimationKind(str, Enum):
@@ -60,6 +67,7 @@ class AnimationKind(str, Enum):
     INDICATE = "indicate"
     CIRCUMSCRIBE = "circumscribe"
     UNCREATE = "uncreate"
+    SET_VALUE = "set_value"
 
 
 class StepKind(str, Enum):
@@ -136,6 +144,31 @@ RETURNING_RATE_FUNCTIONS = frozenset({"there_and_back", "there_and_back_with_pau
 
 #: Kinds whose Manim objects need a LaTeX installation.
 LATEX_KINDS = frozenset({ObjectKind.MATH_TEX, ObjectKind.TEX, ObjectKind.MATRIX})
+
+#: Objects that are drawn on a function graph (and placed by its coordinate system).
+GRAPH_TOOL_KINDS = frozenset(
+    {
+        ObjectKind.GRAPH_AREA,
+        ObjectKind.RIEMANN,
+        ObjectKind.TANGENT,
+        ObjectKind.GRAPH_POINT,
+        ObjectKind.GRAPH_MARKERS,
+        ObjectKind.GRAPH_LABEL,
+    }
+)
+
+#: Kinds that are not drawn and never added to the Manim scene.
+INVISIBLE_KINDS = frozenset({ObjectKind.GROUP, ObjectKind.PARAMETER})
+
+#: Curve types of a function graph.
+CURVE_FUNCTION = "function"
+CURVE_DERIVATIVE = "derivative"
+CURVE_PIECEWISE = "piecewise"
+CURVE_PARAMETRIC = "parametric"
+CURVE_POLAR = "polar"
+CURVES = (CURVE_FUNCTION, CURVE_DERIVATIVE, CURVE_PIECEWISE, CURVE_PARAMETRIC, CURVE_POLAR)
+#: Curves of the form ``y = f(x)``.
+FUNCTION_CURVES = (CURVE_FUNCTION, CURVE_DERIVATIVE, CURVE_PIECEWISE)
 
 #: Line-like kinds that get two endpoint handles on the stage.
 LINE_KINDS = frozenset(

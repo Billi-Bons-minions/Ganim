@@ -10,15 +10,8 @@ from __future__ import annotations
 import math
 
 from manim_studio.model.entities import Scene, SceneObject
-from manim_studio.model.geometry import (
-    axes_layout,
-    bound_axes,
-    graph_scene_segments,
-    param_float,
-    sample_function,
-    try_parse,
-)
-from manim_studio.model.types import ObjectKind
+from manim_studio.model.geometry import axes_layout, bound_axes, param_float
+from manim_studio.model.types import GRAPH_TOOL_KINDS, ObjectKind
 
 CHAR_WIDTH_PER_POINT = 3.29 / 10 / 48
 LINE_HEIGHT_PER_POINT = 0.64 / 48
@@ -116,7 +109,7 @@ def base_size(scene: Scene, obj: SceneObject) -> tuple[float, float]:
     if kind == ObjectKind.IMAGE:
         height = param_float(p, "height", 2.0)
         return height * 1.5, height
-    if kind == ObjectKind.FUNCTION_GRAPH:
+    if kind == ObjectKind.FUNCTION_GRAPH or kind in GRAPH_TOOL_KINDS:
         return _graph_size(scene, obj)
     if kind == ObjectKind.BRACE:
         width = param_float(p, "width", 3.0)
@@ -126,12 +119,18 @@ def base_size(scene: Scene, obj: SceneObject) -> tuple[float, float]:
 
 
 def _graph_size(scene: Scene, obj: SceneObject) -> tuple[float, float]:
-    segments = graph_scene_segments(scene, obj) if bound_axes(scene, obj) is not None else []
-    if not segments:
-        expression = try_parse(str(obj.params.get("expression", "")))
-        if expression is None:
-            return 1.0, 1.0
-        segments = sample_function(expression, param_float(obj.params, "x_min", -5.0), param_float(obj.params, "x_max", 5.0), 120)
+    from manim_studio.model import graphs
+    from manim_studio.model.geometry import axes_to_scene
+
+    if obj.kind in GRAPH_TOOL_KINDS:
+        graph = graphs.tool_graph(scene, obj)
+        axes = bound_axes(scene, graph) if graph is not None else None
+        points = [list(axes_to_scene(axes, x, y)) for x, y in graphs.tool_axes_points(scene, obj)] if axes is not None else []
+        return _points_size(points) if len(points) > 1 else (0.3, 0.3)
+    if bound_axes(scene, obj) is not None:
+        segments = graphs.graph_scene_segments(scene, obj)
+    else:
+        segments = graphs.curve_points(scene, obj)
     points = [list(point) for segment in segments for point in segment]
     return _points_size(points) if points else (1.0, 1.0)
 

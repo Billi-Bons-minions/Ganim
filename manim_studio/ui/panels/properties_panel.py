@@ -29,25 +29,27 @@ from PySide6.QtWidgets import (
 
 from manim_studio.codegen.naming import class_names
 from manim_studio.i18n import has, tr
-from manim_studio.model import groups
+from manim_studio.model import graphs, groups
 from manim_studio.model import operations as ops
 from manim_studio.model.animation_builder import allowed_for_objects
 from manim_studio.model.arrange import ALIGN_MODES, DISTRIBUTE_MODES
 from manim_studio.model.assets import relative_asset_path
 from manim_studio.model.entities import STEP_LAGGED, STEP_MODES, STEP_TOGETHER, Animation, SceneObject, Step
 from manim_studio.model.expression import check_expression
-from manim_studio.model.geometry import is_bound_graph
+from manim_studio.model.graphs import is_bound
 from manim_studio.model.schema import (
     STYLE_FIELDS,
     ParamSpec,
     ParamType,
     animation_allowed,
     animation_params,
+    default_params,
     kind_info,
 )
 from manim_studio.model.stage_edits import COLOR, MOVE, ROTATE, SCALE, is_recording, step_animation
 from manim_studio.model.state import first_reference, states_after, visible_at_start
 from manim_studio.model.types import (
+    GRAPH_TOOL_KINDS,
     LINE_KINDS,
     RATE_FUNCTIONS,
     TRANSFORM_ANIMATIONS,
@@ -58,12 +60,7 @@ from manim_studio.model.types import (
 )
 from manim_studio.ui.animation_preview import PreviewHover
 from manim_studio.ui.controller import EditorController
-from manim_studio.ui.data_editors import (
-    FontPicker,
-    PointsEditor,
-    TableEditor,
-    WordColorsEditor,
-)
+from manim_studio.ui.data_editors import FontPicker, PiecesEditor, PointsEditor, TableEditor, WordColorsEditor
 from manim_studio.ui.document import ProjectDocument
 from manim_studio.ui.editor_state import (
     INSPECT_ANIMATION,
@@ -74,6 +71,7 @@ from manim_studio.ui.editor_state import (
 from manim_studio.ui.flow_layout import flow_container
 from manim_studio.ui.icon_set import icon
 from manim_studio.ui.icons import kind_icon, rate_icon
+from manim_studio.ui.parameter_slider import ParameterSlider
 from manim_studio.ui.settings import AppSettings
 from manim_studio.ui.theme import px
 from manim_studio.ui.widgets import (
@@ -101,14 +99,32 @@ _ROTATION_SPEC = ParamSpec("rotation", ParamType.FLOAT, 0.0, minimum=-360.0, max
 #: Animation buttons in the inspector, grouped by purpose.
 ANIMATION_GROUPS: tuple[tuple[str, tuple[AnimationKind, ...]], ...] = (
     ("appear", (AnimationKind.CREATE, AnimationKind.WRITE, AnimationKind.FADE_IN, AnimationKind.GROW_FROM_CENTER, AnimationKind.DRAW_BORDER_THEN_FILL)),
-    ("change", (AnimationKind.MOVE, AnimationKind.SCALE, AnimationKind.ROTATE, AnimationKind.CHANGE_COLOR)),
+    ("change", (AnimationKind.MOVE, AnimationKind.SCALE, AnimationKind.ROTATE, AnimationKind.CHANGE_COLOR, AnimationKind.SET_VALUE)),
     ("transform", (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM)),
     ("emphasize", (AnimationKind.INDICATE, AnimationKind.CIRCUMSCRIBE)),
     ("disappear", (AnimationKind.FADE_OUT, AnimationKind.UNCREATE)),
 )
+#: Animation buttons that are hidden (instead of disabled) where they do not apply.
+ONLY_WHEN_ALLOWED = frozenset({AnimationKind.SET_VALUE})
 #: Shapes offered as new targets for "transform into".
 TRANSFORM_TARGET_KINDS = (
     ObjectKind.SQUARE, ObjectKind.CIRCLE, ObjectKind.RECTANGLE, ObjectKind.TRIANGLE, ObjectKind.ELLIPSE, ObjectKind.TEXT, ObjectKind.MATH_TEX
+)
+#: Object references that must point to graphs of the form y = f(x).
+FUNCTION_GRAPH_REFS = ("graph_id", "other_graph_id", "derive_from")
+#: Quick actions on a function graph: (key, kind or special action, extra params).
+GRAPH_ACTIONS: tuple[tuple[str, str, dict], ...] = (
+    ("derivative", "derivative", {}),
+    ("second_derivative", "second_derivative", {}),
+    ("zeros", ObjectKind.GRAPH_MARKERS.value, {"feature": "zeros"}),
+    ("extrema", ObjectKind.GRAPH_MARKERS.value, {"feature": "extrema"}),
+    ("inflection", ObjectKind.GRAPH_MARKERS.value, {"feature": "inflection"}),
+    ("intersections", ObjectKind.GRAPH_MARKERS.value, {"feature": "intersections"}),
+    ("tangent", ObjectKind.TANGENT.value, {}),
+    ("point", ObjectKind.GRAPH_POINT.value, {}),
+    ("area", ObjectKind.GRAPH_AREA.value, {}),
+    ("riemann", ObjectKind.RIEMANN.value, {}),
+    ("label", ObjectKind.GRAPH_LABEL.value, {}),
 )
 #: Icons of the align/distribute buttons in the multi-selection inspector.
 ARRANGE_ICONS = tuple(
@@ -170,6 +186,14 @@ def _set_line(edit: DebouncedLineEdit, value: Any) -> None:
         edit.setText(str(value))
 
 
+def _compact_combo() -> QComboBox:
+    """A combo box that does not widen the inspector to its longest entry."""
+    combo = QComboBox()
+    combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+    combo.setMinimumContentsLength(8)
+    return combo
+
+
 def _choice_label(key: str, value: str) -> str:
     specific = f"choice.{key}.{value}"
     return tr(specific) if has(specific) else value
@@ -183,6 +207,7 @@ class _Form:
         self.widget.setObjectName("Inspector")
         self.layout = QFormLayout(self.widget)
         self.layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        self.layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         self.layout.setLabelAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self.layout.setContentsMargins(px(14), px(12), px(14), px(14))
         self.layout.setHorizontalSpacing(px(10))
@@ -361,7 +386,7 @@ class PropertiesPanel(QScrollArea):
     def _object_ref_editor(
         self, spec: ParamSpec, commit: Callable[[Any], None], exclude: Callable[[], str | None], allowed: Callable[[SceneObject], bool]
     ) -> tuple[QWidget, Shower]:
-        combo = QComboBox()
+        combo = _compact_combo()
 
         def options() -> list[tuple[str, str | None]]:
             excluded = exclude()
@@ -417,7 +442,7 @@ class PropertiesPanel(QScrollArea):
             button.colorChosen.connect(commit)
             return button, lambda value: button.set_color(str(value))
         if spec.type == ParamType.CHOICE:
-            combo = QComboBox()
+            combo = _compact_combo()
             for choice in spec.choices:
                 combo.addItem(_choice_label(spec.key, choice), choice)
             combo.currentIndexChanged.connect(lambda _index: commit(combo.currentData()))
@@ -439,8 +464,13 @@ class PropertiesPanel(QScrollArea):
             picker = FontPicker()
             picker.committed.connect(commit)
             return picker, picker.set_value
-        if spec.type in (ParamType.POINTS, ParamType.TABLE, ParamType.WORD_COLORS):
-            editors = {ParamType.POINTS: PointsEditor, ParamType.TABLE: TableEditor, ParamType.WORD_COLORS: WordColorsEditor}
+        if spec.type in (ParamType.POINTS, ParamType.TABLE, ParamType.WORD_COLORS, ParamType.PIECES):
+            editors = {
+                ParamType.POINTS: PointsEditor,
+                ParamType.TABLE: TableEditor,
+                ParamType.WORD_COLORS: WordColorsEditor,
+                ParamType.PIECES: PiecesEditor,
+            }
             grid = editors[spec.type]()
             grid.setProperty(ALWAYS_REFRESH, True)
             grid.committed.connect(commit)
@@ -448,7 +478,7 @@ class PropertiesPanel(QScrollArea):
         edit = DebouncedLineEdit()
         if spec.type == ParamType.EXPRESSION:
             edit.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
-            edit.setPlaceholderText("2x^2 + sin(x)")
+            edit.setPlaceholderText("2x^2 + sin(x)" if spec.variable == "x" else f"2cos({spec.variable})")
         edit.committed.connect(commit)
         return edit, lambda value: _set_line(edit, value or "")
 
@@ -463,24 +493,46 @@ class PropertiesPanel(QScrollArea):
 
     def _object_param_row(self, form: _Form, object_id: str, spec: ParamSpec) -> None:
         label = tr(f"param.{spec.key}")
+        defaults = default_params(kind_info(self._object(object_id).kind).params)
 
         def commit(value: Any) -> None:
             if spec.type == ParamType.FILE:
                 value = relative_asset_path(str(value), self.document.base_dir)
             self._edit(label, lambda s: ops.set_object_param(s, object_id, spec.key, value), f"obj:{object_id}:p:{spec.key}")
 
-        widget, show = self._param_editor(spec, commit, exclude=lambda: object_id)
+        def visible() -> bool:
+            return spec.is_visible(self._object(object_id).params, defaults)
+
+        allowed = graphs.is_function_curve if spec.key in FUNCTION_GRAPH_REFS else (lambda obj: True)
+        widget, show = self._param_editor(spec, commit, exclude=lambda: object_id, allowed=allowed)
         form.row(label, widget, lambda: self._object(object_id).params.get(spec.key, spec.default), show)
         if spec.type == ParamType.EXPRESSION:
-            form.note(lambda: self._expression_message(object_id), warning=True)
+            form.note(lambda: self._expression_message(object_id, spec) if visible() else "", warning=True)
+        if spec.type == ParamType.PIECES:
+            form.note(lambda: self._pieces_message(object_id) if visible() else "", warning=True)
         if spec.type == ParamType.LATEX:
             form.note(lambda: self.latex_status(str(self._object(object_id).params.get("latex", ""))), warning=True)
+        if spec.visible_when is not None:
+            marker = QWidget(form.widget)
+            marker.hide()
+            form.bindings.append(Binding(marker, visible, lambda value: form.layout.setRowVisible(widget, bool(value))))
+            form.bindings[-1].refresh()
 
-    def _expression_message(self, object_id: str) -> str:
-        error = check_expression(str(self._object(object_id).params.get("expression", "")))
+    def _expression_message(self, object_id: str, spec: ParamSpec) -> str:
+        scene = self.editor.scene()
+        text = str(self._object(object_id).params.get(spec.key, ""))
+        error = check_expression(text, spec.variable, graphs.parameter_symbols(scene))
         if error is None:
             return ""
         return tr(f"expr.{error.code}", detail=error.detail)
+
+    def _pieces_message(self, object_id: str) -> str:
+        scene = self.editor.scene()
+        for index, row in enumerate(self._object(object_id).params.get("pieces", []) or [], start=1):
+            error = check_expression(str(row[0]) if row else "", "x", graphs.parameter_symbols(scene))
+            if error is not None:
+                return tr("prop.piece_error", number=index, message=tr(f"expr.{error.code}", detail=error.detail))
+        return ""
 
     def _visibility_note(self, object_id: str) -> str:
         scene = self.editor.scene()
@@ -498,6 +550,9 @@ class PropertiesPanel(QScrollArea):
         if kind == ObjectKind.GROUP:
             self._build_group(form, key)
             return
+        if kind == ObjectKind.PARAMETER:
+            self._build_parameter(form, key)
+            return
         info = kind_info(kind)
         form.header(tr(f"kind.{kind.value}"), kind_icon(kind))
         name_edit = DebouncedLineEdit()
@@ -510,19 +565,22 @@ class PropertiesPanel(QScrollArea):
         recording = key[4]
         if recording >= 0:
             self._step_section(form, object_id, recording)
-        form.section(tr("section.start_position") if recording >= 0 else tr("section.position"))
-        bound = is_bound_graph(self.editor.scene(), self._object(object_id))
-        for field, spec in (("x", _POSITION_SPEC), ("y", _POSITION_SPEC), ("rotation", _ROTATION_SPEC)):
-            widget = self._object_field_row(form, object_id, field, spec, tr(f"prop.{field}"))
-            widget.setEnabled(not bound)
-        if bound:
-            form.note(lambda: tr("prop.bound_graph_note"))
+        bound = is_bound(self.editor.scene(), self._object(object_id))
+        if not bound and kind not in GRAPH_TOOL_KINDS:
+            form.section(tr("section.start_position") if recording >= 0 else tr("section.position"))
+            for field, spec in (("x", _POSITION_SPEC), ("y", _POSITION_SPEC), ("rotation", _ROTATION_SPEC)):
+                self._object_field_row(form, object_id, field, spec, tr(f"prop.{field}"))
         if kind in LINE_KINDS and recording < 0:
             self._endpoint_rows(form, object_id)
+        if kind == ObjectKind.FUNCTION_GRAPH:
+            self._graph_tools_section(form, object_id)
         if info.params:
             form.section(tr("section.content"))
+            if bound:
+                form.note(lambda: tr("prop.bound_graph_note"))
             for spec in info.params:
                 self._object_param_row(form, object_id, spec)
+            form.note(lambda: self._analysis_note(object_id))
         if info.style:
             form.section(tr("section.style"))
             for field in ("stroke_color", "stroke_width", "stroke_opacity", "fill_color", "fill_opacity"):
@@ -543,6 +601,92 @@ class PropertiesPanel(QScrollArea):
         widget, show = self._param_editor(visibility, commit_visibility)
         form.row(tr("prop.visibility"), widget, lambda: self._object(object_id).visibility.value, show)
         form.note(lambda: self._visibility_note(object_id))
+
+    # --- graphs and parameters ------------------------------------------------------------
+
+    def _graph_tools_section(self, form: _Form, object_id: str) -> None:
+        form.section(tr("section.graph_tools"))
+        obj = self._object(object_id)
+        scene = self.editor.scene()
+        usable = graphs.is_function_curve(obj) and is_bound(scene, obj)
+        others = [o for o in scene.objects if o.id != object_id and graphs.is_function_curve(o) and is_bound(scene, o)]
+        container, flow = flow_container(px(4))
+        for key, action, params in GRAPH_ACTIONS:
+            button = QToolButton()
+            button.setText(tr(f"graph_action.{key}"))
+            button.setToolTip(tr(f"graph_action.{key}_tip"))
+            button.setProperty("variant", "button")
+            button.setEnabled(usable and (key != "intersections" or bool(others)))
+            if action in ("derivative", "second_derivative"):
+                order = 1 if action == "derivative" else 2
+                button.clicked.connect(lambda _checked=False, order=order: self.controller.add_derivative(object_id, order))
+            else:
+                kind = ObjectKind(action)
+                button.clicked.connect(lambda _checked=False, kind=kind, params=params: self.controller.add_graph_tool(kind, object_id, **params))
+            flow.addWidget(button)
+        form.layout.addRow(container)
+        if not usable:
+            form.note(lambda: tr("prop.graph_tools_need_axes"))
+
+    def _analysis_note(self, object_id: str) -> str:
+        """Live results: derivative term, slope, coordinates, found points, area."""
+        scene = self.editor.scene()
+        obj = self._object(object_id)
+        kind = obj.kind
+        if kind == ObjectKind.FUNCTION_GRAPH and obj.params.get("curve") == "derivative":
+            pieces = graphs.function_pieces(scene, obj)
+            if not pieces:
+                return tr("prop.derivative_missing")
+            return "\n".join(tr("prop.derivative_term", term=piece.expression.source) for piece in pieces)
+        if kind == ObjectKind.TANGENT:
+            slope = graphs.tangent_slope(scene, obj)
+            return tr("prop.tangent_slope", slope=graphs.format_coordinate(slope)) if slope is not None else tr("prop.tool_undefined")
+        if kind == ObjectKind.GRAPH_POINT:
+            point = graphs.graph_point(scene, obj)
+            return tr("prop.point_value", point=graphs.point_label(*point)) if point is not None else tr("prop.tool_undefined")
+        if kind == ObjectKind.GRAPH_MARKERS:
+            points = graphs.marker_points(scene, obj)
+            if not points:
+                return tr("prop.markers_none")
+            text = ", ".join(graphs.point_label(point.x, point.y) for point in points[:12])
+            return tr("prop.markers_found", count=len(points), points=text)
+        if kind == ObjectKind.GRAPH_AREA:
+            value = graphs.area_value(scene, obj)
+            return tr("prop.area_value", value=graphs.format_coordinate(value)) if value is not None else tr("prop.tool_undefined")
+        if kind == ObjectKind.RIEMANN:
+            value = graphs.riemann_value(scene, obj)
+            return tr("prop.riemann_value", value=graphs.format_coordinate(value)) if value is not None else ""
+        return ""
+
+    def _build_parameter(self, form: _Form, key: tuple) -> None:
+        object_id = key[2]
+        form.header(tr("kind.parameter"), kind_icon(ObjectKind.PARAMETER))
+        name_edit = DebouncedLineEdit()
+        name_edit.committed.connect(lambda text: self.controller.rename_object(object_id, text))
+        form.row(tr("prop.name"), name_edit, lambda: self._object(object_id).name, lambda v: _set_line(name_edit, v))
+        form.note(lambda: tr("prop.parameter_hint", symbol=graphs.parameter_symbol(self._object(object_id))))
+        form.section(tr("section.parameter_value"))
+        slider = ParameterSlider(self.editor, self.controller, object_id)
+        slider.setProperty(ALWAYS_REFRESH, True)
+        form.layout.addRow(slider)
+        form.bindings.append(Binding(slider, lambda: None, lambda _value: slider.refresh()))
+        form.section(tr("section.content"))
+        for spec in kind_info(ObjectKind.PARAMETER).params:
+            self._object_param_row(form, object_id, spec)
+        form.note(lambda: self._parameter_issue(object_id), warning=True)
+        form.note(lambda: self._parameter_users(object_id))
+
+    def _parameter_issue(self, object_id: str) -> str:
+        scene = self.editor.scene()
+        symbol = graphs.parameter_symbol(self._object(object_id))
+        if symbol not in graphs.parameter_symbols(scene):
+            return tr("prop.parameter_symbol_invalid", symbol=symbol)
+        return ""
+
+    def _parameter_users(self, object_id: str) -> str:
+        scene = self.editor.scene()
+        users = [obj.name for obj in scene.objects if object_id in graphs.parameter_users(scene, obj)]
+        return tr("prop.parameter_users", names=", ".join(users)) if users else tr("prop.parameter_unused")
 
     # --- animate section ---------------------------------------------------------------
 
@@ -606,6 +750,8 @@ class PropertiesPanel(QScrollArea):
             column.addWidget(caption)
             container, flow = flow_container(px(4))
             for kind in kinds:
+                if kind in ONLY_WHEN_ALLOWED and not allowed_for_objects(self.editor.scene(), kind, object_ids):
+                    continue
                 button = self._animation_button(kind, object_ids, simultaneous)
                 self.animation_buttons[kind] = button
                 flow.addWidget(button)
@@ -626,7 +772,7 @@ class PropertiesPanel(QScrollArea):
         note.setProperty("role", "hint")
         form.layout.addRow(note)
         scene_state = lambda: states_after(self.editor.scene(), self.editor.cursor)[object_id]  # noqa: E731
-        bound = is_bound_graph(self.editor.scene(), self._object(object_id))
+        bound = is_bound(self.editor.scene(), self._object(object_id))
         for axis in ("x", "y"):
             def commit(value: Any, axis: str = axis) -> None:
                 state = scene_state()
@@ -861,7 +1007,7 @@ class PropertiesPanel(QScrollArea):
         widget.setEnabled(step_mode != STEP_LAGGED)
         widget.setToolTip(tr("prop.delay_tip") if step_mode != STEP_LAGGED else tr("prop.delay_lagged"))
         form.row(tr("prop.delay"), widget, lambda: self._animation(animation_id).delay, show)
-        rate = QComboBox()
+        rate = _compact_combo()
         rate.setIconSize(QSize(px(34), px(18)))
         for name in RATE_FUNCTIONS:
             rate.addItem(rate_icon(name), tr(f"rate.{name}"), name)

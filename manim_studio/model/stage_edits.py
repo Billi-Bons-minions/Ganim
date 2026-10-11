@@ -14,7 +14,7 @@ from typing import Callable, Iterable
 from manim_studio.model import operations as ops
 from manim_studio.model.entities import Animation, Scene
 from manim_studio.model.factory import create_animation
-from manim_studio.model.geometry import is_bound_graph
+from manim_studio.model.graphs import is_bound
 from manim_studio.model.state import START, states_after
 from manim_studio.model.types import TRANSFORM_ANIMATIONS, AnimationKind, StepKind
 
@@ -22,12 +22,14 @@ MOVE = "move"
 SCALE = "scale"
 ROTATE = "rotate"
 COLOR = "color"
+VALUE = "value"
 
 KIND_FOR_ACTION = {
     MOVE: AnimationKind.MOVE,
     SCALE: AnimationKind.SCALE,
     ROTATE: AnimationKind.ROTATE,
     COLOR: AnimationKind.CHANGE_COLOR,
+    VALUE: AnimationKind.SET_VALUE,
 }
 
 Mutation = Callable[[Scene], None]
@@ -65,7 +67,7 @@ def check_edit(scene: Scene, cursor: int, object_ids: Iterable[str], action: str
         return EditCheck(False, "nothing_selected")
     for object_id in ids:
         obj = scene.object_by_id(object_id)
-        if obj is not None and is_bound_graph(scene, obj):
+        if obj is not None and is_bound(scene, obj):
             return EditCheck(False, "bound_graph", object_id)
     if 0 <= cursor < len(scene.steps) and scene.steps[cursor].kind == StepKind.WAIT:
         return EditCheck(False, "wait_step")
@@ -186,6 +188,19 @@ def set_rotation_angle(cursor: int, object_id: str, angle: float) -> Mutation:
 
     def apply(scene: Scene) -> None:
         ensure_animation(scene, cursor, object_id, ROTATE).params["angle"] = round(angle, 4)
+
+    return apply
+
+
+def value_edit(cursor: int, object_id: str, value: float) -> Mutation:
+    """Set a parameter's (or number's) start value, or record a "change value" animation."""
+
+    def apply(scene: Scene) -> None:
+        if cursor == START:
+            ops.set_object_param(scene, object_id, "value", round(value, 6))
+            return
+        anim = ensure_animation(scene, cursor, object_id, VALUE, value=round(value, 6))
+        anim.params["value"] = round(value, 6)
 
     return apply
 

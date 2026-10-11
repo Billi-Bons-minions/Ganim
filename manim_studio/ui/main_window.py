@@ -47,7 +47,7 @@ from manim_studio.model.assets import relative_asset_path, resolve_asset_path
 from manim_studio.model.playback import state_at_time, step_start_time
 from manim_studio.model.serialization import FILE_SUFFIX, ProjectFormatError
 from manim_studio.model.stage_edits import is_recording
-from manim_studio.model.state import START, states_after
+from manim_studio.model.state import START, parameter_values, states_after
 from manim_studio.model.types import AnimationKind, ObjectKind, StepKind
 from manim_studio.ui.chrome import PanelFrame, SegmentedControl, StageBanner, Toast, action_button, separator, tool_button
 from manim_studio.ui.context import AppContext, cache_dir
@@ -552,6 +552,7 @@ class MainWindow(QMainWindow):
         self.resources.base_dir = self.document.base_dir
         playhead = self.editor.playhead
         states = state_at_time(scene, playhead) if playhead is not None else states_after(scene, cursor)
+        self.resources.values = parameter_values(scene, states)
         self.stage.set_point_editing(cursor == START and playhead is None)
         self.stage.set_content(scene, states, self.resources, self.editor.selected_objects, self.act_show_hidden.isChecked())
         self.stage.set_motion_paths(self._motion_paths(scene, cursor) if playhead is None else [])

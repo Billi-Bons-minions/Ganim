@@ -7,7 +7,8 @@ import pytest
 from manim_studio.model import operations as ops
 from manim_studio.model.entities import Scene
 from manim_studio.model.factory import clone_scene, create_project, unique_name
-from manim_studio.model.geometry import axes_layout, graph_anchor
+from manim_studio.model.geometry import axes_layout
+from manim_studio.model.graphs import bound_anchor
 from manim_studio.model.serialization import (
     ProjectFormatError,
     dumps_project,
@@ -83,7 +84,7 @@ def test_bound_graph_anchor_uses_axes() -> None:
     axes = make_object(ObjectKind.AXES, "A", "a", 2.0, 1.0, tips=False)
     graph = make_object(ObjectKind.FUNCTION_GRAPH, "G", "g", 9.0, 9.0, expression="x", axes_id="a")
     scene = Scene(id="s", name="S", objects=[axes, graph])
-    x, y = graph_anchor(scene, graph)
+    x, y = bound_anchor(scene, graph)
     assert x == pytest.approx(2.0) and y == pytest.approx(1.0)
 
 

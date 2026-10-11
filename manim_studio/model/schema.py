@@ -10,7 +10,17 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-from manim_studio.model.types import AnimationKind, ObjectKind
+from manim_studio.model.types import (
+    CURVE_DERIVATIVE,
+    CURVE_FUNCTION,
+    CURVE_PARAMETRIC,
+    CURVE_PIECEWISE,
+    CURVE_POLAR,
+    CURVES,
+    FUNCTION_CURVES,
+    AnimationKind,
+    ObjectKind,
+)
 
 
 class ParamType(str, Enum):
@@ -31,6 +41,7 @@ class ParamType(str, Enum):
     POINTS = "points"
     TABLE = "table"
     WORD_COLORS = "word_colors"
+    PIECES = "pieces"
 
 
 @dataclass(frozen=True)
@@ -48,6 +59,16 @@ class ParamSpec:
     scalable: bool = False
     ref_kinds: tuple[ObjectKind, ...] = ()
     optional: bool = False
+    visible_when: tuple[str, tuple[Any, ...]] | None = None
+    variable: str = "x"
+
+    def is_visible(self, params: dict[str, Any], defaults: dict[str, Any] | None = None) -> bool:
+        """Return ``True`` if the parameter applies with the given other values."""
+        if self.visible_when is None:
+            return True
+        key, allowed = self.visible_when
+        value = params.get(key, (defaults or {}).get(key))
+        return value in allowed
 
 
 #: Style attributes stored directly on :class:`SceneObject`.
@@ -91,6 +112,13 @@ def _range_params(prefix: str, low: float, high: float, step: float, length: flo
 
 ALIGNMENTS = ("left", "center", "right")
 CODE_LANGUAGES = ("python", "javascript", "typescript", "java", "c", "cpp", "csharp", "rust", "go", "html", "css", "bash", "json", "sql", "latex")
+
+
+#: Areas: below the graph (to the x-axis), between two graphs, or up/down to the edge of the axes.
+AREA_MODES = ("under", "between", "above", "below")
+MARKER_FEATURES = ("zeros", "extrema", "inflection", "intersections")
+LABEL_DIRECTIONS = ("up_right", "up", "right", "down_right", "down", "down_left", "left", "up_left")
+_GRAPH_REF = ParamSpec("graph_id", ParamType.OBJECT_REF, None, ref_kinds=(ObjectKind.FUNCTION_GRAPH,))
 
 
 def _font_size(default: float, key: str = "font_size") -> ParamSpec:
@@ -169,6 +197,8 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         + (
             ParamSpec("show_numbers", ParamType.BOOL, False),
             ParamSpec("tips", ParamType.BOOL, True),
+            ParamSpec("x_label", ParamType.STRING, ""),
+            ParamSpec("y_label", ParamType.STRING, ""),
         ),
         _AXES_STYLE,
         (("stroke_color", _WHITE), ("stroke_width", 2.0)),
@@ -182,9 +212,24 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
     ObjectKind.FUNCTION_GRAPH: KindInfo(
         ObjectKind.FUNCTION_GRAPH,
         (
-            ParamSpec("expression", ParamType.EXPRESSION, "sin(x)"),
-            ParamSpec("x_min", ParamType.FLOAT, -5.0, minimum=-1000.0, maximum=1000.0, step=0.5),
-            ParamSpec("x_max", ParamType.FLOAT, 5.0, minimum=-1000.0, maximum=1000.0, step=0.5),
+            ParamSpec("curve", ParamType.CHOICE, CURVE_FUNCTION, choices=CURVES),
+            ParamSpec("expression", ParamType.EXPRESSION, "sin(x)", visible_when=("curve", (CURVE_FUNCTION,))),
+            ParamSpec(
+                "derive_from",
+                ParamType.OBJECT_REF,
+                None,
+                ref_kinds=(ObjectKind.FUNCTION_GRAPH,),
+                visible_when=("curve", (CURVE_DERIVATIVE,)),
+            ),
+            ParamSpec("derive_order", ParamType.CHOICE, "1", choices=("1", "2"), visible_when=("curve", (CURVE_DERIVATIVE,))),
+            ParamSpec("pieces", ParamType.PIECES, [["x^2", "-5", "1"], ["2 - x", "1", "5"]], visible_when=("curve", (CURVE_PIECEWISE,))),
+            ParamSpec("x_expression", ParamType.EXPRESSION, "2cos(t)", visible_when=("curve", (CURVE_PARAMETRIC,)), variable="t"),
+            ParamSpec("y_expression", ParamType.EXPRESSION, "sin(2t)", visible_when=("curve", (CURVE_PARAMETRIC,)), variable="t"),
+            ParamSpec("r_expression", ParamType.EXPRESSION, "2sin(3t)", visible_when=("curve", (CURVE_POLAR,)), variable="t"),
+            ParamSpec("x_min", ParamType.FLOAT, -5.0, minimum=-1000.0, maximum=1000.0, step=0.5, visible_when=("curve", FUNCTION_CURVES)),
+            ParamSpec("x_max", ParamType.FLOAT, 5.0, minimum=-1000.0, maximum=1000.0, step=0.5, visible_when=("curve", FUNCTION_CURVES)),
+            ParamSpec("t_min", ParamType.FLOAT, 0.0, minimum=-1000.0, maximum=1000.0, step=0.5, visible_when=("curve", (CURVE_PARAMETRIC, CURVE_POLAR))),
+            ParamSpec("t_max", ParamType.FLOAT, 6.2832, minimum=-1000.0, maximum=1000.0, step=0.5, decimals=4, visible_when=("curve", (CURVE_PARAMETRIC, CURVE_POLAR))),
             ParamSpec(
                 "axes_id",
                 ParamType.OBJECT_REF,
@@ -192,6 +237,7 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
                 ref_kinds=(ObjectKind.AXES, ObjectKind.NUMBER_PLANE),
                 optional=True,
             ),
+            ParamSpec("clip", ParamType.BOOL, True, visible_when=("curve", FUNCTION_CURVES)),
         ),
         _LINE_STYLE,
         (("stroke_color", _YELLOW),),
@@ -297,6 +343,7 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
             _font_size(48.0),
             ParamSpec("show_sign", ParamType.BOOL, False),
             ParamSpec("unit", ParamType.STRING, ""),
+            ParamSpec("parameter_id", ParamType.OBJECT_REF, None, ref_kinds=(ObjectKind.PARAMETER,), optional=True),
         ),
         _TEXT_STYLE,
         (("fill_color", _WHITE), ("fill_opacity", 1.0)),
@@ -351,6 +398,89 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         (("fill_color", _WHITE), ("fill_opacity", 1.0)),
     ),
     ObjectKind.GROUP: KindInfo(ObjectKind.GROUP, (), frozenset()),
+    ObjectKind.GRAPH_AREA: KindInfo(
+        ObjectKind.GRAPH_AREA,
+        (
+            _GRAPH_REF,
+            ParamSpec("mode", ParamType.CHOICE, "under", choices=AREA_MODES),
+            ParamSpec("other_graph_id", ParamType.OBJECT_REF, None, ref_kinds=(ObjectKind.FUNCTION_GRAPH,), visible_when=("mode", ("between",))),
+            ParamSpec("x_min", ParamType.FLOAT, -1.0, minimum=-1000.0, maximum=1000.0, step=0.5),
+            ParamSpec("x_max", ParamType.FLOAT, 2.0, minimum=-1000.0, maximum=1000.0, step=0.5),
+        ),
+        frozenset({"fill_color", "fill_opacity"}),
+        (("fill_color", "#58C4DD"), ("fill_opacity", 0.5), ("stroke_width", 0.0)),
+    ),
+    ObjectKind.RIEMANN: KindInfo(
+        ObjectKind.RIEMANN,
+        (
+            _GRAPH_REF,
+            ParamSpec("x_min", ParamType.FLOAT, 0.0, minimum=-1000.0, maximum=1000.0, step=0.5),
+            ParamSpec("x_max", ParamType.FLOAT, 3.0, minimum=-1000.0, maximum=1000.0, step=0.5),
+            ParamSpec("dx", ParamType.FLOAT, 0.25, minimum=0.01, maximum=100.0, step=0.05),
+            ParamSpec("sample", ParamType.CHOICE, "left", choices=("left", "center", "right")),
+        ),
+        _SHAPE_STYLE,
+        (("stroke_color", "#000000"), ("stroke_width", 1.0), ("fill_color", "#58C4DD"), ("fill_opacity", 0.7)),
+    ),
+    ObjectKind.TANGENT: KindInfo(
+        ObjectKind.TANGENT,
+        (
+            _GRAPH_REF,
+            ParamSpec("x_value", ParamType.FLOAT, 1.0, minimum=-1000.0, maximum=1000.0, step=0.25, decimals=3),
+            ParamSpec("x_parameter", ParamType.OBJECT_REF, None, ref_kinds=(ObjectKind.PARAMETER,), optional=True),
+            ParamSpec("width", ParamType.FLOAT, 3.0, minimum=0.05, maximum=1000.0, step=0.5),
+        ),
+        _LINE_STYLE,
+        (("stroke_color", "#FF862F"), ("stroke_width", 3.0)),
+    ),
+    ObjectKind.GRAPH_POINT: KindInfo(
+        ObjectKind.GRAPH_POINT,
+        (
+            _GRAPH_REF,
+            ParamSpec("x_value", ParamType.FLOAT, 1.0, minimum=-1000.0, maximum=1000.0, step=0.25, decimals=3),
+            ParamSpec("x_parameter", ParamType.OBJECT_REF, None, ref_kinds=(ObjectKind.PARAMETER,), optional=True),
+            ParamSpec("show_lines", ParamType.BOOL, True),
+            ParamSpec("show_label", ParamType.BOOL, False),
+            _length("radius", 0.08, minimum=0.005),
+        ),
+        _TEXT_STYLE,
+        (("fill_color", "#FC6255"), ("fill_opacity", 1.0)),
+    ),
+    ObjectKind.GRAPH_MARKERS: KindInfo(
+        ObjectKind.GRAPH_MARKERS,
+        (
+            _GRAPH_REF,
+            ParamSpec("feature", ParamType.CHOICE, "zeros", choices=MARKER_FEATURES),
+            ParamSpec("other_graph_id", ParamType.OBJECT_REF, None, ref_kinds=(ObjectKind.FUNCTION_GRAPH,), visible_when=("feature", ("intersections",))),
+            ParamSpec("show_labels", ParamType.BOOL, True),
+            _length("radius", 0.08, minimum=0.005),
+        ),
+        _TEXT_STYLE,
+        (("fill_color", "#FC6255"), ("fill_opacity", 1.0)),
+    ),
+    ObjectKind.GRAPH_LABEL: KindInfo(
+        ObjectKind.GRAPH_LABEL,
+        (
+            _GRAPH_REF,
+            ParamSpec("text", ParamType.STRING, "f(x)"),
+            ParamSpec("use_latex", ParamType.BOOL, False),
+            ParamSpec("x_value", ParamType.FLOAT, 2.0, minimum=-1000.0, maximum=1000.0, step=0.25, decimals=3),
+            ParamSpec("direction", ParamType.CHOICE, "up_right", choices=LABEL_DIRECTIONS),
+            _font_size(36.0),
+        ),
+        _TEXT_STYLE,
+        (("fill_color", _YELLOW), ("fill_opacity", 1.0)),
+    ),
+    ObjectKind.PARAMETER: KindInfo(
+        ObjectKind.PARAMETER,
+        (
+            ParamSpec("symbol", ParamType.STRING, "a"),
+            ParamSpec("value", ParamType.FLOAT, 1.0, minimum=-1e6, maximum=1e6, step=0.1, decimals=3),
+            ParamSpec("minimum", ParamType.FLOAT, -5.0, minimum=-1e6, maximum=1e6, step=1.0, decimals=3),
+            ParamSpec("maximum", ParamType.FLOAT, 5.0, minimum=-1e6, maximum=1e6, step=1.0, decimals=3),
+        ),
+        frozenset(),
+    ),
 }
 
 #: Shift directions offered for FadeIn/FadeOut.
@@ -378,6 +508,7 @@ ANIMATION_PARAMS: dict[AnimationKind, tuple[ParamSpec, ...]] = {
         ParamSpec("scale_factor", ParamType.FLOAT, 1.2, minimum=0.1, maximum=10.0, step=0.1),
     ),
     AnimationKind.CIRCUMSCRIBE: (ParamSpec("color", ParamType.COLOR, _YELLOW),),
+    AnimationKind.SET_VALUE: (ParamSpec("value", ParamType.FLOAT, 2.0, minimum=-1e9, maximum=1e9, step=0.5, decimals=3),),
 }
 
 #: Manim's default rate function per animation where it differs from ``smooth``.
@@ -430,6 +561,10 @@ def is_vector_object(kind: ObjectKind, params: dict[str, Any]) -> bool:
 def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: dict[str, Any]) -> bool:
     """Return ``True`` if the animation can be applied to the object."""
     if obj_kind == ObjectKind.GROUP and anim_kind in (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM):
+        return False
+    if anim_kind == AnimationKind.SET_VALUE:
+        return obj_kind in (ObjectKind.PARAMETER, ObjectKind.DECIMAL_NUMBER)
+    if obj_kind == ObjectKind.PARAMETER:
         return False
     if anim_kind in _VECTOR_ONLY:
         return is_vector_object(obj_kind, params)

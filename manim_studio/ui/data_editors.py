@@ -305,3 +305,45 @@ class WordColorsEditor(_GridEditor):
         if pairs:
             pairs.pop(self._current_row())
             self.committed.emit(pairs)
+
+
+class PiecesEditor(_GridEditor):
+    """Parts of a piecewise function: term, from, to (``from <= x < to``)."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__([tr("widget.term"), tr("widget.from"), tr("widget.to")], parent)
+        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        for column in (1, 2):
+            self.table.horizontalHeader().setSectionResizeMode(column, QHeaderView.ResizeMode.Fixed)
+            self.table.horizontalHeader().resizeSection(column, px(52))
+        self.add_button("plus", tr("widget.add_piece"), self._add)
+        self.remove_button = self.add_button("minus", tr("widget.remove_piece"), self._remove)
+        self.finish_buttons()
+
+    def set_value(self, value: Any) -> None:
+        rows = [[str(cell) for cell in (list(row) + ["", "", ""])[:3]] for row in (value or []) if isinstance(row, (list, tuple))]
+        if self.table.state() == QAbstractItemView.State.EditingState and len(rows) == self.table.rowCount():
+            return
+        self._loading = True
+        self.table.setRowCount(len(rows))
+        for r, row in enumerate(rows):
+            for c in range(3):
+                self._set_cell(r, c, row[c])
+        self._loading = False
+        self.remove_button.setEnabled(len(rows) > 1)
+        self._fit_height()
+
+    def value(self) -> list[list[str]]:
+        return [[self._cell(r, c).strip() for c in range(3)] for r in range(self.table.rowCount())]
+
+    def _add(self) -> None:
+        rows = self.value()
+        last_end = rows[-1][2] if rows else "0"
+        rows.append(["x", last_end, ""])
+        self.committed.emit(rows)
+
+    def _remove(self) -> None:
+        rows = self.value()
+        if len(rows) > 1:
+            rows.pop(self._current_row())
+            self.committed.emit(rows)

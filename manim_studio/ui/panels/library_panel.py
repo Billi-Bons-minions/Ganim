@@ -50,6 +50,18 @@ CATEGORIES: tuple[tuple[str, tuple[ObjectKind, ...]], ...] = (
             ObjectKind.TABLE,
         ),
     ),
+    (
+        "analysis",
+        (
+            ObjectKind.PARAMETER,
+            ObjectKind.GRAPH_POINT,
+            ObjectKind.TANGENT,
+            ObjectKind.GRAPH_AREA,
+            ObjectKind.RIEMANN,
+            ObjectKind.GRAPH_MARKERS,
+            ObjectKind.GRAPH_LABEL,
+        ),
+    ),
     ("media", (ObjectKind.IMAGE,)),
 )
 

@@ -12,10 +12,11 @@ from manim_studio.examples import EXAMPLES
 from manim_studio.i18n import LANGUAGES, catalog, set_language, tr
 from manim_studio.model.arrange import ALIGN_MODES, DISTRIBUTE_MODES
 from manim_studio.model.expression import ExpressionError
-from manim_studio.model.schema import ANIMATION_PARAMS, KIND_INFO, ParamType
-from manim_studio.model.stage_edits import COLOR, MOVE, ROTATE, SCALE
+from manim_studio.model.schema import ANIMATION_PARAMS, KIND_INFO, MARKER_FEATURES, ParamType
+from manim_studio.model.stage_edits import COLOR, MOVE, ROTATE, SCALE, VALUE
 from manim_studio.model.types import MANIM_COLORS, RATE_FUNCTIONS, AnimationKind, ObjectKind, Visibility
 from manim_studio.render.command import QUALITY_PRESETS
+from manim_studio.ui.panels.properties_panel import GRAPH_ACTIONS
 
 SOURCE = Path(__file__).resolve().parent.parent / "manim_studio"
 STATIC_KEY = re.compile(r"""\btr\(\s*["']([a-z_]+(?:\.[a-z_0-9]+)+)["']""")
@@ -56,9 +57,13 @@ def dynamic_keys() -> set[str]:
     keys |= {f"color.{name}" for name in MANIM_COLORS}
     keys |= {f"example.{example.key}.{part}" for example in EXAMPLES for part in ("name", "text", "scene")}
     keys |= {f"tour.{step}" for step in ("intro", "add_circle", "animate", "timeline", "new_step", "drag", "preview", "done")}
-    keys |= {f"library.category.{key}" for key in ("shapes", "lines", "text", "math", "media")}
+    keys |= {f"library.category.{key}" for key in ("shapes", "lines", "text", "math", "analysis", "media")}
     keys |= {f"settings.theme.{name}" for name in ("dark", "light")}
     keys |= {f"{prefix}.arrange.{mode}" for prefix in ("action", "undo") for mode in ALIGN_MODES + DISTRIBUTE_MODES}
+    keys |= {f"graph_action.{key}{suffix}" for key, _action, _params in GRAPH_ACTIONS for suffix in ("", "_tip")}
+    keys |= {f"feature.{feature}" for feature in MARKER_FEATURES}
+    keys |= {f"undo.{action}" for action in (VALUE,)}
+    keys |= {f"lock.{reason}" for reason in ("transform_conflict",)}
     keys |= {f"prop.{point}_{axis}" for point in ("start", "end", "center") for axis in ("x", "y")}
     keys |= {f"choice.{spec.key}.{choice}" for info in KIND_INFO.values() for spec in info.params
              if spec.type == ParamType.CHOICE and spec.key != "language" for choice in spec.choices}

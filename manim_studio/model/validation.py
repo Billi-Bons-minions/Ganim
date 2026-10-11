@@ -6,12 +6,19 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from manim_studio.model import groups
+from manim_studio.model import graphs, groups
 from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import STEP_TOGETHER, Animation, Scene, SceneObject, Step
-from manim_studio.model.expression import check_expression
+from manim_studio.model.expression import check_expression, is_valid_name
 from manim_studio.model.schema import animation_allowed
 from manim_studio.model.types import (
+    CURVE_DERIVATIVE,
+    CURVE_FUNCTION,
+    CURVE_PARAMETRIC,
+    CURVE_PIECEWISE,
+    CURVE_POLAR,
+    FUNCTION_CURVES,
+    GRAPH_TOOL_KINDS,
     LATEX_KINDS,
     MODIFIER_ANIMATIONS,
     RATE_FUNCTIONS,
@@ -81,14 +88,17 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
             if float(params.get(f"{axis}_step", 1)) <= 0:
                 add(ERROR, "axes_step_invalid", axis)
     if obj.kind == ObjectKind.FUNCTION_GRAPH:
-        error = check_expression(str(params.get("expression", "")))
-        if error is not None:
-            add(ERROR, "expression_invalid", error.code + (f": {error.detail}" if error.detail else ""))
-        if float(params.get("x_min", 0)) >= float(params.get("x_max", 1)):
-            add(ERROR, "graph_range_invalid")
-        axes_id = params.get("axes_id")
-        if axes_id and scene.object_by_id(axes_id) is None:
-            add(ERROR, "graph_axes_missing")
+        _graph_issues(scene, obj, add)
+    if obj.kind in GRAPH_TOOL_KINDS:
+        _tool_issues(scene, obj, add)
+    if obj.kind == ObjectKind.PARAMETER:
+        symbol = graphs.parameter_symbol(obj)
+        if not is_valid_name(symbol):
+            add(ERROR, "parameter_symbol_invalid", symbol)
+        elif symbol not in graphs.parameter_symbols(scene):
+            add(ERROR, "parameter_symbol_duplicate", symbol)
+        if float(params.get("minimum", 0)) >= float(params.get("maximum", 1)):
+            add(WARNING, "parameter_range_invalid")
     if obj.kind == ObjectKind.IMAGE:
         path = str(params.get("path", ""))
         if not path:
@@ -96,6 +106,80 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
         elif not resolve_asset_path(path, base_dir).is_file():
             add(ERROR, "image_not_found", path)
     return issues
+
+
+def _expression_issue(scene: Scene, text: str, variable: str, add) -> bool:
+    error = check_expression(text, variable, graphs.parameter_symbols(scene))
+    if error is not None:
+        add(ERROR, "expression_invalid", error.code + (f": {error.detail}" if error.detail else ""))
+        return True
+    return False
+
+
+def _graph_issues(scene: Scene, obj: SceneObject, add) -> None:
+    params = obj.params
+    curve = params.get("curve", CURVE_FUNCTION)
+    if curve == CURVE_FUNCTION:
+        _expression_issue(scene, str(params.get("expression", "")), "x", add)
+    elif curve == CURVE_PIECEWISE:
+        rows = [row for row in params.get("pieces", []) or [] if isinstance(row, (list, tuple)) and row]
+        if not rows:
+            add(ERROR, "pieces_empty")
+        for row in rows:
+            if _expression_issue(scene, str(row[0]), "x", add):
+                break
+    elif curve == CURVE_DERIVATIVE:
+        source = scene.object_by_id(params.get("derive_from"))
+        if source is None:
+            add(ERROR, "derive_source_missing")
+        elif graphs.function_pieces(scene, obj) is None:
+            add(ERROR, "derive_source_invalid", source.name)
+    elif curve == CURVE_PARAMETRIC:
+        for key in ("x_expression", "y_expression"):
+            if _expression_issue(scene, str(params.get(key, "")), "t", add):
+                break
+    elif curve == CURVE_POLAR:
+        _expression_issue(scene, str(params.get("r_expression", "")), "t", add)
+    if curve in FUNCTION_CURVES and float(params.get("x_min", 0)) >= float(params.get("x_max", 1)):
+        add(ERROR, "graph_range_invalid")
+    if curve in (CURVE_PARAMETRIC, CURVE_POLAR) and float(params.get("t_min", 0)) >= float(params.get("t_max", 1)):
+        add(ERROR, "graph_range_invalid")
+    axes_id = params.get("axes_id")
+    if axes_id and scene.object_by_id(axes_id) is None:
+        add(ERROR, "graph_axes_missing")
+
+
+def _tool_issues(scene: Scene, obj: SceneObject, add) -> None:
+    params = obj.params
+    graph = scene.object_by_id(params.get("graph_id"))
+    if graph is None:
+        add(ERROR, "graph_missing")
+        return
+    if graphs.tool_graph(scene, obj) is None:
+        add(ERROR, "graph_needs_axes", graph.name)
+        return
+    if not graphs.is_function_curve(graph) or graphs.function_pieces(scene, graph) is None:
+        add(ERROR, "graph_not_function", graph.name)
+        return
+    needs_other = (obj.kind == ObjectKind.GRAPH_AREA and params.get("mode") == "between") or (
+        obj.kind == ObjectKind.GRAPH_MARKERS and params.get("feature") == "intersections"
+    )
+    if needs_other:
+        other = scene.object_by_id(params.get("other_graph_id"))
+        if other is None or other.id == graph.id or not graphs.is_function_curve(other):
+            add(ERROR, "other_graph_missing")
+    if obj.kind in (ObjectKind.GRAPH_AREA, ObjectKind.RIEMANN) and float(params.get("x_min", 0)) >= float(params.get("x_max", 1)):
+        add(ERROR, "graph_range_invalid")
+    if obj.kind == ObjectKind.RIEMANN and float(params.get("dx", 0.1)) <= 0:
+        add(ERROR, "riemann_dx_invalid")
+    if obj.kind == ObjectKind.TANGENT and not graphs.tangent_points(scene, obj):
+        add(ERROR, "tangent_undefined")
+    if obj.kind == ObjectKind.GRAPH_POINT and graphs.graph_point(scene, obj) is None:
+        add(ERROR, "point_undefined")
+    if obj.kind == ObjectKind.GRAPH_MARKERS and not graphs.marker_points(scene, obj):
+        add(WARNING, "markers_none")
+    if obj.kind == ObjectKind.GRAPH_LABEL and params.get("use_latex") and not str(params.get("text", "")).strip():
+        add(ERROR, "latex_empty")
 
 
 def _animation_issues(scene: Scene, step_index: int, anim: Animation) -> list[Issue]:

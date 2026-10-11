@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from manim_studio.model.entities import Scene, SceneObject
-from manim_studio.model.expression import Expression, ExpressionError, parse_expression
 from manim_studio.model.types import ObjectKind
 
 AXES_TIP_LENGTH = 0.35
@@ -98,52 +97,12 @@ def axes_to_scene(axes: SceneObject, xv: float, yv: float) -> Point:
     return local_to_scene(axes, axes_layout(axes).to_local(xv, yv))
 
 
-def try_parse(text: str) -> Expression | None:
-    """Parse a function term and return ``None`` if it is invalid."""
-    try:
-        return parse_expression(text)
-    except ExpressionError:
-        return None
-
-
-def sample_function(expression: Expression, x_min: float, x_max: float, samples: int = GRAPH_SAMPLES) -> list[Segment]:
-    """Sample ``y = f(x)`` and split the curve where it is undefined."""
-    segments: list[Segment] = []
-    current: Segment = []
-    if x_max <= x_min:
-        return segments
-    for index in range(samples + 1):
-        xv = x_min + (x_max - x_min) * index / samples
-        try:
-            yv = expression.evaluate(xv)
-        except (ArithmeticError, ValueError):
-            yv = math.nan
-        if math.isfinite(yv) and abs(yv) <= GRAPH_VALUE_LIMIT:
-            current.append((xv, yv))
-        elif current:
-            segments.append(current)
-            current = []
-    if current:
-        segments.append(current)
-    return segments
-
-
 def bound_axes(scene: Scene, graph: SceneObject) -> SceneObject | None:
     """Return the coordinate system a function graph is attached to."""
     axes = scene.object_by_id(graph.params.get("axes_id"))
     if axes is None or axes.kind not in (ObjectKind.AXES, ObjectKind.NUMBER_PLANE):
         return None
     return axes
-
-
-def graph_scene_segments(scene: Scene, graph: SceneObject) -> list[Segment]:
-    """Return the curve of a graph attached to axes, in scene coordinates."""
-    axes = bound_axes(scene, graph)
-    expression = try_parse(str(graph.params.get("expression", "")))
-    if axes is None or expression is None:
-        return []
-    raw = sample_function(expression, float(graph.params.get("x_min", -5.0)), float(graph.params.get("x_max", 5.0)))
-    return [[axes_to_scene(axes, xv, yv) for xv, yv in segment] for segment in raw]
 
 
 def bbox_center(segments: list[Segment]) -> Point | None:
@@ -154,24 +113,6 @@ def bbox_center(segments: list[Segment]) -> Point | None:
     xs = [p[0] for p in points]
     ys = [p[1] for p in points]
     return (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
-
-
-def graph_anchor(scene: Scene, graph: SceneObject) -> Point:
-    """Return the initial center of a function graph.
-
-    Graphs attached to axes are positioned by the axes; free graphs use their
-    own ``x``/``y``.
-    """
-    axes = bound_axes(scene, graph)
-    if axes is None:
-        return graph.x, graph.y
-    center = bbox_center(graph_scene_segments(scene, graph))
-    return center if center is not None else (axes.x, axes.y)
-
-
-def is_bound_graph(scene: Scene, obj: SceneObject) -> bool:
-    """Return ``True`` for function graphs attached to a coordinate system."""
-    return obj.kind == ObjectKind.FUNCTION_GRAPH and bound_axes(scene, obj) is not None
 
 
 def param_float(params: dict[str, Any], key: str, default: float) -> float:

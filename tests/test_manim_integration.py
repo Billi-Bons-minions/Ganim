@@ -190,3 +190,64 @@ def test_all_new_object_kinds_render(tmp_path) -> None:
     result = run_manim(tmp_path, script, "Neu", "--format", "png")
     assert result.returncode == 0, result.stdout + result.stderr + script
     assert list((tmp_path / "media").rglob("*.png"))
+
+
+def graph_feature_scene() -> Scene:
+    """Every graph feature in one scene (used by the render test)."""
+    def obj(kind, name, object_id, **params):
+        return make_object(kind, name, object_id, **params)
+
+    objects = [
+        obj(ObjectKind.AXES, "Achsen", "ax", x_label="x", y_label="y"),
+        obj(ObjectKind.PARAMETER, "a", "pa", symbol="a", value=1.0),
+        obj(ObjectKind.FUNCTION_GRAPH, "Graph", "g", expression="x^3/3 - x", axes_id="ax"),
+        obj(ObjectKind.FUNCTION_GRAPH, "Ableitung", "d", curve="derivative", derive_from="g", axes_id="ax"),
+        obj(ObjectKind.FUNCTION_GRAPH, "Stueck", "pw", curve="piecewise", axes_id="ax"),
+        obj(ObjectKind.FUNCTION_GRAPH, "Kurve", "pc", curve="parametric", axes_id="ax"),
+        obj(ObjectKind.FUNCTION_GRAPH, "Rose", "po", curve="polar", axes_id="ax"),
+        obj(ObjectKind.FUNCTION_GRAPH, "Tangens", "tn", expression="tan(x)", axes_id="ax"),
+        obj(ObjectKind.FUNCTION_GRAPH, "Welle", "w", expression="a sin(x)", axes_id="ax"),
+        obj(ObjectKind.FUNCTION_GRAPH, "Frei", "fr", expression="a x^2", x_min=-1.0, x_max=1.0),
+        obj(ObjectKind.GRAPH_AREA, "Flaeche", "ar", graph_id="g"),
+        obj(ObjectKind.GRAPH_AREA, "Zwischen", "ab", graph_id="g", mode="between", other_graph_id="d"),
+        obj(ObjectKind.GRAPH_AREA, "Oben", "aa", graph_id="w", mode="above", x_min=-3.0, x_max=-1.0),
+        obj(ObjectKind.RIEMANN, "Riemann", "ri", graph_id="g"),
+        obj(ObjectKind.TANGENT, "Tangente", "t1", graph_id="g", x_value=0.5),
+        obj(ObjectKind.TANGENT, "Tangente2", "t2", graph_id="w", x_parameter="pa"),
+        obj(ObjectKind.GRAPH_POINT, "Punkt", "p1", graph_id="g", show_label=True),
+        obj(ObjectKind.GRAPH_POINT, "Wanderpunkt", "p2", graph_id="w", x_parameter="pa", show_label=True),
+        obj(ObjectKind.GRAPH_MARKERS, "Nullstellen", "m1", graph_id="g"),
+        obj(ObjectKind.GRAPH_MARKERS, "Extrema", "m2", graph_id="g", feature="extrema"),
+        obj(ObjectKind.GRAPH_MARKERS, "Schnitt", "m3", graph_id="g", feature="intersections", other_graph_id="d"),
+        obj(ObjectKind.GRAPH_LABEL, "Label", "lb", graph_id="g"),
+        obj(ObjectKind.DECIMAL_NUMBER, "Zahl", "n", parameter_id="pa"),
+    ]
+    steps = [
+        play(make_animation(AnimationKind.CREATE, "g", run_time=0.2), make_animation(AnimationKind.FADE_IN, "t2", run_time=0.2)),
+        play(make_animation(AnimationKind.SET_VALUE, "pa", "v", value=2.0, run_time=0.3)),
+    ]
+    return Scene(id="s", name="Graphen", objects=objects, steps=steps)
+
+
+def test_graph_features_render(tmp_path) -> None:
+    script = generate_script(make_project(graph_feature_scene()))
+    result = run_manim(tmp_path, script, "Graphen", "--format", "png")
+    assert result.returncode == 0, result.stdout + result.stderr + script
+    assert list((tmp_path / "media").rglob("*.png"))
+
+
+def test_parameter_animation_moves_dependent_objects(tmp_path) -> None:
+    import math
+
+    from manim import DecimalNumber, Dot, tempconfig
+
+    namespace: dict = {}
+    exec(compile(generate_script(make_project(graph_feature_scene())), "graphen.py", "exec"), namespace)
+    with tempconfig({"dry_run": True, "quality": "low_quality", "media_dir": str(tmp_path)}):
+        scene = namespace["Graphen"]()
+        scene.render()
+    family = [member for top in scene.mobjects for member in top.get_family()]
+    dots = [m.get_center()[:2] for m in family if isinstance(m, Dot)]
+    assert any(abs(x - 2.0) < 1e-3 and abs(y - 2.0 * math.sin(2.0)) < 1e-3 for x, y in dots)
+    number = next(m for m in family if isinstance(m, DecimalNumber))
+    assert number.get_value() == pytest.approx(2.0)

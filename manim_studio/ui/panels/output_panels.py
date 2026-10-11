@@ -6,18 +6,20 @@ import keyword
 import re
 
 from PySide6.QtCore import QRegularExpression, QTimer, Signal
-from PySide6.QtGui import QColor, QFontDatabase, QSyntaxHighlighter, QTextCharFormat
+from PySide6.QtGui import QColor, QFontDatabase, QSyntaxHighlighter, QTextCharFormat, QTextCursor, QTextFormat
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPlainTextEdit,
     QPushButton,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
 
 from manim_studio.i18n import tr
 from manim_studio.ui.icon_set import icon
+from manim_studio.ui.theme import current_palette
 
 LOG_LIMIT = 20_000
 
@@ -63,10 +65,12 @@ def _monospace_editor() -> QPlainTextEdit:
 
 
 class CodePanel(QWidget):
-    """Shows the generated Manim script (read-only)."""
+    """Shows the generated Manim script (read-only), linked with the selection."""
 
     copyRequested = Signal()
     exportRequested = Signal()
+    #: The user clicked a line (0-based).
+    lineActivated = Signal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -86,15 +90,55 @@ class CodePanel(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.addWidget(self.editor, 1)
         layout.addLayout(buttons)
+        self._highlight: list[tuple[int, int]] = []
+        self._updating = False
+        self.editor.cursorPositionChanged.connect(self._on_cursor)
+
+    def _on_cursor(self) -> None:
+        if not self._updating and self.editor.hasFocus():
+            self.lineActivated.emit(self.editor.textCursor().blockNumber())
+
+    def highlight_lines(self, ranges: list[tuple[int, int]], scroll: bool = True) -> None:
+        """Mark the code of the selected objects/step and bring it into view."""
+        self._highlight = list(ranges)
+        selections = []
+        color = QColor(current_palette().accent)
+        color.setAlpha(45)
+        document = self.editor.document()
+        for first, last in ranges:
+            start = document.findBlockByNumber(first)
+            end = document.findBlockByNumber(last)
+            if not start.isValid():
+                continue
+            cursor = QTextCursor(start)
+            if end.isValid():
+                cursor.setPosition(end.position() + max(0, end.length() - 1), QTextCursor.MoveMode.KeepAnchor)
+            selection = QTextEdit.ExtraSelection()
+            selection.cursor = cursor
+            selection.format.setBackground(color)
+            selection.format.setProperty(QTextFormat.Property.FullWidthSelection, True)
+            selections.append(selection)
+        self.editor.setExtraSelections(selections)
+        if scroll and ranges and not self.editor.hasFocus():
+            self._updating = True
+            block = document.findBlockByNumber(ranges[0][0])
+            if block.isValid():
+                cursor = QTextCursor(block)
+                self.editor.setTextCursor(cursor)
+                self.editor.centerCursor()
+            self._updating = False
 
     def show_code(self, code: str) -> None:
         """Display a script, keeping the scroll position."""
         if code == self.editor.toPlainText():
             return
         vertical = self.editor.verticalScrollBar().value()
+        self._updating = True
         self.editor.setPlainText(code)
+        self._updating = False
         self.editor.verticalScrollBar().setValue(vertical)
         self.status.setText("")
+        self.highlight_lines(self._highlight, scroll=False)
 
     def show_error(self, message: str) -> None:
         """Explain why no code could be generated."""

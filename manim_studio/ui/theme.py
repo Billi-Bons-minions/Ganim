@@ -247,6 +247,10 @@ QListWidget::item, QTreeView::item {{ padding: {px(3)}px {px(4)}px; border-radiu
 QListWidget::item:selected, QTreeView::item:selected {{ background: {p.accent_soft}; color: {p.text}; }}
 QListWidget::item:hover:!selected, QTreeView::item:hover:!selected {{ background: {p.hover}; }}
 QTreeView#LayerTree::item {{ border-radius: 0px; padding: {px(3)}px {px(2)}px; }}
+QListView#History {{ padding: {px(6)}px; }}
+QListView#History::item {{ padding: {px(4)}px {px(8)}px; border-radius: {px(6)}px; }}
+QListView#History::item:selected {{ background: {p.accent_soft}; color: {p.text}; }}
+QListView#History::item:hover:!selected {{ background: {p.hover}; }}
 QTreeView#LayerTree::branch:selected {{ background: {p.accent_soft}; }}
 QTreeView#LayerTree::branch:hover:!selected {{ background: {p.hover}; }}
 QTableWidget {{ gridline-color: {p.border}; background: {p.field}; border: 1px solid {p.border_strong}; border-radius: {r}px; }}

@@ -70,7 +70,7 @@ def dynamic_keys() -> set[str]:
     keys |= {f"export.scenes.{key}" for key in EXPORT_SCENES} | {f"export.transition.{key}" for key in ("cut", "fade")}
     keys |= {f"prop.step_{key}" for key in ("section", "subcaption", "sound_gain", "sound_offset")}
     keys |= {"banner.code", "lock.code_step", "action.add_code_step", "action.fade_out_all", "action.camera_view"}
-    keys |= {"action.save_package", "action.open_package"}
+    keys |= {"action.save_package", "action.open_package", "action.import_script"}
     keys |= {f"style.builtin.{style.name}" for style in BUILTIN_STYLES}
     keys |= {f"template.{template.key}.name" for template in BUILTIN_TEMPLATES}
     keys |= {f"undo.{action}" for action in (VALUE,)}
@@ -78,7 +78,7 @@ def dynamic_keys() -> set[str]:
     keys |= {f"prop.{point}_{axis}" for point in ("start", "end", "center") for axis in ("x", "y")}
     keys |= {f"choice.{spec.key}.{choice}" for info in KIND_INFO.values() for spec in info.params
              if spec.type == ParamType.CHOICE and spec.key != "language" for choice in spec.choices}
-    keys |= {f"dock.{dock}" for dock in ("library", "objects", "properties", "preview", "code", "log", "timeline")}
+    keys |= {f"dock.{dock}" for dock in ("library", "objects", "properties", "preview", "code", "log", "timeline", "history")}
     keys |= {f"expr.{code}" for code in ("empty", "too_long", "too_complex", "invalid_character", "syntax", "not_allowed",
                                           "missing_parenthesis", "unknown_name", "unknown_function", "wrong_argument_count")}
     keys |= {f"render_error.{code}" for code in ("manim_missing", "python_not_found", "scene_not_found", "latex_error",

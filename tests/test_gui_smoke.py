@@ -518,3 +518,20 @@ def test_components_templates_and_styles(window) -> None:
     controller.add_scene_from_template(BUILTIN_TEMPLATES[1].build())
     assert len(window.document.project.scenes) == scenes_before + 1
     assert any(obj.kind == ObjectKind.GRAPH_MARKERS for obj in window.editor.scene().objects)
+
+
+def test_code_view_follows_selection_and_history(window, qapp) -> None:
+    from manim_studio.model.types import ObjectKind
+
+    controller = window.controller
+    circle = controller.add_object(ObjectKind.CIRCLE)
+    square = controller.add_object(ObjectKind.SQUARE)
+    window.refresh_code()
+    window.bottom_tabs.setCurrentWidget(window.code)
+    window.editor.select_objects([circle])
+    selections = window.code.editor.extraSelections()
+    assert selections and "Circle(" in selections[0].cursor.selectedText()
+    first, _last = window._source_map.objects[(window.editor.scene_id, square)]
+    window._on_code_line(first)
+    assert window.editor.selected_objects == [square]
+    assert window.history.stack() is window.document.undo_stack and window.document.undo_stack.count() >= 2

@@ -24,14 +24,18 @@ from PySide6.QtWidgets import (
     QTabBar,
     QTabWidget,
     QToolButton,
+    QUndoView,
     QVBoxLayout,
     QWidget,
 )
 
 from manim_studio import APP_NAME, __version__
 from manim_studio.codegen import CodegenError, CodegenOptions, generate_script
+from manim_studio.codegen.generator import generate_script_with_map
 from manim_studio.examples import EXAMPLES, example_by_key
 from manim_studio.i18n import tr
+from manim_studio.importer import import_script
+from manim_studio.importer import summary as import_summary
 from manim_studio.logging_setup import log
 from manim_studio.model.arrange import (
     ALIGN_BOTTOM,
@@ -178,6 +182,7 @@ class MainWindow(QMainWindow):
         self.act_save_as = self._action("save_as", self.save_as, std.SaveAs)
         self.act_save_package = self._action("save_package", self.save_package, None, "package")
         self.act_open_package = self._action("open_package", self.open_package_dialog, None, "package")
+        self.act_import_script = self._action("import_script", self.import_script_dialog, None, "code")
         self.act_export_script = self._action("export_script", self.export_script, "Ctrl+Shift+E", "code")
         self.act_export = self._action("export", self.export_media, "Ctrl+E", "export")
         self.act_quit = self._action("quit", self.close, std.Quit)
@@ -261,7 +266,7 @@ class MainWindow(QMainWindow):
         self.recent_menu.aboutToShow.connect(self._fill_recent_menu)
         file_menu.addActions([self.act_save, self.act_save_as])
         file_menu.addSeparator()
-        file_menu.addActions([self.act_save_package, self.act_open_package])
+        file_menu.addActions([self.act_save_package, self.act_open_package, self.act_import_script])
         file_menu.addSeparator()
         file_menu.addActions([self.act_export, self.act_export_script])
         file_menu.addSeparator()
@@ -436,6 +441,11 @@ class MainWindow(QMainWindow):
         tabs.addTab(self.timeline, icon("clock"), tr("dock.timeline"))
         tabs.addTab(self.code, icon("code"), tr("dock.code"))
         tabs.addTab(self.log, icon("render"), tr("dock.log"))
+        self.history = QUndoView(self.document.undo_stack)
+        self.history.setEmptyLabel(tr("history.start"))
+        self.history.setObjectName("History")
+        tabs.addTab(self.history, icon("undo"), tr("dock.history"))
+        tabs.currentChanged.connect(lambda _index: self._highlight_code())
         tabs.setObjectName("Panel")
         self.bottom_tabs = tabs
         return tabs
@@ -540,6 +550,7 @@ class MainWindow(QMainWindow):
         self.scene_tabs.tabBarDoubleClicked.connect(lambda index: self.controller.rename_scene(self.scene_tabs.tabData(index)))
         self.scene_tabs.customContextMenuRequested.connect(self._show_tab_menu)
         self.code.copyRequested.connect(self.copy_code)
+        self.code.lineActivated.connect(self._on_code_line)
         self.code.exportRequested.connect(self.export_script)
         self.log.saveRequested.connect(self.save_log)
 
@@ -638,11 +649,46 @@ class MainWindow(QMainWindow):
     def refresh_code(self) -> None:
         """Regenerate the read-only code view."""
         try:
-            code = generate_script(self.document.project, CodegenOptions(base_dir=self.document.base_dir))
+            code, self._source_map = generate_script_with_map(self.document.project, CodegenOptions(base_dir=self.document.base_dir))
         except CodegenError as error:
             self.code.show_error(codegen_error_text(error))
             return
         self.code.show_code(code)
+        self._highlight_code(scroll=False)
+
+    def _highlight_code(self, scroll: bool = True) -> None:
+        """Mark the code of the selected objects or the selected step."""
+        source_map = getattr(self, "_source_map", None)
+        if source_map is None:
+            return
+        scene_id = self.editor.scene_id
+        ranges = [source_map.objects[(scene_id, i)] for i in self.editor.selected_objects if (scene_id, i) in source_map.objects]
+        if not ranges and self.editor.cursor >= 0:
+            step = self.editor.scene().steps[self.editor.cursor] if self.editor.cursor < len(self.editor.scene().steps) else None
+            if step is not None and (scene_id, step.id) in source_map.steps:
+                ranges = [source_map.steps[(scene_id, step.id)]]
+        self.code.highlight_lines(ranges, scroll and self.bottom_tabs.currentWidget() is self.code)
+
+    def _on_code_line(self, line: int) -> None:
+        """Select the object or step whose code the user clicked."""
+        source_map = getattr(self, "_source_map", None)
+        if source_map is None:
+            return
+        found = source_map.object_at(line)
+        if found is not None:
+            scene_id, object_id = found
+            if scene_id != self.editor.scene_id:
+                self.editor.set_scene(scene_id)
+            self.editor.select_objects([object_id])
+            return
+        step = source_map.step_at(line)
+        if step is not None:
+            scene_id, step_id = step
+            if scene_id != self.editor.scene_id:
+                self.editor.set_scene(scene_id)
+            index = self.editor.scene().step_index(step_id)
+            if index >= 0:
+                self.editor.inspect_step(index)
 
     def _refresh_tabs(self) -> None:
         self.scene_tabs.blockSignals(True)
@@ -672,6 +718,7 @@ class MainWindow(QMainWindow):
 
     def _on_cursor_changed(self) -> None:
         self.refresh_stage()
+        self._highlight_code()
         if self.center_stack.currentIndex() == MODE_PREVIEW and self.editor.playhead is None:
             time = step_start_time(self.editor.scene(), self.editor.cursor) if self.editor.cursor != START else 0.0
             self.player.seek(round((time - self.render.preview_offset) * 1000))
@@ -705,6 +752,7 @@ class MainWindow(QMainWindow):
     def _on_selection_changed(self) -> None:
         self.stage.set_selection(self.editor.selected_objects)
         self._update_selection_tools()
+        self._highlight_code()
 
     def _update_selection_tools(self) -> None:
         count = len(self.editor.selected_objects)
@@ -1019,6 +1067,38 @@ class MainWindow(QMainWindow):
                         obj.params["path"] = relative_asset_path(str(absolute), new_base)
 
         self.document.edit_project(tr("undo.rebase_images"), rebase)
+
+    def import_script_dialog(self) -> None:
+        """Choose a Manim script and turn its scenes into a new project."""
+        if not self.maybe_save():
+            return
+        path, _ = QFileDialog.getOpenFileName(self, tr("dialog.import_title"), self.settings.last_directory("script"), tr("dialog.script_filter"))
+        if path:
+            self.import_script(path)
+
+    def import_script(self, path: str) -> bool:
+        """Import a script (never executed) and show what could not be translated."""
+        try:
+            source = Path(path).read_text(encoding="utf-8")
+            report = import_script(source)
+        except (OSError, UnicodeDecodeError, SyntaxError) as error:
+            QMessageBox.critical(self, tr("dialog.import_title"), tr("dialog.import_failed", error=str(error)))
+            return False
+        if not report.project.scenes:
+            QMessageBox.information(self, tr("dialog.import_title"), tr("dialog.import_no_scenes"))
+            return False
+        self.document.load(report.project)
+        self.editor.reset()
+        self.settings.set_last_directory("script", str(Path(path).parent))
+        counts = import_summary(report)
+        text = tr("dialog.import_done", **counts)
+        if report.skipped:
+            box = QMessageBox(QMessageBox.Icon.Information, tr("dialog.import_title"), text + "\n\n" + tr("dialog.import_skipped", count=len(report.skipped)), parent=self)
+            box.setDetailedText("\n".join(f"{tr('dialog.import_line', line=line)}: {code}" for line, code in report.skipped))
+            box.exec()
+        else:
+            self.show_status(text)
+        return True
 
     def save_package(self) -> None:
         """Save the project together with all images and sounds as one file."""

@@ -60,7 +60,7 @@ from manim_studio.model.types import (
 )
 from manim_studio.ui.animation_preview import PreviewHover
 from manim_studio.ui.controller import EditorController
-from manim_studio.ui.data_editors import FontPicker, PiecesEditor, PointsEditor, TableEditor, WordColorsEditor
+from manim_studio.ui.data_editors import BarsEditor, DataEditor, FontPicker, PiecesEditor, PointsEditor, TableEditor, WordColorsEditor
 from manim_studio.ui.document import ProjectDocument
 from manim_studio.ui.editor_state import (
     INSPECT_ANIMATION,
@@ -464,12 +464,14 @@ class PropertiesPanel(QScrollArea):
             picker = FontPicker()
             picker.committed.connect(commit)
             return picker, picker.set_value
-        if spec.type in (ParamType.POINTS, ParamType.TABLE, ParamType.WORD_COLORS, ParamType.PIECES):
+        if spec.type in (ParamType.POINTS, ParamType.TABLE, ParamType.WORD_COLORS, ParamType.PIECES, ParamType.DATA, ParamType.BARS):
             editors = {
                 ParamType.POINTS: PointsEditor,
                 ParamType.TABLE: TableEditor,
                 ParamType.WORD_COLORS: WordColorsEditor,
                 ParamType.PIECES: PiecesEditor,
+                ParamType.DATA: DataEditor,
+                ParamType.BARS: BarsEditor,
             }
             grid = editors[spec.type]()
             grid.setProperty(ALWAYS_REFRESH, True)
@@ -656,6 +658,11 @@ class PropertiesPanel(QScrollArea):
         if kind == ObjectKind.RIEMANN:
             value = graphs.riemann_value(scene, obj)
             return tr("prop.riemann_value", value=graphs.format_coordinate(value)) if value is not None else ""
+        if kind == ObjectKind.DATA_PLOT and obj.params.get("regression", "none") != "none":
+            fit = graphs.data_fit(obj)
+            if fit is None:
+                return tr("prop.regression_impossible")
+            return tr("prop.regression", equation=fit.text(), r2=f"{fit.r_squared:.4f}")
         return ""
 
     def _build_parameter(self, form: _Form, key: tuple) -> None:

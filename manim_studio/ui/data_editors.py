@@ -347,3 +347,81 @@ class PiecesEditor(_GridEditor):
         if len(rows) > 1:
             rows.pop(self._current_row())
             self.committed.emit(rows)
+
+
+class DataEditor(PointsEditor):
+    """x/y measurements with CSV import (one row may be enough)."""
+
+    MIN_POINTS = 1
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.buttons.takeAt(self.buttons.count() - 1)
+        self.add_button("open", tr("widget.import_csv"), self._import)
+        self.finish_buttons()
+
+    def _add(self) -> None:
+        points = self.value()
+        if points:
+            last = points[-1]
+            step = points[-1][0] - points[-2][0] if len(points) > 1 else 1.0
+            points.append([round(last[0] + step, 4), last[1]])
+        else:
+            points.append([0.0, 0.0])
+        self.committed.emit(points)
+
+    def _import(self) -> None:
+        from PySide6.QtWidgets import QFileDialog, QMessageBox
+
+        from manim_studio.model.data import parse_table_text
+
+        path, _ = QFileDialog.getOpenFileName(self, tr("widget.import_csv"), "", tr("widget.csv_filter"))
+        if not path:
+            return
+        try:
+            with open(path, encoding="utf-8-sig", errors="replace") as handle:
+                rows = parse_table_text(handle.read())
+        except OSError as error:
+            QMessageBox.warning(self, tr("widget.import_csv"), str(error))
+            return
+        if not rows:
+            QMessageBox.information(self, tr("widget.import_csv"), tr("widget.csv_empty"))
+            return
+        self.committed.emit(rows)
+
+
+class BarsEditor(_GridEditor):
+    """Name and value of every bar."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__([tr("widget.bar_name"), tr("widget.bar_value")], parent)
+        self.add_button("plus", tr("widget.add_bar"), self._add)
+        self.remove_button = self.add_button("minus", tr("widget.remove_bar"), self._remove)
+        self.finish_buttons()
+
+    def set_value(self, value: Any) -> None:
+        rows = [[str(cell) for cell in (list(row) + ["", ""])[:2]] for row in (value or []) if isinstance(row, (list, tuple))]
+        if self.table.state() == QAbstractItemView.State.EditingState and len(rows) == self.table.rowCount():
+            return
+        self._loading = True
+        self.table.setRowCount(len(rows))
+        for r, row in enumerate(rows):
+            for c in range(2):
+                self._set_cell(r, c, row[c])
+        self._loading = False
+        self.remove_button.setEnabled(len(rows) > 1)
+        self._fit_height()
+
+    def value(self) -> list[list[str]]:
+        return [[self._cell(r, 0).strip(), self._cell(r, 1).strip()] for r in range(self.table.rowCount())]
+
+    def _add(self) -> None:
+        rows = self.value()
+        rows.append([chr(ord("A") + len(rows) % 26), "1"])
+        self.committed.emit(rows)
+
+    def _remove(self) -> None:
+        rows = self.value()
+        if len(rows) > 1:
+            rows.pop(self._current_row())
+            self.committed.emit(rows)

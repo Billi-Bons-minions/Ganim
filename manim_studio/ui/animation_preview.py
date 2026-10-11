@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 
+import shiboken6
 from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
@@ -263,16 +264,22 @@ class PreviewHover(QObject):
     @classmethod
     def reset(cls) -> None:
         """Drop the shared popup (after a theme change)."""
-        if cls._popup is not None:
+        if cls._popup is not None and shiboken6.isValid(cls._popup):
             cls._popup.deleteLater()
         cls._popup = None
 
     @classmethod
     def popup(cls) -> AnimationPopup:
         """Return the shared popup window."""
-        if cls._popup is None:
+        if cls._popup is None or not shiboken6.isValid(cls._popup):
             cls._popup = AnimationPopup()
         return cls._popup
+
+    @classmethod
+    def hide_popup(cls) -> None:
+        """Hide the popup if it exists (never creates one)."""
+        if cls._popup is not None and shiboken6.isValid(cls._popup):
+            cls._popup.hide()
 
     def attach(self, widget: QWidget, kind: AnimationKind) -> None:
         """Show the preview of ``kind`` when hovering ``widget``."""
@@ -286,7 +293,7 @@ class PreviewHover(QObject):
         elif event.type() in (QEvent.Type.Leave, QEvent.Type.MouseButtonPress, QEvent.Type.Hide):
             self._timer.stop()
             self._pending = None
-            PreviewHover.popup().hide()
+            PreviewHover.hide_popup()
         return False
 
     def _show(self) -> None:

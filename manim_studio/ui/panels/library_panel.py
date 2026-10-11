@@ -60,6 +60,8 @@ CATEGORIES: tuple[tuple[str, tuple[ObjectKind, ...]], ...] = (
             ObjectKind.RIEMANN,
             ObjectKind.GRAPH_MARKERS,
             ObjectKind.GRAPH_LABEL,
+            ObjectKind.DATA_PLOT,
+            ObjectKind.BAR_CHART,
         ),
     ),
     ("media", (ObjectKind.IMAGE,)),

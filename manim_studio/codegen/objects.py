@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable
 
+from manim_studio.codegen.data_code import bar_chart_code, bar_label_lines, data_plot_code
 from manim_studio.codegen.errors import CodegenError
 from manim_studio.codegen.formatting import assign, call
 from manim_studio.codegen.graph_code import axis_label_lines, graph_object_code
@@ -27,7 +28,6 @@ from manim_studio.codegen.objects_extra import (
 from manim_studio.codegen.objects_extra import text as extra_text
 from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import Scene, SceneObject
-from manim_studio.model.geometry import bound_axes
 from manim_studio.model.schema import is_vector_image_path
 from manim_studio.model.types import GRAPH_TOOL_KINDS, INVISIBLE_KINDS, ObjectKind
 
@@ -234,6 +234,10 @@ def object_code(
         special = _special_code(scene, obj, names) or graph_object_code(scene, obj, names, helpers)
         if special is not None:
             lines, place = special
+        elif obj.kind == ObjectKind.DATA_PLOT:
+            lines, place = assign(variable, data_plot_code(scene, obj, names)), False
+        elif obj.kind == ObjectKind.BAR_CHART:
+            lines, place = assign(variable, bar_chart_code(obj)) + bar_label_lines(obj, variable), True
         elif obj.kind == ObjectKind.IMAGE:
             lines, place = assign(variable, image_code(obj, base_dir)), True
         else:
@@ -260,7 +264,7 @@ def object_code(
 def dependencies(scene: Scene, obj: SceneObject) -> list[str]:
     """Return ids of objects that must be created before ``obj``."""
     result: list[str] = []
-    if obj.kind == ObjectKind.FUNCTION_GRAPH and bound_axes(scene, obj) is not None:
+    if obj.kind in (ObjectKind.FUNCTION_GRAPH, ObjectKind.DATA_PLOT) and obj.params.get("axes_id"):
         result.append(str(obj.params.get("axes_id")))
     if obj.kind in GRAPH_TOOL_KINDS:
         for key in ("x_parameter",):

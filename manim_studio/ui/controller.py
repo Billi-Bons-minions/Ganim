@@ -110,7 +110,7 @@ class EditorController(QObject):
         return relative_asset_path(path, self.document.base_dir)
 
     def add_object(
-        self, kind: ObjectKind, x: float | None = None, y: float | None = None, name: str | None = None, style: dict | None = None, **params
+        self, kind: ObjectKind, x: float | None = None, y: float | None = None, name: str | None = None, attributes: dict | None = None, **params
     ) -> str | None:
         """Create an object of ``kind`` (at the given position or a free spot)."""
         if kind == ObjectKind.IMAGE:
@@ -129,7 +129,7 @@ class EditorController(QObject):
         else:
             name = unique_name(names, name or tr(f"kind.{kind.value}"))
         obj = create_object(kind, name, x, y, **params)
-        for key, value in (style or {}).items():
+        for key, value in (attributes or {}).items():
             setattr(obj, key, value)
         self._attach(obj)
         self._edit(tr("undo.add_object", name=name), lambda s: ops.add_object(s, obj))
@@ -146,7 +146,7 @@ class EditorController(QObject):
     def _attach(self, obj) -> None:
         """Connect a new graph to axes and a new graph tool to a graph (the selected one if possible)."""
         scene = self.scene()
-        if obj.kind == ObjectKind.FUNCTION_GRAPH and not obj.params.get("axes_id"):
+        if obj.kind in (ObjectKind.FUNCTION_GRAPH, ObjectKind.DATA_PLOT) and not obj.params.get("axes_id"):
             axes = [o for o in scene.objects if o.kind in (ObjectKind.AXES, ObjectKind.NUMBER_PLANE)]
             if axes:
                 obj.params["axes_id"] = axes[-1].id
@@ -188,7 +188,7 @@ class EditorController(QObject):
             "x_min": graph.params.get("x_min", -5.0),
             "x_max": graph.params.get("x_max", 5.0),
         }
-        return self.add_object(ObjectKind.FUNCTION_GRAPH, 0.0, 0.0, name=name, style={"stroke_color": color}, **params)
+        return self.add_object(ObjectKind.FUNCTION_GRAPH, 0.0, 0.0, name=name, attributes={"stroke_color": color}, **params)
 
     def delete_objects(self, ids: list[str] | None = None) -> None:
         """Delete objects and everything that refers to them."""

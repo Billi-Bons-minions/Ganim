@@ -535,10 +535,46 @@ def label_anchor(scene: Scene, obj: SceneObject, values: Values | None = None) -
 # --- placement -----------------------------------------------------------------------------------
 
 
+def data_axes(scene: Scene, obj: SceneObject) -> SceneObject | None:
+    """Return the coordinate system of a data plot."""
+    axes = scene.object_by_id(obj.params.get("axes_id"))
+    return axes if axes is not None and axes.kind in (ObjectKind.AXES, ObjectKind.NUMBER_PLANE) else None
+
+
+def data_fit(obj: SceneObject):
+    """Return the regression of a data plot or ``None``."""
+    from manim_studio.model.data import data_points, regression
+
+    kind = str(obj.params.get("regression", "none"))
+    return regression(data_points(obj), kind) if kind != "none" else None
+
+
+def regression_points(obj: SceneObject, samples: int = 120) -> list[Point]:
+    """Samples of the regression curve over the x range of the data."""
+    from manim_studio.model.data import data_points
+
+    fit = data_fit(obj)
+    points = data_points(obj)
+    if fit is None or not points:
+        return []
+    low, high = min(x for x, _y in points), max(x for x, _y in points)
+    result = []
+    for x in _xs(low, high, samples):
+        try:
+            y = fit.evaluate(x)
+        except OverflowError:
+            continue
+        if math.isfinite(y):
+            result.append((x, y))
+    return result
+
+
 def is_bound(scene: Scene, obj: SceneObject) -> bool:
     """Return ``True`` for objects placed by a coordinate system (graphs on axes and graph tools)."""
     if obj.kind == ObjectKind.FUNCTION_GRAPH:
         return bound_axes(scene, obj) is not None
+    if obj.kind == ObjectKind.DATA_PLOT:
+        return data_axes(scene, obj) is not None
     if obj.kind in GRAPH_TOOL_KINDS:
         return tool_graph(scene, obj) is not None
     return False
@@ -575,11 +611,18 @@ def bound_anchor(scene: Scene, obj: SceneObject, values: Values | None = None) -
         if center is not None:
             return center
         return (axes.x, axes.y) if axes is not None else (obj.x, obj.y)
-    graph = tool_graph(scene, obj)
-    axes = bound_axes(scene, graph) if graph is not None else None
+    if obj.kind == ObjectKind.DATA_PLOT:
+        from manim_studio.model.data import data_points
+
+        axes = data_axes(scene, obj)
+        raw = data_points(obj) + regression_points(obj)
+    else:
+        graph = tool_graph(scene, obj)
+        axes = bound_axes(scene, graph) if graph is not None else None
+        raw = tool_axes_points(scene, obj, values) if axes is not None else []
     if axes is None:
         return obj.x, obj.y
-    points = [axes_to_scene(axes, x, y) for x, y in tool_axes_points(scene, obj, values)]
+    points = [axes_to_scene(axes, x, y) for x, y in raw]
     center = bbox_center([points]) if points else None
     return center if center is not None else (axes.x, axes.y)
 

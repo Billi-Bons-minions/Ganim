@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
+from manim_studio.model.data import DATA_STYLES, REGRESSIONS
 from manim_studio.model.types import (
     CURVE_DERIVATIVE,
     CURVE_FUNCTION,
@@ -42,6 +43,8 @@ class ParamType(str, Enum):
     TABLE = "table"
     WORD_COLORS = "word_colors"
     PIECES = "pieces"
+    DATA = "data"
+    BARS = "bars"
 
 
 @dataclass(frozen=True)
@@ -470,6 +473,37 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         ),
         _TEXT_STYLE,
         (("fill_color", _YELLOW), ("fill_opacity", 1.0)),
+    ),
+    ObjectKind.DATA_PLOT: KindInfo(
+        ObjectKind.DATA_PLOT,
+        (
+            ParamSpec("axes_id", ParamType.OBJECT_REF, None, ref_kinds=(ObjectKind.AXES, ObjectKind.NUMBER_PLANE)),
+            ParamSpec(
+                "data",
+                ParamType.DATA,
+                [[-4.0, -1.8], [-3.0, -1.1], [-2.0, -0.9], [-1.0, 0.2], [0.0, 0.4], [1.0, 1.3], [2.0, 1.4], [3.0, 2.4], [4.0, 2.6]],
+            ),
+            ParamSpec("display", ParamType.CHOICE, "dots", choices=DATA_STYLES),
+            ParamSpec("regression", ParamType.CHOICE, "none", choices=REGRESSIONS),
+            _length("radius", 0.08, minimum=0.005),
+        ),
+        frozenset({"stroke_color", "stroke_width", "fill_color"}),
+        (("stroke_color", _YELLOW), ("stroke_width", 3.0), ("fill_color", "#58C4DD"), ("fill_opacity", 1.0)),
+    ),
+    ObjectKind.BAR_CHART: KindInfo(
+        ObjectKind.BAR_CHART,
+        (
+            ParamSpec("bars", ParamType.BARS, [["A", "3"], ["B", "5"], ["C", "2"], ["D", "4"]]),
+            ParamSpec("colors", ParamType.CHOICE, "palette", choices=("palette", "single")),
+            ParamSpec("show_values", ParamType.BOOL, False),
+            ParamSpec("y_max", ParamType.FLOAT, 0.0, minimum=0.0, maximum=1e9, step=1.0),
+            ParamSpec("y_step", ParamType.FLOAT, 0.0, minimum=0.0, maximum=1e9, step=0.5),
+            _length("x_length", 6.0, minimum=0.5),
+            _length("y_length", 4.0, minimum=0.5),
+            ParamSpec("bar_width", ParamType.FLOAT, 0.6, minimum=0.05, maximum=1.0, step=0.05),
+        ),
+        frozenset({"fill_color", "fill_opacity", "stroke_width"}),
+        (("fill_color", "#58C4DD"), ("fill_opacity", 0.7), ("stroke_width", 3.0)),
     ),
     ObjectKind.PARAMETER: KindInfo(
         ObjectKind.PARAMETER,

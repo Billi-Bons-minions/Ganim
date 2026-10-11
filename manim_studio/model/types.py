@@ -47,6 +47,8 @@ class ObjectKind(str, Enum):
     GRAPH_MARKERS = "graph_markers"
     GRAPH_LABEL = "graph_label"
     PARAMETER = "parameter"
+    DATA_PLOT = "data_plot"
+    BAR_CHART = "bar_chart"
 
 
 class AnimationKind(str, Enum):

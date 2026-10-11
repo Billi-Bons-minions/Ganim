@@ -71,7 +71,10 @@ class ProjectDocument(QObject):
         self.project: Project = create_project(default_scene_name)
         self.path: Path | None = None
         self.undo_stack = QUndoStack(self)
-        self.undo_stack.cleanChanged.connect(lambda clean: self.dirtyChanged.emit(not clean))
+        self.undo_stack.cleanChanged.connect(self._on_clean_changed)
+
+    def _on_clean_changed(self, clean: bool) -> None:
+        self.dirtyChanged.emit(not clean)
 
     # --- state ---------------------------------------------------------------
 

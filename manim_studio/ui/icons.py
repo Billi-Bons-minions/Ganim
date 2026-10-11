@@ -298,6 +298,26 @@ def _parameter(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: 
     _text(p, QRectF(0, 0, s, s * 0.55), "a", stroke, italic=True, size=0.75)
 
 
+def _data_plot(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    _axes_hint(p, s, m, w, neutral)
+    p.setPen(QPen(QColor("#F7D96F"), w))
+    p.drawLine(QPointF(m * 1.6, s * 0.72), QPointF(s - m, s * 0.25))
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(stroke)
+    for x, y in ((0.3, 0.62), (0.42, 0.68), (0.55, 0.45), (0.68, 0.5), (0.8, 0.3)):
+        p.drawEllipse(QPointF(s * x, s * y), w * 1.5, w * 1.5)
+
+
+def _bar_chart(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    _axes_hint(p, s, m, w, neutral)
+    base = s - m * 1.2
+    colors = ("#58508D", "#BC5090", "#FF6361", "#FFA600")
+    for index, (height, color) in enumerate(zip((0.35, 0.6, 0.45, 0.7), colors)):
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(color))
+        p.drawRect(QRectF(s * 0.27 + index * s * 0.17, base - s * height, s * 0.12, s * height))
+
+
 _EXTRA_DRAWERS = {
     ObjectKind.NUMBER_LINE: _number_line,
     ObjectKind.VECTOR: _vector,
@@ -324,6 +344,8 @@ _EXTRA_DRAWERS = {
     ObjectKind.GRAPH_MARKERS: _markers,
     ObjectKind.GRAPH_LABEL: _graph_label,
     ObjectKind.PARAMETER: _parameter,
+    ObjectKind.DATA_PLOT: _data_plot,
+    ObjectKind.BAR_CHART: _bar_chart,
 }
 
 

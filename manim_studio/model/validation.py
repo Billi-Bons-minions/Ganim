@@ -8,6 +8,7 @@ from pathlib import Path
 
 from manim_studio.model import graphs, groups
 from manim_studio.model.assets import resolve_asset_path
+from manim_studio.model.data import bar_values, data_points
 from manim_studio.model.entities import STEP_TOGETHER, Animation, Scene, SceneObject, Step
 from manim_studio.model.expression import check_expression, is_valid_name
 from manim_studio.model.schema import animation_allowed
@@ -91,6 +92,15 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
         _graph_issues(scene, obj, add)
     if obj.kind in GRAPH_TOOL_KINDS:
         _tool_issues(scene, obj, add)
+    if obj.kind == ObjectKind.DATA_PLOT:
+        if graphs.data_axes(scene, obj) is None:
+            add(ERROR, "data_needs_axes")
+        if not data_points(obj):
+            add(ERROR, "data_empty")
+        elif params.get("regression", "none") != "none" and graphs.data_fit(obj) is None:
+            add(WARNING, "regression_impossible")
+    if obj.kind == ObjectKind.BAR_CHART and not bar_values(obj):
+        add(ERROR, "data_empty")
     if obj.kind == ObjectKind.PARAMETER:
         symbol = graphs.parameter_symbol(obj)
         if not is_valid_name(symbol):

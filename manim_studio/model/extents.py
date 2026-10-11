@@ -109,8 +109,10 @@ def base_size(scene: Scene, obj: SceneObject) -> tuple[float, float]:
     if kind == ObjectKind.IMAGE:
         height = param_float(p, "height", 2.0)
         return height * 1.5, height
-    if kind == ObjectKind.FUNCTION_GRAPH or kind in GRAPH_TOOL_KINDS:
+    if kind == ObjectKind.FUNCTION_GRAPH or kind in GRAPH_TOOL_KINDS or kind == ObjectKind.DATA_PLOT:
         return _graph_size(scene, obj)
+    if kind == ObjectKind.BAR_CHART:
+        return param_float(p, "x_length", 6.0) + 0.8, param_float(p, "y_length", 4.0) + 0.6
     if kind == ObjectKind.BRACE:
         width = param_float(p, "width", 3.0)
         horizontal = p.get("direction", "down") in ("down", "up")
@@ -122,6 +124,13 @@ def _graph_size(scene: Scene, obj: SceneObject) -> tuple[float, float]:
     from manim_studio.model import graphs
     from manim_studio.model.geometry import axes_to_scene
 
+    if obj.kind == ObjectKind.DATA_PLOT:
+        from manim_studio.model.data import data_points
+
+        axes = graphs.data_axes(scene, obj)
+        raw = data_points(obj) + graphs.regression_points(obj)
+        points = [list(axes_to_scene(axes, x, y)) for x, y in raw] if axes is not None else [list(p) for p in raw]
+        return _points_size(points) if len(points) > 1 else (0.3, 0.3)
     if obj.kind in GRAPH_TOOL_KINDS:
         graph = graphs.tool_graph(scene, obj)
         axes = bound_axes(scene, graph) if graph is not None else None

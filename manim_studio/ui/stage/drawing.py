@@ -441,6 +441,7 @@ def _image_primitives(obj: SceneObject, resources: StageResources) -> list[Primi
 
 
 def _shape_drawing(obj: SceneObject, state: ObjectState, scene: Scene, resources: StageResources) -> tuple[list[Primitive], bool]:
+    from manim_studio.ui.stage.drawing_data import bar_chart_primitives, data_primitives
     from manim_studio.ui.stage.drawing_extra import extra_drawing
     from manim_studio.ui.stage.drawing_graph import graph_primitives, label_primitives, tool_primitives
 
@@ -484,6 +485,10 @@ def _shape_drawing(obj: SceneObject, state: ObjectState, scene: Scene, resources
         return tool_primitives(scene, obj, state, resources.values)
     if kind == ObjectKind.PARAMETER:
         return [], False
+    if kind == ObjectKind.DATA_PLOT:
+        return data_primitives(scene, obj, state)
+    if kind == ObjectKind.BAR_CHART:
+        return bar_chart_primitives(obj, state)
     return _image_primitives(obj, resources), True
 
 

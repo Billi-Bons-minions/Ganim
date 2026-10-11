@@ -251,3 +251,18 @@ def test_parameter_animation_moves_dependent_objects(tmp_path) -> None:
     assert any(abs(x - 2.0) < 1e-3 and abs(y - 2.0 * math.sin(2.0)) < 1e-3 for x, y in dots)
     number = next(m for m in family if isinstance(m, DecimalNumber))
     assert number.get_value() == pytest.approx(2.0)
+
+
+def test_data_plots_and_bar_charts_render(tmp_path) -> None:
+    axes = make_object(ObjectKind.AXES, "Achsen", "ax", -3.0, 0.0, x_length=6.0, y_length=6.0, show_numbers=True)
+    objects = [
+        axes,
+        make_object(ObjectKind.DATA_PLOT, "Punkte", "d1", axes_id="ax", regression="linear"),
+        make_object(ObjectKind.DATA_PLOT, "Linie", "d2", axes_id="ax", display="both", regression="quadratic", data=[[-4, 2.5], [0, -1], [4, 2.8]]),
+        make_object(ObjectKind.DATA_PLOT, "Wachstum", "d3", axes_id="ax", display="line", regression="exponential", data=[[0, 0.5], [1, 0.9], [2, 1.8]]),
+        make_object(ObjectKind.BAR_CHART, "Balken", "b", 3.5, 0.0, show_values=True, bars=[["Mo", "3"], ["Di", "-2"], ["Mi", "4"]]),
+    ]
+    steps = [play(*(make_animation(AnimationKind.CREATE, item.id, run_time=0.2) for item in objects[1:]))]
+    script = generate_script(make_project(Scene(id="s", name="Daten", objects=objects, steps=steps)))
+    result = run_manim(tmp_path, script, "Daten", "--format", "png")
+    assert result.returncode == 0, result.stdout + result.stderr + script

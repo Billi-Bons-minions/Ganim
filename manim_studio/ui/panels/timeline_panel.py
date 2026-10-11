@@ -192,7 +192,8 @@ class TimelinePanel(QWidget):
     def _build_layout(self) -> None:
         toolbar = QHBoxLayout()
         toolbar.addWidget(self._tool_button(tr("timeline.add_animation"), tr("timeline.add_animation_tip"), menu=self._animation_menu(False), icon_name="sparkle"))
-        toolbar.addWidget(self._tool_button(tr("timeline.add_step"), tr("timeline.add_step_tip"), lambda: self.controller.add_step(StepKind.PLAY), icon_name="plus"))
+        self.add_step_button = self._tool_button(tr("timeline.add_step"), tr("timeline.add_step_tip"), lambda: self.controller.add_step(StepKind.PLAY), icon_name="plus")
+        toolbar.addWidget(self.add_step_button)
         toolbar.addWidget(self._tool_button(tr("timeline.add_wait"), tr("timeline.add_wait_tip"), lambda: self.controller.add_step(StepKind.WAIT), icon_name="clock"))
         toolbar.addWidget(self._tool_button(tr("timeline.duplicate"), tr("timeline.duplicate_tip"), self.controller.duplicate_step, icon_name="duplicate"))
         toolbar.addWidget(self._tool_button(tr("timeline.delete"), tr("timeline.delete_tip"), self.controller.delete_step, icon_name="trash"))

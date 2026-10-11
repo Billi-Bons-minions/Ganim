@@ -120,6 +120,13 @@ class ProjectDocument(QObject):
         self.undo_stack.clear()
         self.changed.emit()
 
+    def load(self, project: Project) -> None:
+        """Show an in-memory project (e.g. an example) as a new, unsaved document."""
+        self.project = project
+        self._set_path(None)
+        self.undo_stack.clear()
+        self.changed.emit()
+
     def open(self, path: str | Path) -> None:
         """Load a project file (raises ``ProjectFormatError``)."""
         project = load_project(path)

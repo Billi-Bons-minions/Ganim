@@ -15,6 +15,7 @@ from manim_studio.model.animation_builder import allowed_for_objects, build_anim
 from manim_studio.model.assets import relative_asset_path
 from manim_studio.model.entities import Scene
 from manim_studio.model.factory import (
+    create_animation,
     create_object,
     create_play_step,
     create_scene,
@@ -23,10 +24,20 @@ from manim_studio.model.factory import (
 )
 from manim_studio.model.serialization import object_from_dict, object_to_dict
 from manim_studio.model.stage_edits import (
+    KIND_FOR_ACTION,
+    MOVE,
+    ROTATE,
+    SCALE,
     check_edit,
+    color_edit,
+    is_recording,
     move_edit,
     rotate_edit,
     scale_edit,
+    set_move_target,
+    set_rotation_angle,
+    set_scale_factor,
+    would_create,
 )
 from manim_studio.model.state import START
 from manim_studio.model.types import AnimationKind, ObjectKind, StepKind
@@ -43,6 +54,7 @@ class EditorController(QObject):
     """Turns user intentions into undoable model operations."""
 
     statusMessage = Signal(str)
+    animationRecorded = Signal(str)
 
     def __init__(
         self,
@@ -185,22 +197,53 @@ class EditorController(QObject):
         name = self._object_name(check.object_id) if check.object_id else ""
         return False, tr(f"lock.{check.reason}", name=name, step=self.editor.cursor + 1)
 
-    def move_objects(self, ids: list[str], dx: float, dy: float) -> None:
-        """Move objects (or their Move targets) by a delta."""
-        if not self.edit_policy("move", ids)[0]:
+    def _announce_recording(self, ids: list[str], action: str) -> None:
+        created = would_create(self.scene(), self.editor.cursor, ids, action)
+        if not created:
             return
+        names = ", ".join(self._object_name(object_id) for object_id in created)
+        animation = tr(f"anim.{KIND_FOR_ACTION[action].value}")
+        self.animationRecorded.emit(tr("record.created", animation=animation, name=names, step=self.editor.cursor + 1))
+
+    def move_objects(self, ids: list[str], dx: float, dy: float) -> None:
+        """Move objects at the start, or record a Move animation in the step."""
+        if not self.edit_policy(MOVE, ids)[0]:
+            return
+        self._announce_recording(ids, MOVE)
         key = f"move:{self.editor.cursor}:{','.join(ids)}"
         self._edit(tr("undo.move"), move_edit(self.editor.cursor, ids, dx, dy), merge_key=key)
 
     def scale_object(self, object_id: str, factor: float) -> None:
-        """Scale an object (or its Scale factor)."""
-        if self.edit_policy("scale", [object_id])[0]:
+        """Scale an object at the start, or record a Scale animation."""
+        if self.edit_policy(SCALE, [object_id])[0]:
+            self._announce_recording([object_id], SCALE)
             self._edit(tr("undo.scale"), scale_edit(self.editor.cursor, object_id, factor))
 
     def rotate_object(self, object_id: str, delta: float) -> None:
-        """Rotate an object (or change its Rotate angle)."""
-        if self.edit_policy("rotate", [object_id])[0]:
+        """Rotate an object at the start, or record a Rotate animation."""
+        if self.edit_policy(ROTATE, [object_id])[0]:
+            self._announce_recording([object_id], ROTATE)
             self._edit(tr("undo.rotate"), rotate_edit(self.editor.cursor, object_id, delta))
+
+    def recording(self) -> bool:
+        """Return ``True`` if edits currently become animations."""
+        return is_recording(self.scene(), self.editor.cursor)
+
+    def set_step_value(self, object_id: str, action: str, *values: float | str, merge_key: str | None = None) -> None:
+        """Set an absolute target value in the current step (from the inspector)."""
+        if not self.edit_policy(action, [object_id])[0] or not self.recording():
+            return
+        self._announce_recording([object_id], action)
+        cursor = self.editor.cursor
+        if action == MOVE:
+            mutation = set_move_target(cursor, object_id, float(values[0]), float(values[1]))
+        elif action == SCALE:
+            mutation = set_scale_factor(cursor, object_id, float(values[0]))
+        elif action == ROTATE:
+            mutation = set_rotation_angle(cursor, object_id, float(values[0]))
+        else:
+            mutation = color_edit(cursor, [object_id], str(values[0]), str(values[1]))
+        self._edit(tr(f"undo.{action}"), mutation, merge_key=merge_key)
 
     # --- steps ---------------------------------------------------------------------
 
@@ -255,7 +298,7 @@ class EditorController(QObject):
         """Return ``True`` if ``kind`` fits the selected objects."""
         return allowed_for_objects(self.scene(), kind, list(self.editor.selected_objects))
 
-    def add_animation(self, kind: AnimationKind, same_step: bool) -> None:
+    def add_animation(self, kind: AnimationKind, same_step: bool, inspect: bool = True) -> None:
         """Animate the selected objects, in the current step or in a new step."""
         ids = list(self.editor.selected_objects)
         if not ids:
@@ -264,15 +307,33 @@ class EditorController(QObject):
         if not self.animation_allowed(kind):
             self.statusMessage.emit(tr("status.animation_not_allowed"))
             return
-        scene = self.scene()
+        use_current = same_step and self.recording()
+        base_cursor = self.editor.cursor - 1 if use_current else self.editor.cursor
+        animations = build_animations(self.scene(), kind, ids, base_cursor)
+        self._insert_animations(animations, use_current, kind, inspect)
+
+    def add_transform(self, kind: AnimationKind, source_id: str, target_id: str, same_step: bool, inspect: bool = True) -> None:
+        """Transform ``source_id`` into the existing object ``target_id``."""
+        animation = create_animation(kind, source_id, target=target_id)
+        self._insert_animations([animation], same_step and self.recording(), kind, inspect)
+
+    def add_transform_to_new(self, kind: AnimationKind, source_id: str, new_kind: ObjectKind, same_step: bool) -> None:
+        """Create a hidden object at the source's position and transform into it."""
+        source = self.scene().object_by_id(source_id)
+        if source is None:
+            return
+        name = unique_name([obj.name for obj in self.scene().objects], tr(f"kind.{new_kind.value}"))
+        target = create_object(new_kind, name, source.x, source.y)
+        self._edit(tr("undo.add_object", name=name), lambda s: ops.add_object(s, target))
+        self.add_transform(kind, source_id, target.id, same_step, inspect=False)
+        self.editor.select_objects([target.id])
+        self.statusMessage.emit(tr("status.transform_target_created", name=name))
+
+    def _insert_animations(self, animations: list, use_current: bool, kind: AnimationKind, inspect: bool) -> None:
         cursor = self.editor.cursor
-        current = scene.steps[cursor] if 0 <= cursor < len(scene.steps) else None
-        use_current = same_step and current is not None and current.kind == StepKind.PLAY
-        base_cursor = cursor - 1 if use_current else cursor
-        animations = build_animations(scene, kind, ids, base_cursor)
         label = tr(f"anim.{kind.value}")
         if use_current:
-            step_id = current.id
+            step_id = self.scene().steps[cursor].id
 
             def mutate(s: Scene) -> None:
                 for anim in animations:
@@ -285,7 +346,9 @@ class EditorController(QObject):
             index = cursor + 1
             self._edit(tr("undo.add_animation", name=label), lambda s: ops.add_step(s, step, index))
         self.editor.set_cursor(index)
-        self.editor.inspect_animation(animations[0].id)
+        if inspect:
+            self.editor.inspect_animation(animations[0].id)
+        self.animationRecorded.emit(tr("record.added", animation=label, step=index + 1))
 
     def delete_animation(self, animation_id: str) -> None:
         """Remove one animation from its step."""

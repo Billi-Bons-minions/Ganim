@@ -4,7 +4,19 @@ from __future__ import annotations
 
 from manim_studio.model.animation_builder import allowed_for_objects, build_animations
 from manim_studio.model.entities import Scene
-from manim_studio.model.stage_edits import MOVE, ROTATE, SCALE, check_edit, move_edit, rotate_edit, scale_edit
+from manim_studio.model.stage_edits import (
+    MOVE,
+    SCALE,
+    check_edit,
+    color_edit,
+    move_edit,
+    rotate_edit,
+    scale_edit,
+    set_move_target,
+    set_rotation_angle,
+    set_scale_factor,
+    would_create,
+)
 from manim_studio.model.state import START
 from manim_studio.model.types import AnimationKind, ObjectKind
 from tests.helpers import make_animation, make_object, play, wait
@@ -42,13 +54,50 @@ def test_step_edits_animation_targets() -> None:
 
 def test_locked_cases() -> None:
     scene = scene_with_move()
-    assert check_edit(scene, 0, ["c"], SCALE).reason == "needs_scale"
-    assert check_edit(scene, 0, ["c"], ROTATE).reason == "needs_rotate"
+    assert check_edit(scene, 0, ["c"], SCALE).allowed
+    assert check_edit(scene, 2, ["c"], MOVE).allowed
     assert check_edit(scene, 1, ["c"], MOVE).reason == "wait_step"
-    assert check_edit(scene, 2, ["c"], MOVE).reason == "needs_move"
     locked = check_edit(scene, START, ["g"], MOVE)
     assert not locked.allowed and locked.reason == "bound_graph" and locked.object_id == "g"
     assert check_edit(scene, START, [], MOVE).reason == "nothing_selected"
+
+
+def test_dragging_in_a_step_records_new_animations() -> None:
+    scene = scene_with_move()
+    assert would_create(scene, 2, ["c"], MOVE) == ["c"]
+    assert would_create(scene, 0, ["c"], MOVE) == []
+    assert would_create(scene, START, ["c"], MOVE) == []
+    move_edit(2, ["c"], -1.0, 0.5)(scene)
+    scale_edit(2, "c", 2.0)(scene)
+    rotate_edit(2, "c", 45.0)(scene)
+    color_edit(2, ["c"], "fill_color", "#FF0000")(scene)
+    kinds = {anim.kind: anim for anim in scene.steps[2].animations}
+    assert kinds[AnimationKind.MOVE].params == {"x": 2.0, "y": 0.5}
+    assert kinds[AnimationKind.SCALE].params == {"factor": 2.0}
+    assert kinds[AnimationKind.ROTATE].params == {"angle": 45.0}
+    assert kinds[AnimationKind.CHANGE_COLOR].params == {"color": "#FF0000", "apply_to": "fill"}
+    assert all(anim.run_time == 1.0 for anim in scene.steps[2].animations)
+
+
+def test_recorded_animation_matches_step_duration() -> None:
+    scene = scene_with_move()
+    scene.steps[0].animations[0].run_time = 2.5
+    scale_edit(0, "c", 1.5)(scene)
+    assert scene.steps[0].animations[-1].run_time == 2.5
+
+
+def test_absolute_step_values_and_color_merge() -> None:
+    scene = scene_with_move()
+    set_move_target(0, "c", -2.0, 1.0)(scene)
+    set_rotation_angle(2, "c", 90.0)(scene)
+    set_scale_factor(2, "c", 0.5)(scene)
+    color_edit(2, ["c"], "stroke_color", "#00FF00")(scene)
+    color_edit(2, ["c"], "fill_color", "#0000FF")(scene)
+    assert scene.steps[0].animations[0].params == {"x": -2.0, "y": 1.0}
+    color = [a for a in scene.steps[2].animations if a.kind == AnimationKind.CHANGE_COLOR]
+    assert len(color) == 1 and color[0].params == {"color": "#0000FF", "apply_to": "both"}
+    color_edit(START, ["c"], "fill_color", "#123456")(scene)
+    assert scene.object_by_id("c").fill_color == "#123456"
 
 
 def test_build_move_uses_current_position() -> None:

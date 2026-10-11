@@ -28,18 +28,29 @@ from PySide6.QtWidgets import (
 
 from manim_studio import APP_NAME, __version__
 from manim_studio.codegen import CodegenError, CodegenOptions, generate_script
+from manim_studio.examples import EXAMPLES, example_by_key
 from manim_studio.i18n import tr
 from manim_studio.logging_setup import log
 from manim_studio.model.assets import relative_asset_path, resolve_asset_path
 from manim_studio.model.serialization import FILE_SUFFIX, ProjectFormatError
 from manim_studio.model.state import START, states_after
-from manim_studio.model.types import ObjectKind, StepKind
-from manim_studio.ui.chrome import PanelFrame, SegmentedControl, StageBanner, action_button, separator, tool_button
+from manim_studio.model.stage_edits import is_recording
+from manim_studio.model.types import AnimationKind, ObjectKind, StepKind
+from manim_studio.ui.chrome import PanelFrame, SegmentedControl, StageBanner, Toast, action_button, separator, tool_button
 from manim_studio.ui.context import AppContext
 from manim_studio.ui.dialogs.environment_dialog import EnvironmentDialog
 from manim_studio.ui.dialogs.export_dialog import ExportDialog
 from manim_studio.ui.dialogs.messages import codegen_error_text
 from manim_studio.ui.dialogs.settings_dialog import SettingsDialog
+from manim_studio.ui.dialogs.shortcuts_dialog import ShortcutsDialog
+from manim_studio.ui.dialogs.welcome_dialog import (
+    CHOICE_NEW,
+    CHOICE_OPEN,
+    CHOICE_TUTORIAL,
+    EXAMPLE_PREFIX,
+    RECENT_PREFIX,
+    WelcomeDialog,
+)
 from manim_studio.ui.icon_set import icon
 from manim_studio.ui.icons import app_icon, kind_icon
 from manim_studio.ui.panels.library_panel import LIBRARY_ORDER, LibraryPanel
@@ -51,6 +62,7 @@ from manim_studio.ui.panels.timeline_panel import TimelinePanel, build_animation
 from manim_studio.ui.stage.drawing import PX, StageResources
 from manim_studio.ui.stage.view import StageView
 from manim_studio.ui.theme import current_palette, px
+from manim_studio.ui.tutorial import TourStep, TutorialOverlay
 
 CODE_REFRESH_MS = 250
 STATUS_TIMEOUT_MS = 6000
@@ -76,6 +88,7 @@ class MainWindow(QMainWindow):
         self._links: list[tuple[Any, Callable]] = []
         self._closing_for_rebuild = False
         self._interactive_check = False
+        self._preview_seen = False
         self.setWindowIcon(app_icon())
         self.resources = StageResources(tex=self.tex_cache)
         self._code_timer = QTimer(self, singleShot=True, interval=CODE_REFRESH_MS)
@@ -173,6 +186,9 @@ class MainWindow(QMainWindow):
             "manim_docs", lambda: QDesktopServices.openUrl(QUrl("https://docs.manim.community/en/stable/")), None, "help"
         )
         self.act_open_log_folder = self._action("open_log_folder", self.open_log_folder)
+        self.act_welcome = self._action("welcome", self.show_welcome, None, "lightbulb")
+        self.act_tutorial = self._action("tutorial", self.start_tutorial, None, "lightbulb")
+        self.act_shortcuts = self._action("shortcuts", self.show_shortcuts, "F1", "help")
         stack.canUndoChanged.connect(self.act_undo.setEnabled)
         stack.canRedoChanged.connect(self.act_redo.setEnabled)
         self._links.append((stack.canUndoChanged, self.act_undo.setEnabled))
@@ -224,7 +240,15 @@ class MainWindow(QMainWindow):
         render_menu.addSeparator()
         render_menu.addAction(self.act_environment)
         help_menu = bar.addMenu(tr("menu.help"))
-        help_menu.addActions([self.act_manim_docs, self.act_open_log_folder, self.act_about])
+        help_menu.addActions([self.act_welcome, self.act_tutorial])
+        examples_menu = help_menu.addMenu(icon("template"), tr("menu.examples"))
+        for example in EXAMPLES:
+            action = examples_menu.addAction(icon(example.icon), tr(f"example.{example.key}.name"))
+            action.triggered.connect(lambda _checked=False, key=example.key: self.open_example(key))
+        help_menu.addSeparator()
+        help_menu.addActions([self.act_shortcuts, self.act_manim_docs, self.act_open_log_folder])
+        help_menu.addSeparator()
+        help_menu.addAction(self.act_about)
 
     # --- layout -----------------------------------------------------------------------------
 
@@ -258,7 +282,8 @@ class MainWindow(QMainWindow):
         self.environment_button.clicked.connect(lambda: self.check_environment(interactive=True))
         row.addWidget(self.environment_button)
         row.addWidget(action_button(self.act_export, show_text=True, variant="button"))
-        row.addWidget(action_button(self.act_preview, show_text=True, variant="primary"))
+        self.preview_button = action_button(self.act_preview, show_text=True, variant="primary")
+        row.addWidget(self.preview_button)
         return header
 
     def _build_stage_area(self) -> QWidget:
@@ -294,6 +319,13 @@ class MainWindow(QMainWindow):
         stage_layout.setContentsMargins(0, 0, 0, 0)
         stage_layout.addWidget(self.stage)
         self.banner = StageBanner(self.stage)
+        self.toast = Toast(self.stage)
+        self.empty_hint = QLabel(self.stage)
+        self.empty_hint.setTextFormat(Qt.TextFormat.RichText)
+        self.empty_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.empty_hint.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.empty_hint.setText(tr("stage.empty_hint"))
+        self.empty_hint.setStyleSheet(f"color: {current_palette().text_muted}; font-size: {px(15)}px;")
         self.center_stack = QStackedWidget()
         self.center_stack.addWidget(stage_holder)
         self.center_stack.addWidget(self.player)
@@ -322,7 +354,7 @@ class MainWindow(QMainWindow):
     def _build_layout(self) -> None:
         self.library = LibraryPanel()
         self.objects = ObjectsPanel(self.document, self.editor)
-        self.properties = PropertiesPanel(self.document, self.editor, self.settings, self.context.latex_status)
+        self.properties = PropertiesPanel(self.document, self.editor, self.settings, self.context.latex_status, self.controller)
         self.left_split = QSplitter(Qt.Orientation.Vertical)
         self.left_split.addWidget(PanelFrame(tr("dock.library"), self.library))
         self.left_split.addWidget(PanelFrame(tr("dock.objects"), self.objects))
@@ -380,6 +412,7 @@ class MainWindow(QMainWindow):
         link(self.editor.selectionChanged, self._on_selection_changed)
         link(self.tex_cache.ready, self._on_tex_ready)
         link(self.controller.statusMessage, self.show_status)
+        link(self.controller.animationRecorded, self.show_toast)
         link(self.context.environmentChanged, self._on_environment)
         link(self.render.busyChanged, self._on_render_busy)
         link(self.render.progressChanged, self._on_render_progress)
@@ -437,10 +470,26 @@ class MainWindow(QMainWindow):
     def refresh_stage(self) -> None:
         """Redraw the stage at the current timeline position."""
         scene = self.editor.scene()
+        cursor = self.editor.cursor
         self.resources.base_dir = self.document.base_dir
-        states = states_after(scene, self.editor.cursor)
+        states = states_after(scene, cursor)
         self.stage.set_content(scene, states, self.resources, self.editor.selected_objects, self.act_show_hidden.isChecked())
+        self.stage.set_motion_paths(self._motion_paths(scene, cursor))
+        self.empty_hint.setVisible(not scene.objects)
         self._update_banner()
+
+    def _motion_paths(self, scene, cursor: int) -> list:
+        if not is_recording(scene, cursor):
+            return []
+        before = states_after(scene, cursor - 1)
+        paths = []
+        for anim in scene.steps[cursor].animations:
+            if anim.kind == AnimationKind.MOVE and anim.target_id in before:
+                start = before[anim.target_id]
+                end = (float(anim.params.get("x", start.x)), float(anim.params.get("y", start.y)))
+                if abs(end[0] - start.x) > 1e-6 or abs(end[1] - start.y) > 1e-6:
+                    paths.append(((start.x, start.y), end))
+        return paths
 
     def _update_banner(self) -> None:
         cursor = self.editor.cursor
@@ -451,16 +500,24 @@ class MainWindow(QMainWindow):
             key = "banner.wait" if step.kind == StepKind.WAIT else "banner.step"
             dot = f"<span style='color:{current_palette().record}'>●</span>"
             self.banner.show_message(tr(key, step=cursor + 1, dot=dot), recording=step.kind != StepKind.WAIT)
-        self._place_banner()
+        self._place_overlays()
 
-    def _place_banner(self) -> None:
+    def _place_overlays(self) -> None:
         viewport = self.stage.viewport().geometry()
         self.banner.move(viewport.x() + (viewport.width() - self.banner.width()) // 2, viewport.y() + px(10))
         self.banner.raise_()
+        self.toast.adjustSize()
+        self.toast.move(viewport.x() + (viewport.width() - self.toast.width()) // 2, viewport.bottom() - self.toast.height() - px(14))
+        self.empty_hint.setGeometry(viewport.x(), viewport.y() + viewport.height() // 2 - px(60), viewport.width(), px(120))
+
+    def show_toast(self, text: str) -> None:
+        """Show a short notification on the stage."""
+        self.toast.show_message(text)
+        self._place_overlays()
 
     def resizeEvent(self, event) -> None:  # noqa: N802 - Qt API
         super().resizeEvent(event)
-        QTimer.singleShot(0, self._place_banner)
+        QTimer.singleShot(0, self._place_overlays)
 
     def refresh_code(self) -> None:
         """Regenerate the read-only code view."""
@@ -512,7 +569,7 @@ class MainWindow(QMainWindow):
 
     def _on_zoom_changed(self, factor: float) -> None:
         self.zoom_label.setText(f"{round(factor * 100)} %")
-        QTimer.singleShot(0, self._place_banner)
+        QTimer.singleShot(0, self._place_overlays)
 
     def _on_library_request(self, kind: str) -> None:
         self.set_center_mode(MODE_STAGE)
@@ -770,6 +827,7 @@ class MainWindow(QMainWindow):
         self.progress.setValue(round(value * 1000))
 
     def _on_preview_ready(self, path: Path) -> None:
+        self._preview_seen = True
         self.set_center_mode(MODE_PREVIEW)
         self.player.load(path)
 
@@ -824,6 +882,66 @@ class MainWindow(QMainWindow):
         self.refresh_stage()
         if needs_rebuild:
             QTimer.singleShot(0, self._on_preferences_changed)
+
+    def show_welcome(self) -> None:
+        """Show the start screen and act on the user's choice."""
+        dialog = WelcomeDialog(self.settings, self.context.latex_available(), self)
+        if not dialog.exec():
+            return
+        choice = dialog.choice
+        if choice == CHOICE_TUTORIAL:
+            self.start_tutorial()
+        elif choice == CHOICE_NEW:
+            self.new_project()
+        elif choice == CHOICE_OPEN:
+            self.open_dialog()
+        elif choice.startswith(EXAMPLE_PREFIX):
+            self.open_example(choice[len(EXAMPLE_PREFIX):])
+        elif choice.startswith(RECENT_PREFIX):
+            self.open_file(choice[len(RECENT_PREFIX):])
+
+    def open_example(self, key: str) -> None:
+        """Open a built-in example as a new, unsaved project."""
+        example = example_by_key(key)
+        if example is None or not self.maybe_save():
+            return
+        self.document.load(example.build())
+        self.editor.reset()
+        self.set_center_mode(MODE_STAGE)
+        self.show_toast(tr("status.example_opened", name=tr(f"example.{key}.name")))
+
+    def show_shortcuts(self) -> None:
+        """Show all keyboard shortcuts."""
+        ShortcutsDialog(self.actions(), self).exec()
+
+    def start_tutorial(self) -> None:
+        """Run the guided tour on a fresh project."""
+        if not self.maybe_save():
+            return
+        self.document.new(tr("scene.first_name"))
+        self.editor.reset()
+        self.set_center_mode(MODE_STAGE)
+        self.bottom_tabs.setCurrentIndex(BOTTOM_TIMELINE)
+        self._preview_seen = False
+        scene = lambda: self.editor.scene()  # noqa: E731
+
+        def has_animation(kind: AnimationKind) -> bool:
+            return any(anim.kind == kind for step in scene().steps for anim in step.animations)
+
+        steps = [
+            TourStep("intro"),
+            TourStep("add_circle", lambda: self.library.tiles.get(ObjectKind.CIRCLE),
+                     lambda: any(obj.kind == ObjectKind.CIRCLE for obj in scene().objects)),
+            TourStep("animate", lambda: self.properties.animation_buttons.get(AnimationKind.CREATE),
+                     lambda: has_animation(AnimationKind.CREATE)),
+            TourStep("timeline", lambda: self.bottom_tabs),
+            TourStep("new_step", lambda: self.timeline.add_step_button, lambda: len(scene().steps) >= 2),
+            TourStep("drag", lambda: self.stage, lambda: has_animation(AnimationKind.MOVE)),
+            TourStep("preview", lambda: self.preview_button, lambda: self._preview_seen),
+            TourStep("done"),
+        ]
+        self.tour = TutorialOverlay(self, steps)
+        self.tour.start()
 
     def show_about(self) -> None:
         """Show version information."""

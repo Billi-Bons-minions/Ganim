@@ -39,6 +39,8 @@ class StudioApplication:
         self._create_window()
         if initial_file:
             QTimer.singleShot(0, lambda: self.window.open_file(initial_file, ask=False))
+        elif self.settings.show_welcome:
+            QTimer.singleShot(450, lambda: self.window.show_welcome())
         QTimer.singleShot(300, self.context.check_environment)
 
     def _apply_preferences(self) -> None:
@@ -62,6 +64,9 @@ class StudioApplication:
             QMessageBox.information(old, tr("settings.title"), tr("settings.rebuild_busy"))
             return
         old.close_for_rebuild()
+        from manim_studio.ui.animation_preview import PreviewHover
+
+        PreviewHover.reset()
         self._apply_preferences()
         self._create_window()
         old.deleteLater()

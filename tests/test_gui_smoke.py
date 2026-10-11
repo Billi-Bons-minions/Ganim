@@ -78,17 +78,23 @@ def test_undo_redo_and_clipboard(window) -> None:
     assert len(window.editor.scene().objects) == 2
 
 
-def test_stage_policy_messages(window) -> None:
-    from manim_studio.model.types import AnimationKind, ObjectKind
+def test_stage_records_animations_and_explains_wait_steps(window) -> None:
+    from manim_studio.model.types import AnimationKind, ObjectKind, StepKind
 
     controller = window.controller
     circle = controller.add_object(ObjectKind.CIRCLE)
     window.editor.select_objects([circle])
     controller.add_animation(AnimationKind.FADE_IN, False)
-    allowed, message = controller.edit_policy("move", [circle])
-    assert not allowed and "Bewegen" in message
-    window.editor.inspect_step(-1)
+    toasts = []
+    controller.animationRecorded.connect(toasts.append)
     assert controller.edit_policy("move", [circle]) == (True, "")
+    controller.move_objects([circle], 2.0, 0.0)
+    step = window.editor.scene().steps[0]
+    assert [anim.kind for anim in step.animations] == [AnimationKind.FADE_IN, AnimationKind.MOVE]
+    assert toasts and "Bewegen" in toasts[0]
+    controller.add_step(StepKind.WAIT)
+    allowed, message = controller.edit_policy("move", [circle])
+    assert not allowed and "Warte" in message
 
 
 def test_drop_from_library_creates_object(window) -> None:
@@ -146,3 +152,42 @@ def test_window_rebuild_keeps_project_and_switches_language(window, qapp, monkey
     rebuilt.document.undo_stack.setClean()
     rebuilt.close()
     set_language("de")
+
+
+def test_guided_tour_advances_on_user_actions(window) -> None:
+    from manim_studio.model.types import AnimationKind, ObjectKind, StepKind
+
+    window.start_tutorial()
+    tour = window.tour
+    assert tour.current().key == "intro"
+    tour.advance()
+    assert tour.current().key == "add_circle" and tour.current().target() is window.library.tiles[ObjectKind.CIRCLE]
+    window.library.tiles[ObjectKind.CIRCLE].click()
+    tour._poll()
+    assert tour.current().key == "animate"
+    window.properties.animation_buttons[AnimationKind.CREATE].click()
+    tour._poll()
+    assert tour.current().key == "timeline"
+    tour.advance()
+    window.timeline.add_step_button.click()
+    tour._poll()
+    assert tour.current().key == "drag"
+    circle = window.editor.scene().objects[0].id
+    window.controller.move_objects([circle], 3.0, 0.0)
+    tour._poll()
+    assert tour.current().key == "preview"
+    steps = window.editor.scene().steps
+    assert [anim.kind for anim in steps[1].animations] == [AnimationKind.MOVE] and steps[1].kind == StepKind.PLAY
+    window._preview_seen = True
+    tour._poll()
+    assert tour.current().key == "done"
+    tour.advance()
+    assert not tour.isVisible()
+
+
+def test_examples_open_from_window(window) -> None:
+    from manim_studio.examples import EXAMPLES
+
+    window.open_example(EXAMPLES[0].key)
+    assert window.document.path is None and window.editor.scene().objects
+    assert not window.document.is_dirty

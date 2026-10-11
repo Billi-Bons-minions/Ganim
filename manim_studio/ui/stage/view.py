@@ -84,12 +84,18 @@ class StageView(QGraphicsView):
         self._grid_step = 0.5
         self._snap = True
         self._auto_fit = True
+        self._motion_paths: list[tuple[QPointF, QPointF]] = []
 
     # --- configuration --------------------------------------------------------
 
     def set_policy(self, policy: EditPolicy) -> None:
         """Install the function that decides which edits are allowed."""
         self._policy = policy
+
+    def set_motion_paths(self, paths: list[tuple[tuple[float, float], tuple[float, float]]]) -> None:
+        """Show dashed arrows for Move animations of the selected step."""
+        self._motion_paths = [(pt(*start), pt(*end)) for start, end in paths]
+        self.viewport().update()
 
     def set_grid(self, show: bool, step: float, snap: bool) -> None:
         """Configure grid display and snapping."""
@@ -421,6 +427,27 @@ class StageView(QGraphicsView):
         painter.setPen(border)
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawRect(frame)
+
+    def drawForeground(self, painter: QPainter, rect: QRectF) -> None:  # noqa: N802 - Qt API
+        if not self._motion_paths:
+            return
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        record = theme_color("record")
+        pen = QPen(record, 2.0, Qt.PenStyle.DashLine)
+        pen.setCosmetic(True)
+        scale = max(self.view_scale(), 0.01)
+        for start, end in self._motion_paths:
+            painter.setPen(pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawLine(start, end)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(record)
+            painter.drawEllipse(start, 4 / scale, 4 / scale)
+            angle = math.atan2(end.y() - start.y(), end.x() - start.x())
+            size = 12 / scale
+            left = QPointF(end.x() - size * math.cos(angle - 0.45), end.y() - size * math.sin(angle - 0.45))
+            right = QPointF(end.x() - size * math.cos(angle + 0.45), end.y() - size * math.sin(angle + 0.45))
+            painter.drawPolygon([end, left, right])
 
     def _grid_color(self, alpha: int) -> QColor:
         light = self._background.lightnessF() > 0.6

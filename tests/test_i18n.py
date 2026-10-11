@@ -8,10 +8,11 @@ from pathlib import Path
 
 import pytest
 
+from manim_studio.examples import EXAMPLES
 from manim_studio.i18n import LANGUAGES, catalog, set_language, tr
 from manim_studio.model.expression import ExpressionError
 from manim_studio.model.schema import ANIMATION_PARAMS, KIND_INFO, ParamType
-from manim_studio.model.stage_edits import MOVE, ROTATE, SCALE
+from manim_studio.model.stage_edits import COLOR, MOVE, ROTATE, SCALE
 from manim_studio.model.types import MANIM_COLORS, RATE_FUNCTIONS, AnimationKind, ObjectKind, Visibility
 from manim_studio.render.command import QUALITY_PRESETS
 
@@ -42,7 +43,9 @@ def dynamic_keys() -> set[str]:
     keys |= {f"choice.visibility.{v.value}" for v in Visibility}
     keys |= {f"prop.{field}" for field in ("x", "y", "rotation", "stroke_color", "stroke_width", "stroke_opacity", "fill_color", "fill_opacity")}
     keys |= {f"lock.{reason}" for reason in ("nothing_selected", "bound_graph", "wait_step")}
-    keys |= {f"lock.needs_{action}" for action in (MOVE, SCALE, ROTATE)}
+    keys |= {f"anim_short.{kind.value}" for kind in AnimationKind}
+    keys |= {f"animgroup.{group}" for group in ("appear", "change", "transform", "emphasize", "disappear")}
+    keys |= {f"undo.{action}" for action in (MOVE, SCALE, ROTATE, COLOR)}
     keys |= {f"export.format.{name}" for name in ("mp4", "gif", "png")}
     keys |= {f"export.quality.{key}" for key in QUALITY_PRESETS}
     keys |= {f"render.started_{mode}" for mode in ("preview", "export")}
@@ -50,6 +53,8 @@ def dynamic_keys() -> set[str]:
     keys |= {f"env.tool.{tool}" for tool in tools} | {f"env.missing.{tool}" for tool in tools}
     keys |= {f"env.hint.{tool}.{platform}" for tool in tools for platform in ("windows", "macos", "linux")}
     keys |= {f"color.{name}" for name in MANIM_COLORS}
+    keys |= {f"example.{example.key}.{part}" for example in EXAMPLES for part in ("name", "text", "scene")}
+    keys |= {f"tour.{step}" for step in ("intro", "add_circle", "animate", "timeline", "new_step", "drag", "preview", "done")}
     keys |= {f"library.category.{key}" for key in ("shapes", "lines", "text", "math", "media")}
     keys |= {f"settings.theme.{name}" for name in ("dark", "light")}
     keys |= {f"dock.{dock}" for dock in ("library", "objects", "properties", "preview", "code", "log", "timeline")}

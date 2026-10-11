@@ -60,13 +60,13 @@ class AppSettings:
         self._settings.setValue("ui_scale", float(value))
 
     @property
-    def first_run_done(self) -> bool:
-        """Whether the welcome dialog was already shown."""
-        return _to_bool(self._settings.value("first_run_done"), False)
+    def show_welcome(self) -> bool:
+        """Whether the welcome dialog appears at start-up."""
+        return _to_bool(self._settings.value("show_welcome"), True)
 
-    @first_run_done.setter
-    def first_run_done(self, value: bool) -> None:
-        self._settings.setValue("first_run_done", value)
+    @show_welcome.setter
+    def show_welcome(self, value: bool) -> None:
+        self._settings.setValue("show_welcome", value)
 
     def splitter_state(self, key: str) -> object:
         """Return the saved state of a splitter."""

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtCore import QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -126,6 +126,79 @@ class SegmentedControl(QWidget):
     def current(self) -> int:
         """Return the selected segment index."""
         return self.group.checkedId()
+
+
+class ChoiceTile(QFrame):
+    """Clickable card with icon, bold title and a wrapped description."""
+
+    clicked = Signal()
+
+    def __init__(self, icon_value, title: str, text: str, primary: bool = False, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        palette = current_palette()
+        background = palette.accent if primary else palette.raised
+        foreground = palette.accent_text if primary else palette.text
+        muted = palette.accent_text if primary else palette.text_muted
+        hover = palette.accent_hover if primary else palette.hover
+        self.setObjectName("ChoiceTile")
+        self.setStyleSheet(
+            f"QFrame#ChoiceTile {{ background: {background}; border: 1px solid {palette.border if not primary else background};"
+            f" border-radius: {px(10)}px; }} QFrame#ChoiceTile:hover {{ background: {hover}; border-color: {palette.accent}; }}"
+            f" QFrame#ChoiceTile:disabled {{ background: {palette.panel}; }}"
+        )
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setMinimumSize(px(210), px(70))
+        picture = QLabel()
+        picture.setPixmap(icon_value.pixmap(QSize(px(26), px(26))))
+        picture.setFixedWidth(px(30))
+        title_label = QLabel(title)
+        font = title_label.font()
+        font.setBold(True)
+        title_label.setFont(font)
+        title_label.setStyleSheet(f"color: {foreground};")
+        text_label = QLabel(text)
+        text_label.setWordWrap(True)
+        text_label.setStyleSheet(f"color: {muted};")
+        texts = QVBoxLayout()
+        texts.setSpacing(px(2))
+        texts.addWidget(title_label)
+        texts.addWidget(text_label)
+        row = QHBoxLayout(self)
+        row.setContentsMargins(px(12), px(10), px(12), px(10))
+        row.setSpacing(px(10))
+        row.addWidget(picture, 0, Qt.AlignmentFlag.AlignTop)
+        row.addLayout(texts, 1)
+
+    def mouseReleaseEvent(self, event) -> None:  # noqa: N802 - Qt API
+        if event.button() == Qt.MouseButton.LeftButton and self.isEnabled() and self.rect().contains(event.position().toPoint()):
+            self.clicked.emit()
+        super().mouseReleaseEvent(event)
+
+
+class Toast(QLabel):
+    """Short notification that fades out by itself (placed by its parent)."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWordWrap(True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.setMaximumWidth(px(520))
+        self._timer = QTimer(self, singleShot=True, interval=3200)
+        self._timer.timeout.connect(self.hide)
+        self.hide()
+
+    def show_message(self, text: str) -> None:
+        """Show ``text`` for a few seconds."""
+        palette = current_palette()
+        self.setStyleSheet(
+            f"QLabel {{ background: {palette.accent}; color: {palette.accent_text}; border-radius: {px(9)}px;"
+            f" padding: {px(7)}px {px(14)}px; font-weight: 600; }}"
+        )
+        self.setText(text)
+        self.adjustSize()
+        self.show()
+        self.raise_()
+        self._timer.start()
 
 
 class StageBanner(QLabel):

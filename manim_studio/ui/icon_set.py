@@ -498,6 +498,103 @@ def _distribute(horizontal: bool) -> Drawer:
     return draw
 
 
+# --- animation kinds ---------------------------------------------------------------------
+
+
+def _a_create(p: QPainter) -> None:
+    _arc(p, 12, 12, 8, 90, 270)
+    _circle(p, 12, 4, 1.6, fill=True)
+
+
+def _a_write(p: QPainter) -> None:
+    _poly(p, [(14, 4), (19, 9), (9, 19), (4, 20), (5, 15), (14, 4)])
+    _line(p, 12, 6, 17, 11)
+
+
+def _a_draw_fill(p: QPainter) -> None:
+    _rect(p, 4, 4, 16, 16)
+    p.save()
+    p.setBrush(p.pen().color())
+    p.drawPolygon(QPolygonF([QPointF(4, 20), QPointF(20, 4), QPointF(20, 20)]))
+    p.restore()
+
+
+def _a_fade_in(p: QPainter) -> None:
+    p.save()
+    pen = p.pen()
+    pen.setStyle(Qt.PenStyle.DotLine)
+    p.setPen(pen)
+    _circle(p, 12, 12, 9)
+    p.restore()
+    _circle(p, 12, 12, 4.5, fill=True)
+
+
+def _a_grow(p: QPainter) -> None:
+    _rect(p, 9, 9, 6, 6, 1)
+    for x1, y1, x2, y2 in ((7, 7, 3, 3), (17, 7, 21, 3), (7, 17, 3, 21), (17, 17, 21, 21)):
+        _line(p, x1, y1, x2, y2)
+    _poly(p, [(3, 6.5), (3, 3), (6.5, 3)])
+    _poly(p, [(17.5, 3), (21, 3), (21, 6.5)])
+    _poly(p, [(3, 17.5), (3, 21), (6.5, 21)])
+    _poly(p, [(21, 17.5), (21, 21), (17.5, 21)])
+
+
+def _a_transform(p: QPainter) -> None:
+    _circle(p, 6.5, 12, 4)
+    _rect(p, 14, 8, 8, 8, 1)
+    _line(p, 9.5, 5, 15, 5)
+    _poly(p, [(13, 3), (15, 5), (13, 7)])
+
+
+def _a_replace(p: QPainter) -> None:
+    _circle(p, 6.5, 12, 4)
+    _rect(p, 14, 8, 8, 8, 1)
+    _line(p, 9, 5, 15, 5)
+    _poly(p, [(13, 3), (15, 5), (13, 7)])
+    _line(p, 15, 19, 9, 19)
+    _poly(p, [(11, 17), (9, 19), (11, 21)])
+
+
+def _a_color(p: QPainter) -> None:
+    path = QPainterPath(QPointF(12, 3))
+    path.cubicTo(12, 3, 5, 11, 5, 15)
+    path.cubicTo(5, 19, 8.5, 21, 12, 21)
+    path.cubicTo(15.5, 21, 19, 19, 19, 15)
+    path.cubicTo(19, 11, 12, 3, 12, 3)
+    p.drawPath(path)
+
+
+def _a_circumscribe(p: QPainter) -> None:
+    p.save()
+    pen = p.pen()
+    pen.setStyle(Qt.PenStyle.DashLine)
+    p.setPen(pen)
+    _rect(p, 3, 6, 18, 12, 2)
+    p.restore()
+    _circle(p, 12, 12, 2.5, fill=True)
+
+
+def _a_fade_out(p: QPainter) -> None:
+    p.save()
+    pen = p.pen()
+    pen.setStyle(Qt.PenStyle.DotLine)
+    p.setPen(pen)
+    _circle(p, 10, 13, 6.5)
+    p.restore()
+    _line(p, 14, 9, 20, 3)
+    _poly(p, [(15.5, 3), (20, 3), (20, 7.5)])
+
+
+def _a_uncreate(p: QPainter) -> None:
+    _arc(p, 12, 12, 8, 90, -150)
+    p.save()
+    pen = p.pen()
+    pen.setStyle(Qt.PenStyle.DotLine)
+    p.setPen(pen)
+    _arc(p, 12, 12, 8, 300, -210)
+    p.restore()
+
+
 ICONS: dict[str, Drawer] = {
     "new": _new,
     "open": _open,
@@ -567,6 +664,21 @@ ICONS: dict[str, Drawer] = {
     "align_bottom": _align("bottom"),
     "distribute_h": _distribute(True),
     "distribute_v": _distribute(False),
+    "a_create": _a_create,
+    "a_write": _a_write,
+    "a_draw_border_then_fill": _a_draw_fill,
+    "a_fade_in": _a_fade_in,
+    "a_grow_from_center": _a_grow,
+    "a_transform": _a_transform,
+    "a_replacement_transform": _a_replace,
+    "a_move": _move,
+    "a_scale": _scale,
+    "a_rotate": _rotate,
+    "a_change_color": _a_color,
+    "a_indicate": _sparkle,
+    "a_circumscribe": _a_circumscribe,
+    "a_fade_out": _a_fade_out,
+    "a_uncreate": _a_uncreate,
 }
 
 

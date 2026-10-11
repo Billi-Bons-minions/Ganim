@@ -20,7 +20,10 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QScrollArea,
+    QMenu,
     QSpinBox,
+    QToolButton,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -38,9 +41,13 @@ from manim_studio.model.schema import (
     animation_params,
     kind_info,
 )
-from manim_studio.model.state import first_reference, visible_at_start
-from manim_studio.model.types import RATE_FUNCTIONS, AnimationKind, StepKind, Visibility
+from manim_studio.model.stage_edits import COLOR, MOVE, ROTATE, SCALE, is_recording, step_animation
+from manim_studio.model.state import first_reference, states_after, visible_at_start
+from manim_studio.model.types import RATE_FUNCTIONS, TRANSFORM_ANIMATIONS, AnimationKind, ObjectKind, StepKind, Visibility
+from manim_studio.ui.animation_preview import PreviewHover
+from manim_studio.ui.controller import EditorController
 from manim_studio.ui.document import ProjectDocument
+from manim_studio.ui.flow_layout import flow_container
 from manim_studio.ui.editor_state import (
     INSPECT_ANIMATION,
     INSPECT_OBJECTS,
@@ -71,6 +78,18 @@ _STYLE_SPECS = {
 }
 _POSITION_SPEC = ParamSpec("pos", ParamType.FLOAT, 0.0, minimum=-100.0, maximum=100.0, step=0.25, decimals=3)
 _ROTATION_SPEC = ParamSpec("rotation", ParamType.FLOAT, 0.0, minimum=-360.0, maximum=360.0, step=15.0, decimals=1)
+#: Animation buttons in the inspector, grouped by purpose.
+ANIMATION_GROUPS: tuple[tuple[str, tuple[AnimationKind, ...]], ...] = (
+    ("appear", (AnimationKind.CREATE, AnimationKind.WRITE, AnimationKind.FADE_IN, AnimationKind.GROW_FROM_CENTER, AnimationKind.DRAW_BORDER_THEN_FILL)),
+    ("change", (AnimationKind.MOVE, AnimationKind.SCALE, AnimationKind.ROTATE, AnimationKind.CHANGE_COLOR)),
+    ("transform", (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM)),
+    ("emphasize", (AnimationKind.INDICATE, AnimationKind.CIRCUMSCRIBE)),
+    ("disappear", (AnimationKind.FADE_OUT, AnimationKind.UNCREATE)),
+)
+#: Shapes offered as new targets for "transform into".
+TRANSFORM_TARGET_KINDS = (
+    ObjectKind.SQUARE, ObjectKind.CIRCLE, ObjectKind.RECTANGLE, ObjectKind.TRIANGLE, ObjectKind.ELLIPSE, ObjectKind.TEXT, ObjectKind.MATH_TEX
+)
 _RUN_TIME_SPEC = ParamSpec("run_time", ParamType.FLOAT, 1.0, minimum=0.05, maximum=120.0, step=0.25)
 
 
@@ -206,6 +225,7 @@ class PropertiesPanel(QScrollArea):
         editor: EditorState,
         settings: AppSettings,
         latex_status: Callable[[str], str],
+        controller: EditorController,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -213,6 +233,9 @@ class PropertiesPanel(QScrollArea):
         self.editor = editor
         self.settings = settings
         self.latex_status = latex_status
+        self.controller = controller
+        self.hover = PreviewHover(self)
+        self.animation_buttons: dict[AnimationKind, QToolButton] = {}
         self.setWidgetResizable(True)
         self.setObjectName("Inspector")
         self.setMinimumWidth(px(280))
@@ -243,7 +266,8 @@ class PropertiesPanel(QScrollArea):
             if len(ids) == 1:
                 obj = scene.object_by_id(ids[0])
                 if obj:
-                    return ("object", scene.id, obj.id, obj.kind)
+                    recording = self.editor.cursor if is_recording(scene, self.editor.cursor) else -1
+                    return ("object", scene.id, obj.id, obj.kind, recording)
             return ("objects", scene.id, ids)
         return ("scene", scene.id)
 
@@ -263,6 +287,7 @@ class PropertiesPanel(QScrollArea):
             "scene": self._build_scene,
         }
         form = _Form()
+        self.animation_buttons = {}
         builders[key[0]](form, key)
         self._form = form
         old = self.takeWidget()
@@ -437,14 +462,17 @@ class PropertiesPanel(QScrollArea):
             and self._edit(tr("prop.name"), lambda s: ops.update_object(s, object_id, name=text.strip()), f"obj:{object_id}:name")
         )
         form.row(tr("prop.name"), name_edit, lambda: self._object(object_id).name, lambda v: _set_line(name_edit, v))
-        form.section(tr("section.position"))
+        self._animate_section(form, object_id)
+        recording = key[4]
+        if recording >= 0:
+            self._step_section(form, object_id, recording)
+        form.section(tr("section.start_position") if recording >= 0 else tr("section.position"))
         bound = is_bound_graph(self.editor.scene(), self._object(object_id))
         for field, spec in (("x", _POSITION_SPEC), ("y", _POSITION_SPEC), ("rotation", _ROTATION_SPEC)):
             widget = self._object_field_row(form, object_id, field, spec, tr(f"prop.{field}"))
             widget.setEnabled(not bound)
         if bound:
             form.note(lambda: tr("prop.bound_graph_note"))
-        form.note(lambda: tr("prop.step_view_note") if self.editor.cursor >= 0 else "")
         if info.params:
             form.section(tr("section.content"))
             for spec in info.params:
@@ -469,6 +497,120 @@ class PropertiesPanel(QScrollArea):
         widget, show = self._param_editor(visibility, commit_visibility)
         form.row(tr("prop.visibility"), widget, lambda: self._object(object_id).visibility.value, show)
         form.note(lambda: self._visibility_note(object_id))
+
+    # --- animate section ---------------------------------------------------------------
+
+    def _animation_button(self, kind: AnimationKind, object_id: str, simultaneous: QCheckBox) -> QToolButton:
+        button = QToolButton()
+        button.setIcon(icon(f"a_{kind.value}"))
+        button.setIconSize(QSize(px(16), px(16)))
+        button.setText(tr(f"anim_short.{kind.value}"))
+        button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        button.setProperty("variant", "button")
+        obj = self._object(object_id)
+        button.setEnabled(animation_allowed(kind, obj.kind, obj.params))
+        self.hover.attach(button, kind)
+        if kind in TRANSFORM_ANIMATIONS:
+            menu = QMenu(button)
+            menu.aboutToShow.connect(lambda: self._fill_transform_menu(menu, kind, object_id, simultaneous.isChecked()))
+            button.setMenu(menu)
+            button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        else:
+            button.clicked.connect(lambda: self.controller.add_animation(kind, simultaneous.isChecked(), inspect=False))
+        return button
+
+    def _fill_transform_menu(self, menu: QMenu, kind: AnimationKind, object_id: str, same_step: bool) -> None:
+        menu.clear()
+        scene = self.editor.scene()
+        header = menu.addAction(tr("animate.transform_into"))
+        header.setEnabled(False)
+        for obj in scene.objects:
+            if obj.id == object_id or not animation_allowed(kind, obj.kind, obj.params):
+                continue
+            action = menu.addAction(kind_icon(obj.kind), obj.name)
+            action.triggered.connect(
+                lambda _checked=False, target=obj.id: self.controller.add_transform(kind, object_id, target, same_step, inspect=False)
+            )
+        menu.addSeparator()
+        new_menu = menu.addMenu(icon("plus"), tr("animate.new_target"))
+        for new_kind in TRANSFORM_TARGET_KINDS:
+            action = new_menu.addAction(kind_icon(new_kind), tr(f"kind.{new_kind.value}"))
+            action.triggered.connect(
+                lambda _checked=False, k=new_kind: self.controller.add_transform_to_new(kind, object_id, k, same_step)
+            )
+
+    def _animate_section(self, form: _Form, object_id: str) -> None:
+        form.section(tr("section.animate"))
+        simultaneous = QCheckBox()
+        cursor = self.editor.cursor
+        recording = is_recording(self.editor.scene(), cursor)
+        simultaneous.setText(tr("animate.simultaneous", step=cursor + 1))
+        simultaneous.setVisible(recording)
+        simultaneous.setToolTip(tr("animate.simultaneous_tip"))
+        box = QWidget()
+        column = QVBoxLayout(box)
+        column.setContentsMargins(0, 0, 0, 0)
+        column.setSpacing(px(4))
+        for group, kinds in ANIMATION_GROUPS:
+            caption = QLabel(tr(f"animgroup.{group}"))
+            caption.setProperty("role", "faint")
+            column.addWidget(caption)
+            container, flow = flow_container(px(4))
+            for kind in kinds:
+                button = self._animation_button(kind, object_id, simultaneous)
+                self.animation_buttons[kind] = button
+                flow.addWidget(button)
+            column.addWidget(container)
+        column.addWidget(simultaneous)
+        hint = QLabel(tr("animate.hint_recording", step=cursor + 1) if recording else tr("animate.hint_new_step"))
+        hint.setWordWrap(True)
+        hint.setProperty("role", "muted")
+        column.addWidget(hint)
+        form.layout.addRow(box)
+
+    # --- values recorded in the current step ----------------------------------------------
+
+    def _step_section(self, form: _Form, object_id: str, cursor: int) -> None:
+        form.section(tr("section.in_step", step=cursor + 1))
+        note = QLabel(tr("prop.in_step_note", step=cursor + 1))
+        note.setWordWrap(True)
+        note.setProperty("role", "hint")
+        form.layout.addRow(note)
+        scene_state = lambda: states_after(self.editor.scene(), self.editor.cursor)[object_id]  # noqa: E731
+        bound = is_bound_graph(self.editor.scene(), self._object(object_id))
+        for axis in ("x", "y"):
+            def commit(value: Any, axis: str = axis) -> None:
+                state = scene_state()
+                x, y = (value, state.y) if axis == "x" else (state.x, value)
+                self.controller.set_step_value(object_id, MOVE, x, y, merge_key=f"step:{object_id}:move")
+
+            widget, show = self._float_editor(_POSITION_SPEC, commit)
+            widget.setEnabled(not bound)
+            form.row(tr(f"prop.target_{axis}"), widget, lambda axis=axis: getattr(scene_state(), axis), show)
+
+        def angle() -> float:
+            anim = step_animation(self.editor.scene(), self.editor.cursor, object_id, ROTATE)
+            return float(anim.params.get("angle", 0.0)) if anim else 0.0
+
+        def factor() -> float:
+            anim = step_animation(self.editor.scene(), self.editor.cursor, object_id, SCALE)
+            return float(anim.params.get("factor", 1.0)) if anim else 1.0
+
+        rotate_spec = ParamSpec("angle", ParamType.FLOAT, 0.0, minimum=-3600.0, maximum=3600.0, step=15.0, decimals=1)
+        widget, show = self._float_editor(rotate_spec, lambda v: self.controller.set_step_value(object_id, ROTATE, v, merge_key=f"step:{object_id}:rot"))
+        widget.setEnabled(not bound)
+        form.row(tr("prop.rotate_by"), widget, angle, show)
+        scale_spec = ParamSpec("factor", ParamType.FLOAT, 1.0, minimum=0.01, maximum=100.0, step=0.1)
+        widget, show = self._float_editor(scale_spec, lambda v: self.controller.set_step_value(object_id, SCALE, v, merge_key=f"step:{object_id}:scale"))
+        widget.setEnabled(not bound)
+        form.row(tr("prop.scale_by"), widget, factor, show)
+        style = kind_info(self._object(object_id).kind).style
+        for field in ("stroke_color", "fill_color"):
+            if field not in style:
+                continue
+            button = ColorButton()
+            button.colorChosen.connect(lambda color, field=field: self.controller.set_step_value(object_id, COLOR, field, color))
+            form.row(tr(f"prop.{field}"), button, lambda field=field: getattr(scene_state(), field), lambda v, b=button: b.set_color(str(v)))
 
     # --- several objects -----------------------------------------------------------------
 

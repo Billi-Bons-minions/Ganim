@@ -1,0 +1,1 @@
+"""Dialogs of Manim Studio."""

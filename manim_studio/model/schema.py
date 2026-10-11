@@ -1,0 +1,273 @@
+"""Declarative description of object and animation parameters.
+
+The schema drives the property panel, default values, stage scaling and
+validation, so new parameters only need to be declared here.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any
+
+from manim_studio.model.types import AnimationKind, ObjectKind
+
+
+class ParamType(str, Enum):
+    """Editor type of a parameter."""
+
+    FLOAT = "float"
+    INT = "int"
+    BOOL = "bool"
+    STRING = "string"
+    TEXT = "text"
+    LATEX = "latex"
+    EXPRESSION = "expression"
+    COLOR = "color"
+    CHOICE = "choice"
+    FILE = "file"
+    OBJECT_REF = "object_ref"
+
+
+@dataclass(frozen=True)
+class ParamSpec:
+    """Description of one editable parameter."""
+
+    key: str
+    type: ParamType
+    default: Any
+    minimum: float | None = None
+    maximum: float | None = None
+    step: float = 0.1
+    decimals: int = 2
+    choices: tuple[str, ...] = ()
+    scalable: bool = False
+    ref_kinds: tuple[ObjectKind, ...] = ()
+    optional: bool = False
+
+
+#: Style attributes stored directly on :class:`SceneObject`.
+STYLE_FIELDS = ("stroke_color", "stroke_width", "stroke_opacity", "fill_color", "fill_opacity")
+
+_SHAPE_STYLE = frozenset(STYLE_FIELDS)
+_LINE_STYLE = frozenset({"stroke_color", "stroke_width", "stroke_opacity"})
+_TEXT_STYLE = frozenset({"fill_color", "fill_opacity"})
+_AXES_STYLE = frozenset({"stroke_color", "stroke_width"})
+
+
+@dataclass(frozen=True)
+class KindInfo:
+    """Static information about one object kind."""
+
+    kind: ObjectKind
+    params: tuple[ParamSpec, ...]
+    style: frozenset[str]
+    default_style: tuple[tuple[str, Any], ...] = ()
+
+    def param(self, key: str) -> ParamSpec | None:
+        """Return the spec of a parameter or ``None``."""
+        for spec in self.params:
+            if spec.key == key:
+                return spec
+        return None
+
+
+def _length(key: str, default: float, minimum: float = 0.01) -> ParamSpec:
+    return ParamSpec(key, ParamType.FLOAT, default, minimum=minimum, maximum=100.0, scalable=True)
+
+
+def _range_params(prefix: str, low: float, high: float, step: float, length: float) -> tuple[ParamSpec, ...]:
+    return (
+        ParamSpec(f"{prefix}_min", ParamType.FLOAT, low, minimum=-1000.0, maximum=1000.0, step=1.0),
+        ParamSpec(f"{prefix}_max", ParamType.FLOAT, high, minimum=-1000.0, maximum=1000.0, step=1.0),
+        ParamSpec(f"{prefix}_step", ParamType.FLOAT, step, minimum=0.01, maximum=1000.0, step=0.5),
+        _length(f"{prefix}_length", length, minimum=0.1),
+    )
+
+
+_WHITE = "#FFFFFF"
+_YELLOW = "#F7D96F"
+
+KIND_INFO: dict[ObjectKind, KindInfo] = {
+    ObjectKind.CIRCLE: KindInfo(ObjectKind.CIRCLE, (_length("radius", 1.0),), _SHAPE_STYLE),
+    ObjectKind.SQUARE: KindInfo(
+        ObjectKind.SQUARE,
+        (_length("side_length", 2.0),),
+        _SHAPE_STYLE,
+        (("stroke_color", "#FC6255"), ("fill_color", "#FC6255")),
+    ),
+    ObjectKind.RECTANGLE: KindInfo(
+        ObjectKind.RECTANGLE,
+        (_length("width", 4.0), _length("height", 2.0)),
+        _SHAPE_STYLE,
+        (("stroke_color", "#83C167"), ("fill_color", "#83C167")),
+    ),
+    ObjectKind.TRIANGLE: KindInfo(
+        ObjectKind.TRIANGLE,
+        (_length("radius", 1.0),),
+        _SHAPE_STYLE,
+        (("stroke_color", _YELLOW), ("fill_color", _YELLOW)),
+    ),
+    ObjectKind.ELLIPSE: KindInfo(
+        ObjectKind.ELLIPSE,
+        (_length("width", 3.0), _length("height", 1.5)),
+        _SHAPE_STYLE,
+        (("stroke_color", "#D147BD"), ("fill_color", "#D147BD")),
+    ),
+    ObjectKind.LINE: KindInfo(
+        ObjectKind.LINE, (_length("length", 3.0),), _LINE_STYLE, (("stroke_color", _WHITE),)
+    ),
+    ObjectKind.ARROW: KindInfo(
+        ObjectKind.ARROW, (_length("length", 3.0),), _LINE_STYLE, (("stroke_color", _WHITE),)
+    ),
+    ObjectKind.DOT: KindInfo(
+        ObjectKind.DOT,
+        (_length("radius", 0.08, minimum=0.005),),
+        _TEXT_STYLE,
+        (("fill_color", _WHITE), ("fill_opacity", 1.0)),
+    ),
+    ObjectKind.TEXT: KindInfo(
+        ObjectKind.TEXT,
+        (
+            ParamSpec("text", ParamType.TEXT, "Text"),
+            ParamSpec("font_size", ParamType.FLOAT, 48.0, minimum=1.0, maximum=500.0, step=1.0, decimals=1, scalable=True),
+            ParamSpec("font", ParamType.STRING, ""),
+            ParamSpec("bold", ParamType.BOOL, False),
+            ParamSpec("italic", ParamType.BOOL, False),
+        ),
+        _TEXT_STYLE,
+        (("fill_color", _WHITE), ("fill_opacity", 1.0)),
+    ),
+    ObjectKind.MATH_TEX: KindInfo(
+        ObjectKind.MATH_TEX,
+        (
+            ParamSpec("latex", ParamType.LATEX, r"e^{i\pi} + 1 = 0"),
+            ParamSpec("font_size", ParamType.FLOAT, 48.0, minimum=1.0, maximum=500.0, step=1.0, decimals=1, scalable=True),
+        ),
+        _TEXT_STYLE,
+        (("fill_color", _WHITE), ("fill_opacity", 1.0)),
+    ),
+    ObjectKind.AXES: KindInfo(
+        ObjectKind.AXES,
+        _range_params("x", -5.0, 5.0, 1.0, 10.0)
+        + _range_params("y", -3.0, 3.0, 1.0, 6.0)
+        + (
+            ParamSpec("show_numbers", ParamType.BOOL, False),
+            ParamSpec("tips", ParamType.BOOL, True),
+        ),
+        _AXES_STYLE,
+        (("stroke_color", _WHITE), ("stroke_width", 2.0)),
+    ),
+    ObjectKind.NUMBER_PLANE: KindInfo(
+        ObjectKind.NUMBER_PLANE,
+        _range_params("x", -7.0, 7.0, 1.0, 14.0) + _range_params("y", -4.0, 4.0, 1.0, 8.0),
+        frozenset({"stroke_color", "stroke_width", "stroke_opacity"}),
+        (("stroke_color", "#29ABCA"), ("stroke_width", 2.0)),
+    ),
+    ObjectKind.FUNCTION_GRAPH: KindInfo(
+        ObjectKind.FUNCTION_GRAPH,
+        (
+            ParamSpec("expression", ParamType.EXPRESSION, "sin(x)"),
+            ParamSpec("x_min", ParamType.FLOAT, -5.0, minimum=-1000.0, maximum=1000.0, step=0.5),
+            ParamSpec("x_max", ParamType.FLOAT, 5.0, minimum=-1000.0, maximum=1000.0, step=0.5),
+            ParamSpec(
+                "axes_id",
+                ParamType.OBJECT_REF,
+                None,
+                ref_kinds=(ObjectKind.AXES, ObjectKind.NUMBER_PLANE),
+                optional=True,
+            ),
+        ),
+        _LINE_STYLE,
+        (("stroke_color", _YELLOW),),
+    ),
+    ObjectKind.IMAGE: KindInfo(
+        ObjectKind.IMAGE,
+        (
+            ParamSpec("path", ParamType.FILE, ""),
+            _length("height", 2.0),
+            ParamSpec("opacity", ParamType.FLOAT, 1.0, minimum=0.0, maximum=1.0, step=0.05),
+        ),
+        frozenset(),
+    ),
+}
+
+#: Shift directions offered for FadeIn/FadeOut.
+SHIFT_CHOICES = ("none", "up", "down", "left", "right")
+#: Which colors a color change affects.
+COLOR_TARGET_CHOICES = ("both", "stroke", "fill")
+
+ANIMATION_PARAMS: dict[AnimationKind, tuple[ParamSpec, ...]] = {
+    AnimationKind.FADE_IN: (ParamSpec("shift", ParamType.CHOICE, "none", choices=SHIFT_CHOICES),),
+    AnimationKind.FADE_OUT: (ParamSpec("shift", ParamType.CHOICE, "none", choices=SHIFT_CHOICES),),
+    AnimationKind.TRANSFORM: (ParamSpec("target", ParamType.OBJECT_REF, None),),
+    AnimationKind.REPLACEMENT_TRANSFORM: (ParamSpec("target", ParamType.OBJECT_REF, None),),
+    AnimationKind.MOVE: (
+        ParamSpec("x", ParamType.FLOAT, 0.0, minimum=-100.0, maximum=100.0, step=0.25),
+        ParamSpec("y", ParamType.FLOAT, 0.0, minimum=-100.0, maximum=100.0, step=0.25),
+    ),
+    AnimationKind.SCALE: (ParamSpec("factor", ParamType.FLOAT, 1.5, minimum=0.01, maximum=100.0, step=0.1),),
+    AnimationKind.ROTATE: (ParamSpec("angle", ParamType.FLOAT, 90.0, minimum=-3600.0, maximum=3600.0, step=15.0, decimals=1),),
+    AnimationKind.CHANGE_COLOR: (
+        ParamSpec("color", ParamType.COLOR, _YELLOW),
+        ParamSpec("apply_to", ParamType.CHOICE, "both", choices=COLOR_TARGET_CHOICES),
+    ),
+    AnimationKind.INDICATE: (
+        ParamSpec("color", ParamType.COLOR, _YELLOW),
+        ParamSpec("scale_factor", ParamType.FLOAT, 1.2, minimum=0.1, maximum=10.0, step=0.1),
+    ),
+    AnimationKind.CIRCUMSCRIBE: (ParamSpec("color", ParamType.COLOR, _YELLOW),),
+}
+
+#: Manim's default rate function per animation where it differs from ``smooth``.
+DEFAULT_RATE_FUNC: dict[AnimationKind, str] = {
+    AnimationKind.WRITE: "linear",
+    AnimationKind.INDICATE: "there_and_back",
+}
+
+#: Animations that require a vector object (not a raster image).
+_VECTOR_ONLY = frozenset(
+    {
+        AnimationKind.CREATE,
+        AnimationKind.WRITE,
+        AnimationKind.DRAW_BORDER_THEN_FILL,
+        AnimationKind.UNCREATE,
+        AnimationKind.CHANGE_COLOR,
+        AnimationKind.TRANSFORM,
+        AnimationKind.REPLACEMENT_TRANSFORM,
+    }
+)
+
+
+def kind_info(kind: ObjectKind) -> KindInfo:
+    """Return the static description of an object kind."""
+    return KIND_INFO[kind]
+
+
+def animation_params(kind: AnimationKind) -> tuple[ParamSpec, ...]:
+    """Return the parameter specs of an animation kind."""
+    return ANIMATION_PARAMS.get(kind, ())
+
+
+def default_params(specs: tuple[ParamSpec, ...]) -> dict[str, Any]:
+    """Return a dict with the default value of every spec."""
+    return {spec.key: spec.default for spec in specs}
+
+
+def is_vector_image_path(path: str) -> bool:
+    """Return ``True`` if an image path points to an SVG file."""
+    return path.lower().endswith(".svg")
+
+
+def is_vector_object(kind: ObjectKind, params: dict[str, Any]) -> bool:
+    """Return ``True`` if the object becomes a Manim ``VMobject``."""
+    if kind != ObjectKind.IMAGE:
+        return True
+    return is_vector_image_path(str(params.get("path", "")))
+
+
+def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: dict[str, Any]) -> bool:
+    """Return ``True`` if the animation can be applied to the object."""
+    if anim_kind in _VECTOR_ONLY:
+        return is_vector_object(obj_kind, params)
+    return True

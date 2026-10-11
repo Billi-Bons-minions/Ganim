@@ -1,0 +1,6 @@
+# Laufzeit
+PySide6>=6.6
+manim>=0.19
+
+# Tests
+pytest>=7.4

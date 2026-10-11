@@ -509,7 +509,7 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
     ),
     ObjectKind.CAMERA: KindInfo(
         ObjectKind.CAMERA,
-        (ParamSpec("width", ParamType.FLOAT, 14.2222, minimum=0.2, maximum=1000.0, step=0.5, decimals=3),),
+        (ParamSpec("width", ParamType.FLOAT, 0.0, minimum=0.0, maximum=1000.0, step=0.5, decimals=3),),
         frozenset(),
     ),
     ObjectKind.PARAMETER: KindInfo(

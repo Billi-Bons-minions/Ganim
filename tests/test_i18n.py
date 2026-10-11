@@ -12,10 +12,12 @@ from manim_studio.examples import EXAMPLES
 from manim_studio.i18n import LANGUAGES, catalog, set_language, tr
 from manim_studio.model.arrange import ALIGN_MODES, DISTRIBUTE_MODES
 from manim_studio.model.expression import ExpressionError
+from manim_studio.model.frame import ASPECTS
 from manim_studio.model.schema import ANIMATION_PARAMS, KIND_INFO, MARKER_FEATURES, ParamType
 from manim_studio.model.stage_edits import COLOR, MOVE, ROTATE, SCALE, VALUE
 from manim_studio.model.types import MANIM_COLORS, RATE_FUNCTIONS, AnimationKind, ObjectKind, Visibility
 from manim_studio.render.command import QUALITY_PRESETS
+from manim_studio.ui.dialogs.export_dialog import EXPORT_SCENES
 from manim_studio.ui.panels.properties_panel import GRAPH_ACTIONS
 
 SOURCE = Path(__file__).resolve().parent.parent / "manim_studio"
@@ -62,6 +64,10 @@ def dynamic_keys() -> set[str]:
     keys |= {f"{prefix}.arrange.{mode}" for prefix in ("action", "undo") for mode in ALIGN_MODES + DISTRIBUTE_MODES}
     keys |= {f"graph_action.{key}{suffix}" for key, _action, _params in GRAPH_ACTIONS for suffix in ("", "_tip")}
     keys |= {f"feature.{feature}" for feature in MARKER_FEATURES}
+    keys |= {f"aspect.{aspect}" for aspect in ASPECTS}
+    keys |= {f"export.scenes.{key}" for key in EXPORT_SCENES} | {f"export.transition.{key}" for key in ("cut", "fade")}
+    keys |= {f"prop.step_{key}" for key in ("section", "subcaption", "sound_gain", "sound_offset")}
+    keys |= {"banner.code", "lock.code_step", "action.add_code_step", "action.fade_out_all", "action.camera_view"}
     keys |= {f"undo.{action}" for action in (VALUE,)}
     keys |= {f"lock.{reason}" for reason in ("transform_conflict",)}
     keys |= {f"prop.{point}_{axis}" for point in ("start", "end", "center") for axis in ("x", "y")}

@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import textwrap
 from dataclasses import dataclass
+from pathlib import Path
 
 from manim_studio.codegen.errors import CodegenError
 from manim_studio.codegen.formatting import INDENT, MAX_LINE
-from manim_studio.codegen.literals import LiteralError, fmt_float, py_color, py_degrees, py_point
+from manim_studio.codegen.literals import LiteralError, fmt_float, py_color, py_degrees, py_point, py_str
+from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import STEP_LAGGED, STEP_SEQUENCE, Animation, Scene, Step
 from manim_studio.model.schema import animation_allowed
 from manim_studio.model.types import (
@@ -366,22 +369,56 @@ def _indent_block(code: str) -> list[str]:
     return [f"{INDENT}{lines[0]}"] + [f"{INDENT}{line}" for line in lines[1:]]
 
 
-def step_code(step: Step, number: int, scene: Scene, names: dict[str, str], helpers: set[str] | None = None) -> list[str]:
+def _step_extras(step: Step, base_dir: str | Path | None) -> list[str]:
+    """Section start and sound of a step (emitted before it plays)."""
+    lines = []
+    if step.section.strip():
+        lines.append(f"self.next_section({py_str(step.section.strip())})")
+    if step.sound.strip():
+        path = resolve_asset_path(step.sound.strip(), base_dir).as_posix()
+        options = []
+        if step.sound_offset:
+            options.append(f"time_offset={fmt_float(step.sound_offset)}")
+        if step.sound_gain:
+            options.append(f"gain={fmt_float(step.sound_gain)}")
+        lines.append(f"self.add_sound({', '.join([py_str(path, prefer_raw=True)] + options)})")
+    return lines
+
+
+def code_step_lines(step: Step, number: int) -> list[str]:
+    """The user's own lines of an expert code step, as written."""
+    code = textwrap.dedent(step.code).strip("\n")
+    header = f"# Step {number}: own code"
+    if not code.strip():
+        return [f"{header} (empty)"]
+    return [header] + code.split("\n")
+
+
+def step_code(
+    step: Step, number: int, scene: Scene, names: dict[str, str], helpers: set[str] | None = None, base_dir: str | Path | None = None
+) -> list[str]:
     """Return the lines of one timeline step (comment + ``self.play``/``self.wait``)."""
     header = f"# Step {number}"
+    extras = _step_extras(step, base_dir)
+    subcaption = step.subcaption.strip()
+    if step.kind == StepKind.CODE:
+        return extras + code_step_lines(step, number)
     if step.kind == StepKind.WAIT:
         if step.wait_time <= 0:
             raise CodegenError("wait_time_invalid", str(number))
-        return [header, f"self.wait({fmt_float(step.wait_time)})"]
+        caption = [f"self.add_subcaption({py_str(subcaption)}, duration={fmt_float(step.wait_time)})"] if subcaption else []
+        return [header] + extras + caption + [f"self.wait({fmt_float(step.wait_time)})"]
     try:
         codes = step_animation_codes(step, scene, names, helpers)
     except LiteralError as error:
         raise CodegenError("value_invalid", f"step {number}: {error}") from None
     if not codes:
-        return [f"{header}: no animations"]
+        return [f"{header}: no animations"] + extras
+    if subcaption:
+        codes = codes + [f"subcaption={py_str(subcaption)}", f"subcaption_duration={fmt_float(step.duration())}"]
     if len(codes) == 1 and "\n" not in codes[0]:
-        return [header, f"self.play({codes[0]})"]
-    lines = [header, "self.play("]
+        return [header] + extras + [f"self.play({codes[0]})"]
+    lines = [header] + extras + ["self.play("]
     for code in codes:
         block = _indent_block(code)
         block[-1] += ","

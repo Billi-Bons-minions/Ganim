@@ -17,6 +17,7 @@ from manim_studio.codegen import (
     class_names,
     generate_script,
 )
+from manim_studio.codegen.generator import JOINED_CLASS
 from manim_studio.i18n import tr
 from manim_studio.model import operations as ops
 from manim_studio.model.entities import RenderSettings, Scene
@@ -43,7 +44,7 @@ EXPORT = "export"
 
 def emitted_calls(steps) -> int:
     """Return how many ``self.play``/``self.wait`` calls the steps produce."""
-    return sum(1 for step in steps if step.kind == StepKind.WAIT or step.animations)
+    return sum(1 for step in steps if step.kind in (StepKind.WAIT, StepKind.CODE) or step.animations)
 
 
 def count_rendered_steps(scene: Scene, stop_after_step: int | None) -> int:
@@ -85,6 +86,9 @@ class RenderController(QObject):
         self.runner.finished.connect(self._on_finished)
         self._mode = ""
         self._target: Path | None = None
+        self._queue: list[str] = []
+        self._request: ExportRequest | None = None
+        self._exported: list[Path] = []
         self.preview_offset = 0.0
 
     def is_busy(self) -> bool:
@@ -110,8 +114,11 @@ class RenderController(QObject):
             return False
         return True
 
-    def _write_script(self, scene: Scene, stop_after_step: int | None) -> tuple[Path, str] | None:
-        options = CodegenOptions(base_dir=self.document.base_dir, scene_ids=(scene.id,), stop_after_step=stop_after_step)
+    def _write_script(self, scene: Scene, stop_after_step: int | None, joined: bool = False, transition: str = "cut") -> tuple[Path, str] | None:
+        scene_ids = None if joined else (scene.id,)
+        options = CodegenOptions(
+            base_dir=self.document.base_dir, scene_ids=scene_ids, stop_after_step=stop_after_step, joined=joined, transition=transition
+        )
         try:
             script = generate_script(self.document.project, options)
         except CodegenError as error:
@@ -119,7 +126,7 @@ class RenderController(QObject):
             return None
         path = self.work_dir() / SCRIPT_NAME
         path.write_text(script, encoding="utf-8")
-        return path, class_names(self.document.project)[scene.id]
+        return path, JOINED_CLASS if joined else class_names(self.document.project)[scene.id]
 
     def _start(
         self,
@@ -129,16 +136,19 @@ class RenderController(QObject):
         output_name: str,
         stop_after_step: int | None,
         from_step: int | None = None,
+        joined: bool = False,
     ) -> bool:
         if self.is_busy():
             self.statusMessage.emit(tr("render.busy"))
             return False
-        if not self._validate(scene):
+        scenes = self.document.project.scenes if joined else [scene]
+        if not all(self._validate(item) for item in scenes):
             return False
-        written = self._write_script(scene, stop_after_step)
+        written = self._write_script(scene, stop_after_step, joined, settings.transition)
         if written is None:
             return False
         script_path, class_name = written
+        total = sum(count_rendered_steps(item, None) for item in scenes) if joined else count_rendered_steps(scene, stop_after_step)
         job = RenderJob(
             script_path=script_path,
             scene_class=class_name,
@@ -149,8 +159,10 @@ class RenderController(QObject):
             width=settings.width,
             height=settings.height,
             fps=settings.fps,
-            total_animations=count_rendered_steps(scene, stop_after_step) - (emitted_calls(scene.steps[:from_step]) if from_step else 0),
+            total_animations=total - (emitted_calls(scene.steps[:from_step]) if from_step else 0),
             from_animation=emitted_calls(scene.steps[:from_step]) if from_step else None,
+            transparent=settings.transparent and mode == EXPORT,
+            save_sections=settings.save_sections and mode == EXPORT,
         )
         self._mode = mode
         self.aboutToRender.emit()
@@ -173,9 +185,24 @@ class RenderController(QObject):
         self._start(scene, settings, PREVIEW, "preview", None, from_step)
 
     def export(self, request: ExportRequest) -> None:
-        """Render a scene with the export settings and copy it to the target."""
+        """Render a scene (or all scenes) with the export settings and copy the result to the target."""
         scene = self.document.scene(request.scene_id)
         if scene is None:
+            return
+        self._exported = []
+        if request.settings.scenes == "all_separate":
+            if self.document.project.render != request.settings:
+                self.document.edit_project(tr("undo.export_settings"), lambda p: setattr(p, "render", request.settings))
+            self._queue = [item.id for item in self.document.project.scenes]
+            self._request = request
+            self._export_next()
+            return
+        if request.settings.scenes == "all_joined":
+            if self.document.project.render != request.settings:
+                self.document.edit_project(tr("undo.export_settings"), lambda p: setattr(p, "render", request.settings))
+            self._queue = []
+            self._target = request.target
+            self._start(scene, request.settings, EXPORT, "export", None, joined=True)
             return
         if scene.background_color.upper() != request.background.upper():
             self.document.edit_scene(
@@ -186,10 +213,26 @@ class RenderController(QObject):
         scene = self.document.scene(request.scene_id)
         stop = request.settings.png_after_step if request.settings.format == "png" and request.settings.png_after_step >= 0 else None
         self._target = request.target
+        self._queue = []
         self._start(scene, request.settings, EXPORT, "export", stop)
 
+    def _export_next(self) -> None:
+        """Render the next scene of an "all scenes" export."""
+        while self._queue:
+            scene = self.document.scene(self._queue.pop(0))
+            if scene is None:
+                continue
+            name = class_names(self.document.project)[scene.id]
+            extension = RenderJob(Path(), "", Path(), "", format=self._request.settings.format, transparent=self._request.settings.transparent).extension()
+            self._target = self._request.target / f"{name}.{extension}"
+            if not self._start(scene, self._request.settings, EXPORT, "export", None):
+                self._queue = []
+            return
+        self._show_export_done()
+
     def cancel(self) -> None:
-        """Stop the running render."""
+        """Stop the running render (and the rest of an export queue)."""
+        self._queue = []
         self.runner.cancel()
 
     # --- results -----------------------------------------------------------------------
@@ -206,7 +249,13 @@ class RenderController(QObject):
             self.statusMessage.emit(tr("render.preview_done"))
             self.previewReady.emit(result.output)
             return
-        self._finish_export(result.output)
+        if not self._copy_export(result.output, result.job):
+            self._queue = []
+            return
+        if self._queue:
+            self._export_next()
+        else:
+            self._show_export_done()
 
     def _report_failure(self, result: RenderResult) -> None:
         message = render_error_text(result.error) if result.error else tr("render_error.unknown", detail="")
@@ -221,19 +270,40 @@ class RenderController(QObject):
         if box.clickedButton() is show_log:
             self.showLogRequested.emit()
 
-    def _finish_export(self, output: Path) -> None:
+    def _copy_export(self, output: Path, job: RenderJob) -> bool:
+        """Copy the video (plus subtitles and section clips) to the chosen place."""
         target = self._target or output
+        if target.suffix.lower() != output.suffix.lower():
+            target = target.with_suffix(output.suffix)
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(output, target)
+            subtitles = output.with_suffix(".srt")
+            if subtitles.exists():
+                shutil.copyfile(subtitles, target.with_suffix(".srt"))
+            if job.save_sections:
+                sections = output.parent / "sections"
+                if sections.is_dir():
+                    folder = target.parent / f"{target.stem}_sections"
+                    folder.mkdir(exist_ok=True)
+                    for clip in sections.glob(f"{job.output_name}_*"):
+                        shutil.copyfile(clip, folder / clip.name)
         except OSError as error:
             QMessageBox.critical(self.window(), tr("render.failed_title"), tr("render.copy_failed", error=str(error)))
+            return False
+        self._exported.append(target)
+        return True
+
+    def _show_export_done(self) -> None:
+        if not self._exported:
             return
-        self.statusMessage.emit(tr("render.export_done", path=str(target)))
+        target = self._exported[-1]
+        text = tr("render.export_done", path=str(target)) if len(self._exported) == 1 else tr("render.export_done_many", count=len(self._exported), path=str(target.parent))
+        self.statusMessage.emit(text)
         box = QMessageBox(self.window())
         box.setIcon(QMessageBox.Icon.Information)
         box.setWindowTitle(tr("render.export_done_title"))
-        box.setText(tr("render.export_done", path=str(target)))
+        box.setText(text)
         open_folder = box.addButton(tr("render.open_folder"), QMessageBox.ButtonRole.ActionRole)
         open_file = box.addButton(tr("render.open_file"), QMessageBox.ButtonRole.ActionRole)
         box.setEscapeButton(box.addButton(QMessageBox.StandardButton.Ok))

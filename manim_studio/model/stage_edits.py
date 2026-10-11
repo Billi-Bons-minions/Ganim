@@ -71,6 +71,8 @@ def check_edit(scene: Scene, cursor: int, object_ids: Iterable[str], action: str
             return EditCheck(False, "bound_graph", object_id)
     if 0 <= cursor < len(scene.steps) and scene.steps[cursor].kind == StepKind.WAIT:
         return EditCheck(False, "wait_step")
+    if 0 <= cursor < len(scene.steps) and scene.steps[cursor].kind == StepKind.CODE:
+        return EditCheck(False, "code_step")
     if is_recording(scene, cursor):
         transformed = {anim.target_id for anim in scene.steps[cursor].animations if anim.kind in TRANSFORM_ANIMATIONS}
         for object_id in ids:

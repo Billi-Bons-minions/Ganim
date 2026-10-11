@@ -324,3 +324,33 @@ def test_new_animations_camera_and_colored_formula(tmp_path) -> None:
     assert scene.camera.frame.get_center()[:2] == pytest.approx([1.0, 0.5], abs=1e-3)
     result = run_manim(tmp_path, script, "Neu", "--format", "png")
     assert result.returncode == 0, result.stdout + result.stderr + script
+
+
+def test_portrait_joined_video_with_subtitles_and_sound(tmp_path) -> None:
+    import wave
+
+    import av
+
+    sound = tmp_path / "ton.wav"
+    with wave.open(str(sound), "wb") as handle:
+        handle.setnchannels(1)
+        handle.setsampwidth(2)
+        handle.setframerate(8000)
+        handle.writeframes(b"\x00\x00" * 4000)
+    first = Scene(id="a", name="Erste", objects=[make_object(ObjectKind.CIRCLE, "Kreis", "c")], steps=[play(make_animation(AnimationKind.CREATE, "c", run_time=0.3))])
+    first.steps[0].section, first.steps[0].subcaption, first.steps[0].sound = "Start", "Ein Kreis", "ton.wav"
+    second = Scene(id="b", name="Zweite", objects=[make_object(ObjectKind.SQUARE, "Quadrat", "q")], steps=[play(make_animation(AnimationKind.FADE_IN, "q", run_time=0.3))])
+    project = make_project(first, second)
+    project.aspect = "9:16"
+    from manim_studio.codegen import CodegenOptions
+
+    script = generate_script(project, CodegenOptions(base_dir=tmp_path, joined=True, transition="fade"))
+    result = run_manim(tmp_path, script, "AllScenes", "--save_sections", "-o", "gesamt")
+    assert result.returncode == 0, result.stdout + result.stderr + script
+    video = next(path for path in (tmp_path / "media").rglob("gesamt.mp4") if "partial" not in str(path))
+    with av.open(str(video)) as container:
+        stream = container.streams.video[0]
+        assert (stream.width, stream.height) == (480, 854)
+        assert container.streams.audio
+    assert video.with_suffix(".srt").exists()
+    assert list(video.parent.glob("sections/*.mp4"))

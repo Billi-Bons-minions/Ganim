@@ -20,7 +20,6 @@ from manim_studio.codegen.literals import (
     py_range,
     py_str,
 )
-from manim_studio.codegen.naming import DEFAULT_FRAME_WIDTH
 from manim_studio.codegen.objects_extra import (
     EXTRA_CONSTRUCTORS,
     brace_code,
@@ -242,8 +241,8 @@ def camera_code(obj: SceneObject, variable: str) -> list[str]:
     lines = []
     if round(obj.x, 6) != 0 or round(obj.y, 6) != 0:
         lines.append(f"{variable}.move_to({py_point(obj.x, obj.y)})")
-    width = float(obj.params.get("width", DEFAULT_FRAME_WIDTH))
-    if abs(width - DEFAULT_FRAME_WIDTH) > 1e-3:
+    width = float(obj.params.get("width", 0.0) or 0.0)
+    if width > 0:
         lines.append(f"{variable}.set(width={fmt_float(width)})")
     if round(obj.rotation, 6) != 0:
         lines.append(f"{variable}.rotate({py_degrees(obj.rotation)})")

@@ -44,6 +44,7 @@ from manim_studio.model.arrange import (
     DISTRIBUTE_V,
 )
 from manim_studio.model.assets import relative_asset_path, resolve_asset_path
+from manim_studio.model.frame import frame_box, frame_size
 from manim_studio.model.playback import state_at_time, step_start_time
 from manim_studio.model.serialization import FILE_SUFFIX, ProjectFormatError
 from manim_studio.model.stage_edits import is_recording
@@ -73,7 +74,7 @@ from manim_studio.ui.panels.player_panel import PlayerPanel
 from manim_studio.ui.panels.properties_panel import PropertiesPanel
 from manim_studio.ui.panels.timeline_panel import TimelinePanel, build_animation_menu, format_time
 from manim_studio.ui.playback import PlaybackController
-from manim_studio.ui.stage.drawing import PX, StageResources
+from manim_studio.ui.stage.drawing import PX, StageResources, camera_size
 from manim_studio.ui.stage.ruler import Ruler, RulerCorner
 from manim_studio.ui.stage.view import StageView
 from manim_studio.ui.still_preview import StillPreview
@@ -195,6 +196,7 @@ class MainWindow(QMainWindow):
         self.act_add_step = self._action("add_step", lambda: c.add_step(StepKind.PLAY), "Ctrl+T", "plus")
         self.act_add_wait = self._action("add_wait", lambda: c.add_step(StepKind.WAIT), "Ctrl+W", "clock")
         self.act_fade_out_all = self._action("fade_out_all", c.fade_out_all, "Ctrl+Shift+F", "a_fade_out")
+        self.act_add_code = self._action("add_code_step", lambda: c.add_step(StepKind.CODE), None, "code")
         self.act_duplicate_step = self._action("duplicate_step", c.duplicate_step, None, "duplicate")
         self.act_delete_step = self._action("delete_step", c.delete_step, None, "trash")
         self.act_prev_step = self._action("prev_step", lambda: c.go_to_step(-1), "PgUp", "chevron_left")
@@ -278,7 +280,7 @@ class MainWindow(QMainWindow):
         self.simultaneous_menu = timeline_menu.addMenu(tr("menu.add_simultaneous"))
         self.simultaneous_menu.aboutToShow.connect(lambda: build_animation_menu(self.simultaneous_menu, self.controller, True))
         timeline_menu.addSeparator()
-        timeline_menu.addActions([self.act_add_step, self.act_add_wait, self.act_fade_out_all, self.act_duplicate_step, self.act_delete_step])
+        timeline_menu.addActions([self.act_add_step, self.act_add_wait, self.act_fade_out_all, self.act_add_code, self.act_duplicate_step, self.act_delete_step])
         timeline_menu.addSeparator()
         timeline_menu.addActions([self.act_start, self.act_prev_step, self.act_next_step, self.act_end])
         timeline_menu.addSeparator()
@@ -512,6 +514,7 @@ class MainWindow(QMainWindow):
         self.stage.vertexMenuRequested.connect(self._show_vertex_menu)
         self.stage.endpointMoved.connect(lambda object_id, which, x, y: (self._before_stage_edit(), self.controller.set_line_endpoint(object_id, which, x, y)))
         self.objects.contextMenuRequested.connect(self.show_object_menu)
+        self.properties.arrangeRequested.connect(self.arrange)
         self.library.objectRequested.connect(self._on_library_request)
         self.scene_tabs.currentChanged.connect(self._on_tab_changed)
         self.scene_tabs.tabMoved.connect(self._on_tab_moved)
@@ -555,6 +558,8 @@ class MainWindow(QMainWindow):
         playhead = self.editor.playhead
         states = state_at_time(scene, playhead) if playhead is not None else states_after(scene, cursor)
         self.resources.values = parameter_values(scene, states)
+        self.resources.frame_size = frame_size(self.document.project.aspect)
+        self.stage.set_frame_size(*self.resources.frame_size)
         self.stage.set_point_editing(cursor == START and playhead is None)
         self.stage.set_content(scene, states, self.resources, self.editor.selected_objects, self.act_show_hidden.isChecked())
         self.stage.set_motion_paths(self._motion_paths(scene, cursor) if playhead is None else [])
@@ -589,9 +594,9 @@ class MainWindow(QMainWindow):
             self.banner.show_message(tr("banner.start"), recording=False)
         else:
             step = self.editor.scene().steps[cursor]
-            key = "banner.wait" if step.kind == StepKind.WAIT else "banner.step"
+            key = {StepKind.WAIT: "banner.wait", StepKind.CODE: "banner.code"}.get(step.kind, "banner.step")
             dot = f"<span style='color:{current_palette().record}'>●</span>"
-            self.banner.show_message(tr(key, step=cursor + 1, dot=dot), recording=step.kind != StepKind.WAIT)
+            self.banner.show_message(tr(key, step=cursor + 1, dot=dot), recording=step.kind == StepKind.PLAY)
         self._place_overlays()
 
     def _place_overlays(self) -> None:
@@ -710,7 +715,7 @@ class MainWindow(QMainWindow):
     def arrange(self, mode: str) -> None:
         """Align or distribute the selected objects."""
         self._before_stage_edit()
-        self.controller.arrange(mode, self.selection_boxes())
+        self.controller.arrange(mode, self.selection_boxes(), frame_box(self.document.project.aspect))
 
     def zoom_to_selection(self) -> None:
         """Zoom onto the selected objects."""
@@ -755,8 +760,8 @@ class MainWindow(QMainWindow):
         state = states.get(camera.id)
         if state is None:
             return
-        width = float(camera.params.get("width", 14.2222)) * state.scale * PX
-        height = width * 9 / 16
+        width, height = camera_size(camera, self.resources.frame_size)
+        width, height = width * state.scale * PX, height * state.scale * PX
         self.stage.follow_rect(QRectF(state.x * PX - width / 2, -state.y * PX - height / 2, width, height))
 
     def _on_camera_view(self, checked: bool) -> None:

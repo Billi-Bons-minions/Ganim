@@ -76,6 +76,16 @@ class Step:
     wait_time: float = 1.0
     mode: str = STEP_TOGETHER
     lag_ratio: float = 0.25
+    #: Start of a new video section (``self.next_section``) before this step.
+    section: str = ""
+    #: Text shown as subtitle while the step plays.
+    subcaption: str = ""
+    #: Sound file played at the start of the step (path relative to the project).
+    sound: str = ""
+    sound_gain: float = 0.0
+    sound_offset: float = 0.0
+    #: Python lines of an expert code step (inserted into ``construct`` as written).
+    code: str = ""
 
     def windows(self) -> list[tuple[float, float]]:
         """Return ``(start, end)`` in seconds of every animation within the step."""
@@ -94,8 +104,8 @@ class Step:
         return windows
 
     def duration(self) -> float:
-        """Return how long the step lasts in seconds."""
-        if self.kind == StepKind.WAIT:
+        """Return how long the step lasts in seconds (code steps: the estimate in ``wait_time``)."""
+        if self.kind in (StepKind.WAIT, StepKind.CODE):
             return self.wait_time
         return max((end for _start, end in self.windows()), default=0.0)
 
@@ -151,6 +161,12 @@ class RenderSettings:
     format: str = "mp4"
     output_dir: str = ""
     png_after_step: int = -1
+    transparent: bool = False
+    #: Which scenes to export: the chosen one, all as separate files, or all joined in one video.
+    scenes: str = "current"
+    #: Between joined scenes: hard cut or fade out.
+    transition: str = "cut"
+    save_sections: bool = False
 
 
 @dataclass
@@ -159,6 +175,8 @@ class Project:
 
     scenes: list[Scene] = field(default_factory=list)
     render: RenderSettings = field(default_factory=RenderSettings)
+    #: Video format such as ``"16:9"`` or ``"9:16"`` (see :mod:`manim_studio.model.frame`).
+    aspect: str = "16:9"
 
     def scene_by_id(self, scene_id: str | None) -> Scene | None:
         """Return the scene with the given id or ``None``."""

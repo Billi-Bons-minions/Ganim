@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -232,7 +233,17 @@ def _animation_issues(scene: Scene, step_index: int, anim: Animation) -> list[Is
     return issues
 
 
+def _code_issue(scene: Scene, index: int, step: Step) -> list[Issue]:
+    try:
+        compile(textwrap.dedent(step.code), f"step {index + 1}", "exec")
+    except SyntaxError as error:
+        return [Issue(ERROR, "code_syntax", scene.id, step_index=index, detail=f"{error.lineno}: {error.msg}")]
+    return []
+
+
 def _step_issues(scene: Scene, index: int, step: Step) -> list[Issue]:
+    if step.kind == StepKind.CODE:
+        return _code_issue(scene, index, step)
     if step.kind == StepKind.WAIT:
         if step.wait_time <= 0:
             return [Issue(ERROR, "wait_time_invalid", scene.id, step_index=index)]

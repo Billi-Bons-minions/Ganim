@@ -152,7 +152,7 @@ class ManimRunner(QObject):
             error = summarize_error("\n".join(self._log))
             self._finish(RenderResult(job, False, error=error, log_lines=list(self._log)))
             return
-        output = find_output(job.media_dir, job.output_name, job.format)
+        output = find_output(job.media_dir, job.output_name, job.extension())
         if output is None:
             error = ErrorSummary("output_missing")
             self._finish(RenderResult(job, False, error=error, log_lines=list(self._log)))

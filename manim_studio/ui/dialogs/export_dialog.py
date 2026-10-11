@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -23,10 +24,12 @@ from PySide6.QtWidgets import (
 from manim_studio.codegen.naming import class_names
 from manim_studio.i18n import tr
 from manim_studio.model.entities import Project, RenderSettings
+from manim_studio.model.frame import pixel_size
 from manim_studio.render.command import CUSTOM_QUALITY, OUTPUT_FORMATS, QUALITY_PRESETS
 from manim_studio.ui.widgets import ColorButton
 
 _EXTENSIONS = {"mp4": "mp4", "gif": "gif", "png": "png"}
+EXPORT_SCENES = ("current", "all_separate", "all_joined")
 
 
 @dataclass(frozen=True)
@@ -55,8 +58,21 @@ class ExportDialog(QDialog):
         for name in OUTPUT_FORMATS:
             self.format_combo.addItem(tr(f"export.format.{name}"), name)
         self.format_combo.setCurrentIndex(max(0, self.format_combo.findData(settings.format)))
+        self.scenes_combo = QComboBox()
+        for key in EXPORT_SCENES:
+            self.scenes_combo.addItem(tr(f"export.scenes.{key}"), key)
+        self.scenes_combo.setCurrentIndex(max(0, self.scenes_combo.findData(settings.scenes)))
+        self.transition_combo = QComboBox()
+        for key in ("cut", "fade"):
+            self.transition_combo.addItem(tr(f"export.transition.{key}"), key)
+        self.transition_combo.setCurrentIndex(max(0, self.transition_combo.findData(settings.transition)))
+        self.transparent_box = QCheckBox(tr("export.transparent"))
+        self.transparent_box.setChecked(settings.transparent)
+        self.sections_box = QCheckBox(tr("export.sections"))
+        self.sections_box.setChecked(settings.save_sections)
         self.quality_combo = QComboBox()
         for key, (width, height, fps) in QUALITY_PRESETS.items():
+            width, height = pixel_size((width, height), project.aspect)
             self.quality_combo.addItem(tr(f"export.quality.{key}", width=width, height=height, fps=fps), key)
         self.quality_combo.addItem(tr("export.quality.custom"), CUSTOM_QUALITY)
         self.quality_combo.setCurrentIndex(max(0, self.quality_combo.findData(settings.quality)))
@@ -71,6 +87,8 @@ class ExportDialog(QDialog):
         self.target_label.setWordWrap(True)
         self._build_layout()
         self.scene_combo.currentIndexChanged.connect(self._on_scene_changed)
+        self.scenes_combo.currentIndexChanged.connect(self._on_scenes_changed)
+        self.transparent_box.toggled.connect(self._update_target)
         self.quality_combo.currentIndexChanged.connect(self._update_enabled)
         self.format_combo.currentIndexChanged.connect(self._update_enabled)
         self.folder_edit.textChanged.connect(self._update_target)
@@ -87,7 +105,9 @@ class ExportDialog(QDialog):
 
     def _build_layout(self) -> None:
         form = QFormLayout()
+        form.addRow(tr("export.which_scenes"), self.scenes_combo)
         form.addRow(tr("export.scene"), self.scene_combo)
+        form.addRow(tr("export.transition"), self.transition_combo)
         form.addRow(tr("export.format"), self.format_combo)
         form.addRow(tr("export.quality"), self.quality_combo)
         size = QHBoxLayout()
@@ -98,6 +118,8 @@ class ExportDialog(QDialog):
         form.addRow(tr("export.fps"), self.fps_spin)
         form.addRow(tr("export.png_step"), self.png_step)
         form.addRow(tr("export.background"), self.background)
+        form.addRow("", self.transparent_box)
+        form.addRow("", self.sections_box)
         folder = QHBoxLayout()
         folder.addWidget(self.folder_edit, 1)
         browse = QToolButton()
@@ -132,15 +154,33 @@ class ExportDialog(QDialog):
         self.png_step.setCurrentIndex(max(0, self.png_step.findData(current)))
         self._update_enabled()
 
+    def _on_scenes_changed(self) -> None:
+        scenes = self.scenes_combo.currentData()
+        if scenes == "all_joined":
+            self.name_edit.setText(tr("export.joined_name"))
+        elif scenes == "current":
+            scene = self._scene()
+            if scene is not None:
+                self.name_edit.setText(class_names(self.project).get(scene.id, "Scene"))
+        self.name_edit.setEnabled(scenes != "all_separate")
+        self._update_enabled()
+
     def _update_enabled(self) -> None:
         custom = self.quality_combo.currentData() == CUSTOM_QUALITY
         is_png = self.format_combo.currentData() == "png"
+        scenes = self.scenes_combo.currentData()
+        self.scene_combo.setEnabled(scenes == "current")
+        self.transition_combo.setEnabled(scenes == "all_joined")
+        self.transparent_box.setEnabled(self.format_combo.currentData() != "gif")
+        self.sections_box.setEnabled(not is_png)
+        self.background.setEnabled(scenes == "current")
         for widget in (self.width_spin, self.height_spin):
             widget.setEnabled(custom)
         self.fps_spin.setEnabled(custom and not is_png)
         self.png_step.setEnabled(is_png)
         if not custom:
             width, height, fps = QUALITY_PRESETS[self.quality_combo.currentData()]
+            width, height = pixel_size((width, height), self.project.aspect)
             self.width_spin.setValue(width)
             self.height_spin.setValue(height)
             self.fps_spin.setValue(fps)
@@ -152,10 +192,15 @@ class ExportDialog(QDialog):
             self.folder_edit.setText(folder)
 
     def target_path(self) -> Path:
-        """Return the file that will be written."""
+        """Return the file (or, for separate scenes, the folder) that will be written."""
+        folder = Path(self.folder_edit.text().strip() or ".").expanduser()
+        if self.scenes_combo.currentData() == "all_separate":
+            return folder
         name = self.name_edit.text().strip() or "scene"
         extension = _EXTENSIONS[self.format_combo.currentData()]
-        return Path(self.folder_edit.text().strip() or ".").expanduser() / f"{name}.{extension}"
+        if extension == "mp4" and self.transparent_box.isChecked() and self.transparent_box.isEnabled():
+            extension = "mov"
+        return folder / f"{name}.{extension}"
 
     def _update_target(self) -> None:
         self.target_label.setText(str(self.target_path()))
@@ -170,5 +215,9 @@ class ExportDialog(QDialog):
             format=self.format_combo.currentData(),
             output_dir=self.folder_edit.text().strip(),
             png_after_step=int(self.png_step.currentData() if self.png_step.currentData() is not None else -1),
+            transparent=self.transparent_box.isChecked() and self.transparent_box.isEnabled(),
+            scenes=self.scenes_combo.currentData(),
+            transition=self.transition_combo.currentData(),
+            save_sections=self.sections_box.isChecked() and self.sections_box.isEnabled(),
         )
         return ExportRequest(self.scene_combo.currentData(), settings, self.background.color(), self.target_path())

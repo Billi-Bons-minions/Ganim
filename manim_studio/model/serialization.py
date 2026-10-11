@@ -16,6 +16,7 @@ from manim_studio.model.entities import (
     SceneObject,
     Step,
 )
+from manim_studio.model.frame import ASPECTS, DEFAULT_ASPECT
 from manim_studio.model.types import AnimationKind, ObjectKind, StepKind, Visibility
 
 FILE_FORMAT = "manim-studio-project"
@@ -74,6 +75,12 @@ def step_to_dict(step: Step) -> dict[str, Any]:
         "mode": step.mode,
         "lag_ratio": step.lag_ratio,
         "animations": [animation_to_dict(anim) for anim in step.animations],
+        "section": step.section,
+        "subcaption": step.subcaption,
+        "sound": step.sound,
+        "sound_gain": step.sound_gain,
+        "sound_offset": step.sound_offset,
+        "code": step.code,
     }
 
 
@@ -98,6 +105,10 @@ def render_to_dict(settings: RenderSettings) -> dict[str, Any]:
         "format": settings.format,
         "output_dir": settings.output_dir,
         "png_after_step": settings.png_after_step,
+        "transparent": settings.transparent,
+        "scenes": settings.scenes,
+        "transition": settings.transition,
+        "save_sections": settings.save_sections,
     }
 
 
@@ -108,6 +119,7 @@ def project_to_dict(project: Project) -> dict[str, Any]:
         "version": FILE_VERSION,
         "scenes": [scene_to_dict(scene) for scene in project.scenes],
         "render": render_to_dict(project.render),
+        "aspect": project.aspect,
     }
 
 
@@ -167,6 +179,12 @@ def step_from_dict(data: dict[str, Any]) -> Step:
         animations=[animation_from_dict(item) for item in data.get("animations", [])],
         mode=str(data.get("mode", STEP_TOGETHER)) if data.get("mode") in STEP_MODES else STEP_TOGETHER,
         lag_ratio=float(data.get("lag_ratio", 0.25)),
+        section=str(data.get("section", "")),
+        subcaption=str(data.get("subcaption", "")),
+        sound=str(data.get("sound", "")),
+        sound_gain=float(data.get("sound_gain", 0.0)),
+        sound_offset=float(data.get("sound_offset", 0.0)),
+        code=str(data.get("code", "")),
     )
 
 
@@ -192,6 +210,10 @@ def render_from_dict(data: dict[str, Any]) -> RenderSettings:
         format=str(data.get("format", defaults.format)),
         output_dir=str(data.get("output_dir", defaults.output_dir)),
         png_after_step=int(data.get("png_after_step", defaults.png_after_step)),
+        transparent=bool(data.get("transparent", defaults.transparent)),
+        scenes=str(data.get("scenes", defaults.scenes)),
+        transition=str(data.get("transition", defaults.transition)),
+        save_sections=bool(data.get("save_sections", defaults.save_sections)),
     )
 
 
@@ -208,7 +230,8 @@ def project_from_dict(data: dict[str, Any]) -> Project:
         raise ProjectFormatError(str(error)) from error
     if not scenes:
         raise ProjectFormatError("project contains no scene")
-    return Project(scenes=scenes, render=render)
+    aspect = str(data.get("aspect", DEFAULT_ASPECT))
+    return Project(scenes=scenes, render=render, aspect=aspect if aspect in ASPECTS else DEFAULT_ASPECT)
 
 
 # --- files -------------------------------------------------------------------

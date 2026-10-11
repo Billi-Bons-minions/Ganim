@@ -312,6 +312,13 @@ def test_align_zoom_and_rulers(window) -> None:
     window.editor.select_objects([first, second])
     window.arrange("left")
     assert window.stage.item_rect(first).left() == pytest.approx(window.stage.item_rect(second).left(), abs=0.5)
+    from PySide6.QtWidgets import QToolButton
+
+    from manim_studio.i18n import tr
+
+    button = next(b for b in window.properties.findChildren(QToolButton) if b.toolTip() == tr("action.arrange.right"))
+    button.click()
+    assert window.stage.item_rect(first).right() == pytest.approx(window.stage.item_rect(second).right(), abs=0.5)
     window.arrange("vcenter")
     assert window.stage.item_rect(first).center().y() == pytest.approx(window.stage.item_rect(second).center().y(), abs=0.5)
     assert window.top_ruler.isVisible()

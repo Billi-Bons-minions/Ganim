@@ -65,7 +65,7 @@ def _distribute(boxes: dict[str, Box], horizontal: bool) -> dict[str, tuple[floa
     return deltas
 
 
-def arrange_deltas(boxes: dict[str, Box], mode: str) -> dict[str, tuple[float, float]]:
+def arrange_deltas(boxes: dict[str, Box], mode: str, frame: Box | None = None) -> dict[str, tuple[float, float]]:
     """Return the move per object for an align or distribute command.
 
     A single object is aligned to the video frame; several objects to their
@@ -77,7 +77,7 @@ def arrange_deltas(boxes: dict[str, Box], mode: str) -> dict[str, tuple[float, f
         if len(boxes) < 3:
             return {}
         return _distribute(boxes, mode == DISTRIBUTE_H)
-    reference = FRAME_BOX if len(boxes) == 1 else _union(list(boxes.values()))
+    reference = (frame or FRAME_BOX) if len(boxes) == 1 else _union(list(boxes.values()))
     deltas = {}
     for object_id, box in boxes.items():
         dx, dy = _align_delta(box, reference, mode)

@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from manim_studio.codegen.naming import class_names
+from manim_studio.codegen.naming import class_names, variable_names
 from manim_studio.i18n import has, tr
 from manim_studio.model import graphs, groups
 from manim_studio.model import operations as ops
@@ -36,6 +36,7 @@ from manim_studio.model.arrange import ALIGN_MODES, DISTRIBUTE_MODES
 from manim_studio.model.assets import relative_asset_path
 from manim_studio.model.entities import STEP_LAGGED, STEP_MODES, STEP_TOGETHER, Animation, SceneObject, Step
 from manim_studio.model.expression import check_expression
+from manim_studio.model.frame import ASPECTS
 from manim_studio.model.graphs import is_bound
 from manim_studio.model.schema import (
     STYLE_FIELDS,
@@ -1053,6 +1054,10 @@ class PropertiesPanel(QScrollArea):
     def _build_step(self, form: _Form, key: tuple) -> None:
         step_id, kind = key[2], key[3]
         number = self.editor.scene().step_index(step_id) + 1
+        if kind == StepKind.CODE:
+            self._build_code_step(form, step_id, number)
+            self._step_details(form, step_id)
+            return
         if kind == StepKind.WAIT:
             form.header(tr("prop.wait_header", step=number), icon("clock"))
             spec = ParamSpec("wait_time", ParamType.FLOAT, 1.0, minimum=0.05, maximum=600.0, step=0.25)
@@ -1062,6 +1067,7 @@ class PropertiesPanel(QScrollArea):
 
             widget, show = self._float_editor(spec, commit)
             form.row(tr("prop.wait_time"), widget, lambda: self._step(step_id).wait_time, show)
+            self._step_details(form, step_id)
             return
         form.header(tr("prop.step_header", step=number), icon("layers"))
         mode_spec = ParamSpec("mode", ParamType.CHOICE, STEP_TOGETHER, choices=STEP_MODES)
@@ -1087,6 +1093,56 @@ class PropertiesPanel(QScrollArea):
         form.note(lambda: tr(f"step_mode_help.{self._step(step_id).mode}"))
         form.note(lambda: self._step_summary(step_id))
         form.note(lambda: tr("prop.step_hint"))
+        self._step_details(form, step_id)
+
+    def _build_code_step(self, form: _Form, step_id: str, number: int) -> None:
+        form.header(tr("prop.code_header", step=number), icon("code"))
+        form.note(lambda: tr("prop.code_hint"))
+        editor = DebouncedTextEdit()
+        editor.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
+        editor.setMinimumHeight(px(200))
+        editor.setLineWrapMode(DebouncedTextEdit.LineWrapMode.NoWrap)
+        editor.committed.connect(lambda text: self.controller.set_step_fields(step_id, f"step:{step_id}:code", code=text))
+        form.layout.addRow(editor)
+        form.bindings.append(Binding(editor, lambda: self._step(step_id).code, lambda v: editor.set_text_silently(str(v))))
+        form.bindings[-1].refresh()
+        form.note(lambda: self._code_message(step_id), warning=True)
+        spec = ParamSpec("wait_time", ParamType.FLOAT, 1.0, minimum=0.05, maximum=600.0, step=0.25)
+        widget, show = self._float_editor(spec, lambda value: self.controller.set_step_fields(step_id, f"step:{step_id}:wait", wait_time=value))
+        form.row(tr("prop.code_duration"), widget, lambda: self._step(step_id).wait_time, show)
+        form.note(lambda: tr("prop.code_names", names=", ".join(variable_names(self.editor.scene()).values()) or "–"))
+
+    def _code_message(self, step_id: str) -> str:
+        import textwrap
+
+        try:
+            compile(textwrap.dedent(self._step(step_id).code), "code", "exec")
+        except SyntaxError as error:
+            return tr("prop.code_error", line=error.lineno or 0, message=error.msg)
+        return ""
+
+    def _step_details(self, form: _Form, step_id: str) -> None:
+        """Section start, subtitle and sound of a step."""
+        form.section(tr("section.step_details"))
+        for key, placeholder in (("section", "prop.section_placeholder"), ("subcaption", "prop.subcaption_placeholder")):
+            edit = DebouncedLineEdit()
+            edit.setPlaceholderText(tr(placeholder))
+            edit.committed.connect(lambda text, key=key: self.controller.set_step_fields(step_id, f"step:{step_id}:{key}", **{key: text}))
+            form.row(tr(f"prop.step_{key}"), edit, lambda key=key: getattr(self._step(step_id), key), lambda v, e=edit: _set_line(e, v))
+        sound = FileField(tr("dialog.sound_filter"), lambda: self.settings.last_directory("sound"))
+        sound.committed.connect(
+            lambda path: self.controller.set_step_fields(
+                step_id, None, sound=relative_asset_path(path, self.document.base_dir) if path.strip() else ""
+            )
+        )
+        form.row(tr("prop.step_sound"), sound, lambda: self._step(step_id).sound, lambda v: sound.set_path(str(v)))
+        for key, spec in (
+            ("sound_gain", ParamSpec("sound_gain", ParamType.FLOAT, 0.0, minimum=-60.0, maximum=30.0, step=1.0, decimals=1)),
+            ("sound_offset", ParamSpec("sound_offset", ParamType.FLOAT, 0.0, minimum=0.0, maximum=600.0, step=0.1)),
+        ):
+            widget, show = self._float_editor(spec, lambda value, key=key: self.controller.set_step_fields(step_id, f"step:{step_id}:{key}", **{key: value}))
+            form.row(tr(f"prop.step_{key}"), widget, lambda key=key: getattr(self._step(step_id), key), show)
+        form.note(lambda: tr("prop.step_details_hint"))
 
     # --- scene form --------------------------------------------------------------------------------
 
@@ -1109,6 +1165,13 @@ class PropertiesPanel(QScrollArea):
             lambda: class_names(self.document.project).get(scene_id, ""),
             class_label.setText,
         )
+        aspect = _compact_combo()
+        for key in ASPECTS:
+            aspect.addItem(tr(f"aspect.{key}"), key)
+        aspect.currentIndexChanged.connect(
+            lambda _index: self.document.edit_project(tr("undo.aspect"), lambda p: setattr(p, "aspect", aspect.currentData()), None)
+        )
+        form.row(tr("prop.aspect"), aspect, lambda: self.document.project.aspect, lambda v: _set_combo_data(aspect, v))
         background = ColorButton()
         background.colorChosen.connect(
             lambda color: self._edit(tr("prop.background"), lambda s: ops.set_background(s, color), f"scene:{scene_id}:bg")

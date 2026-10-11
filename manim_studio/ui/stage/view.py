@@ -108,6 +108,7 @@ class StageView(QGraphicsView):
         self._scene_model: Scene | None = None
         self._entered_group: str | None = None
         self._point_editing = False
+        self._frame_size = (FRAME_WIDTH, FRAME_HEIGHT)
 
     # --- configuration --------------------------------------------------------
 
@@ -160,10 +161,19 @@ class StageView(QGraphicsView):
         self._show_grid, self._grid_step, self._snap = show, max(0.05, step), snap
         self.viewport().update()
 
-    @staticmethod
-    def frame_rect() -> QRectF:
+    def frame_rect(self) -> QRectF:
         """Return the Manim frame in scene pixels."""
-        return QRectF(pt(-FRAME_WIDTH / 2, FRAME_HEIGHT / 2), pt(FRAME_WIDTH / 2, -FRAME_HEIGHT / 2))
+        width, height = self._frame_size
+        return QRectF(pt(-width / 2, height / 2), pt(width / 2, -height / 2))
+
+    def set_frame_size(self, width: float, height: float) -> None:
+        """Change the video format (frame size in Manim units)."""
+        if (width, height) == self._frame_size:
+            return
+        self._frame_size = (width, height)
+        if self._auto_fit:
+            self.fit_frame()
+        self.viewport().update()
 
     def fit_frame(self) -> None:
         """Zoom so that the whole Manim frame is visible."""

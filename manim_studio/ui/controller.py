@@ -307,9 +307,9 @@ class EditorController(QObject):
         scene = self.scene()
         return any(groups.is_group(scene.object_by_id(i)) for i in self.editor.selected_objects)
 
-    def arrange(self, mode: str, boxes: dict[str, tuple[float, float, float, float]]) -> None:
+    def arrange(self, mode: str, boxes: dict[str, tuple[float, float, float, float]], frame: tuple[float, float, float, float] | None = None) -> None:
         """Align or distribute objects given their drawn bounds (Manim units)."""
-        deltas = arrange_deltas(boxes, mode)
+        deltas = arrange_deltas(boxes, mode, frame)
         moving = {object_id: delta for object_id, delta in deltas.items() if abs(delta[0]) > 1e-6 or abs(delta[1]) > 1e-6}
         if not moving:
             return
@@ -452,8 +452,13 @@ class EditorController(QObject):
         return self.editor.cursor + 1
 
     def add_step(self, kind: StepKind = StepKind.PLAY) -> None:
-        """Insert an empty play step or a wait step after the current one."""
-        step = create_play_step() if kind == StepKind.PLAY else create_wait_step(1.0)
+        """Insert an empty play step, a wait step or an expert code step after the current one."""
+        if kind == StepKind.CODE:
+            step = create_wait_step(1.0)
+            step.kind = StepKind.CODE
+            step.code = tr("code_step.template")
+        else:
+            step = create_play_step() if kind == StepKind.PLAY else create_wait_step(1.0)
         index = self._insert_index()
         self._edit(tr("undo.add_step"), lambda s: ops.add_step(s, step, index))
         self.editor.inspect_step(index)
@@ -610,6 +615,10 @@ class EditorController(QObject):
         new_id = self._edit(tr("undo.duplicate_animation"), lambda s: ops.duplicate_animation(s, animation_id))
         if new_id:
             self.editor.inspect_animation(new_id)
+
+    def set_step_fields(self, step_id: str, merge_key: str | None = None, **values) -> None:
+        """Change section, subtitle, sound or code of a step."""
+        self._edit(tr("undo.step_details"), lambda s: ops.set_step_fields(s, step_id, **values), merge_key)
 
     def set_step_mode(self, step_id: str, mode: str, lag_ratio: float | None = None) -> None:
         """Run a step's animations together, staggered or one after another."""

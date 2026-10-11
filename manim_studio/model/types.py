@@ -90,6 +90,7 @@ class StepKind(str, Enum):
 
     PLAY = "play"
     WAIT = "wait"
+    CODE = "code"
 
 
 class Visibility(str, Enum):

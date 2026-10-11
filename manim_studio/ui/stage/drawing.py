@@ -81,6 +81,8 @@ class StageResources:
     tinted: dict[tuple[str, str, int], QImage] = field(default_factory=dict)
     #: Current parameter values (symbol -> value); ``None`` uses the start values.
     values: dict[str, float] | None = None
+    #: Size of the video frame in Manim units (depends on the project's format).
+    frame_size: tuple[float, float] = (8.0 * 16 / 9, 8.0)
 
 
 def pt(x: float, y: float) -> QPointF:
@@ -496,7 +498,7 @@ def _shape_drawing(obj: SceneObject, state: ObjectState, scene: Scene, resources
     if kind == ObjectKind.PARAMETER:
         return [], False
     if kind == ObjectKind.CAMERA:
-        return camera_primitives(obj), True
+        return camera_primitives(obj, resources.frame_size), True
     if kind == ObjectKind.DATA_PLOT:
         return data_primitives(scene, obj, state)
     if kind == ObjectKind.BAR_CHART:
@@ -504,16 +506,17 @@ def _shape_drawing(obj: SceneObject, state: ObjectState, scene: Scene, resources
     return _image_primitives(obj, resources), True
 
 
-def camera_rect(obj: SceneObject) -> QRectF:
-    """The camera frame in local scene pixels (16:9)."""
-    width = param_float(obj.params, "width", 14.2222) * PX
-    height = width * 9 / 16
-    return QRectF(-width / 2, -height / 2, width, height)
+def camera_size(obj: SceneObject, frame_size: tuple[float, float]) -> tuple[float, float]:
+    """Width and height (Manim units) of what the camera shows; 0 = the whole frame."""
+    frame_width, frame_height = frame_size
+    width = param_float(obj.params, "width", 0.0) or frame_width
+    return width, width * frame_height / frame_width
 
 
-def camera_primitives(obj: SceneObject) -> list[Primitive]:
+def camera_primitives(obj: SceneObject, frame_size: tuple[float, float]) -> list[Primitive]:
     """Dashed frame with corner marks showing what the camera sees."""
-    rect = camera_rect(obj)
+    width, height = camera_size(obj, frame_size)
+    rect = QRectF(-width / 2 * PX, -height / 2 * PX, width * PX, height * PX)
     frame = QPainterPath()
     frame.addRect(rect)
     pen = QPen(QColor(255, 255, 255, 170), 2.0, Qt.PenStyle.DashLine)

@@ -58,6 +58,18 @@ def group_color(kind: AnimationKind) -> QColor:
     return QColor(palette.text_muted)
 
 
+def step_badges(step) -> str:
+    """Small marks for section start, sound and subtitle."""
+    marks = ""
+    if step.section.strip():
+        marks += " ▸"
+    if step.sound.strip():
+        marks += " ♪"
+    if step.subcaption.strip():
+        marks += " ❝"
+    return marks
+
+
 @dataclass
 class StepBlock:
     """Geometry of one step in the canvas."""
@@ -265,22 +277,27 @@ class TimelineCanvas(QWidget):
 
     def _paint_block(self, painter: QPainter, block: StepBlock) -> None:
         selected = block.index == self.cursor
-        wait = block.step.kind == StepKind.WAIT
+        wait = block.step.kind in (StepKind.WAIT, StepKind.CODE)
+        code = block.step.kind == StepKind.CODE
         header = block.header.adjusted(1, px(2), -1, -px(2))
-        accent = theme_color("warning") if wait else theme_color("accent")
+        accent = QColor("#9A72AC") if code else (theme_color("warning") if wait else theme_color("accent"))
         painter.setPen(QPen(accent if selected else theme_color("border_strong"), 2 if selected else 1))
         painter.setBrush(theme_color("accent_soft") if selected else theme_color("raised"))
         painter.drawRoundedRect(header, px(6), px(6))
         painter.setPen(theme_color("text"))
-        title = tr("timeline.wait_title", step=block.index + 1) if wait else tr("timeline.step_title", step=block.index + 1)
+        if code:
+            title = tr("timeline.code_title", step=block.index + 1)
+        else:
+            title = tr("timeline.wait_title", step=block.index + 1) if wait else tr("timeline.step_title", step=block.index + 1)
         mode_mark = {STEP_LAGGED: " ⋰", STEP_SEQUENCE: " →"}.get(block.step.mode, "") if not wait else ""
+        mode_mark += step_badges(block.step)
         text_rect = header.adjusted(px(6), 0, -px(4), 0)
         painter.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
                          painter.fontMetrics().elidedText(title + mode_mark, Qt.TextElideMode.ElideRight, int(text_rect.width())))
         if wait:
             body = QRectF(block.body.left() + 1, block.body.top(), block.body.width() - 2, self.lane_height)
             painter.setPen(Qt.PenStyle.NoPen)
-            hatch = QColor(current_palette().warning)
+            hatch = QColor("#9A72AC") if code else QColor(current_palette().warning)
             hatch.setAlphaF(0.18)
             painter.setBrush(hatch)
             painter.drawRoundedRect(body, px(5), px(5))
@@ -397,7 +414,7 @@ class TimelineCanvas(QWidget):
         if block is None:
             return
         self.stepClicked.emit(block.index)
-        if block.step.kind == StepKind.WAIT and point.x() >= block.header.right() - EDGE_GRAB:
+        if block.step.kind in (StepKind.WAIT, StepKind.CODE) and point.x() >= block.header.right() - EDGE_GRAB:
             self._drag = _Drag(DRAG_WAIT, point, block.index, original=block.step.wait_time, value=block.step.wait_time)
         elif point.y() < self.ruler_height + self.header_height:
             self._drag = _Drag(DRAG_STEP, point, block.index)
@@ -478,7 +495,7 @@ class TimelineCanvas(QWidget):
             self.setCursor(Qt.CursorShape.SizeHorCursor)
             return
         block = self._block_at_x(point.x())
-        if block is not None and block.step.kind == StepKind.WAIT and point.x() >= block.header.right() - EDGE_GRAB:
+        if block is not None and block.step.kind in (StepKind.WAIT, StepKind.CODE) and point.x() >= block.header.right() - EDGE_GRAB:
             self.setCursor(Qt.CursorShape.SizeHorCursor)
         elif hit is not None:
             self.setCursor(Qt.CursorShape.OpenHandCursor)

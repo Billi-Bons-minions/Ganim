@@ -33,6 +33,16 @@ class RenderJob:
     fps: int = 60
     total_animations: int = 1
     from_animation: int | None = None
+    transparent: bool = False
+    save_sections: bool = False
+
+    def extension(self) -> str:
+        """File extension Manim writes (transparent videos become ``.mov``)."""
+        if self.format == "png":
+            return "png"
+        if self.transparent and self.format == "mp4":
+            return "mov"
+        return self.format if self.format in OUTPUT_FORMATS else "mp4"
 
 
 def build_arguments(job: RenderJob) -> list[str]:
@@ -56,6 +66,10 @@ def build_arguments(job: RenderJob) -> list[str]:
         arguments += ["-r", f"{int(job.width)},{int(job.height)}", "--fps", str(int(job.fps))]
     if job.from_animation:
         arguments += ["-n", str(int(job.from_animation))]
+    if job.transparent:
+        arguments.append("--transparent")
+    if job.save_sections:
+        arguments.append("--save_sections")
     return arguments + [str(job.script_path), job.scene_class]
 
 
@@ -75,8 +89,11 @@ def render_environment(base: dict[str, str] | None = None) -> dict[str, str]:
 
 
 def find_output(media_dir: Path, output_name: str, file_format: str) -> Path | None:
-    """Return the newest rendered file named ``output_name`` (ignoring partial files)."""
-    suffix = "png" if file_format == "png" else file_format
+    """Return the newest rendered file named ``output_name`` (ignoring partial files).
+
+    ``file_format`` is the file extension (``mp4``, ``mov``, ``gif`` or ``png``).
+    """
+    suffix = file_format
     candidates = [
         path
         for path in Path(media_dir).rglob(f"{output_name}.{suffix}")

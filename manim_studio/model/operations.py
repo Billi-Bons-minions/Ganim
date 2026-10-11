@@ -434,6 +434,18 @@ def set_wait_time(scene: Scene, step_id: str, seconds: float) -> None:
     require_step(scene, step_id).wait_time = max(0.01, float(seconds))
 
 
+STEP_FIELDS = ("section", "subcaption", "sound", "sound_gain", "sound_offset", "code", "wait_time")
+
+
+def set_step_fields(scene: Scene, step_id: str, **values: Any) -> None:
+    """Change section, subtitle, sound or code of a step."""
+    step = require_step(scene, step_id)
+    for key, value in values.items():
+        if key not in STEP_FIELDS:
+            raise ModelError(f"unknown step field {key}")
+        setattr(step, key, value)
+
+
 def add_animation(scene: Scene, step_id: str, anim: Animation, index: int | None = None) -> str:
     """Add an animation to a step and return its id."""
     step = require_step(scene, step_id)

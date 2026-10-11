@@ -61,6 +61,15 @@ class SettingsDialog(QDialog):
         form.addRow("", hint)
         form.addRow(tr("settings.grid"), self.grid)
         form.addRow(tr("settings.latex_preview"), self.latex_preview)
+        self.cache_label = QLabel()
+        clear = QToolButton()
+        clear.setText(tr("settings.cache_clear"))
+        clear.clicked.connect(self._clear_cache)
+        cache_row = QHBoxLayout()
+        cache_row.addWidget(self.cache_label, 1)
+        cache_row.addWidget(clear)
+        form.addRow(tr("settings.cache"), cache_row)
+        self._show_cache_size()
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
@@ -76,6 +85,17 @@ class SettingsDialog(QDialog):
         index = combo.findData(current)
         combo.setCurrentIndex(max(0, index))
         return combo
+
+    def _show_cache_size(self) -> None:
+        from manim_studio.ui.context import cache_size
+
+        self.cache_label.setText(tr("settings.cache_size", size=f"{cache_size() / 1024 / 1024:.1f}"))
+
+    def _clear_cache(self) -> None:
+        from manim_studio.ui.context import clear_cache
+
+        clear_cache()
+        self._show_cache_size()
 
     def _browse(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, tr("settings.python"), self.python.text())

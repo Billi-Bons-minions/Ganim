@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import zipfile
 from pathlib import Path
 from typing import Any, Callable
 
@@ -45,6 +46,7 @@ from manim_studio.model.arrange import (
 )
 from manim_studio.model.assets import relative_asset_path, resolve_asset_path
 from manim_studio.model.frame import frame_box, frame_size
+from manim_studio.model.package import PACKAGE_SUFFIX, extract_package, save_package
 from manim_studio.model.playback import state_at_time, step_start_time
 from manim_studio.model.serialization import FILE_SUFFIX, ProjectFormatError
 from manim_studio.model.stage_edits import is_recording
@@ -172,6 +174,8 @@ class MainWindow(QMainWindow):
         self.act_open = self._action("open", self.open_dialog, std.Open, "open")
         self.act_save = self._action("save", self.save, std.Save, "save")
         self.act_save_as = self._action("save_as", self.save_as, std.SaveAs)
+        self.act_save_package = self._action("save_package", self.save_package, None, "package")
+        self.act_open_package = self._action("open_package", self.open_package_dialog, None, "package")
         self.act_export_script = self._action("export_script", self.export_script, "Ctrl+Shift+E", "code")
         self.act_export = self._action("export", self.export_media, "Ctrl+E", "export")
         self.act_quit = self._action("quit", self.close, std.Quit)
@@ -254,6 +258,8 @@ class MainWindow(QMainWindow):
         self.recent_menu = file_menu.addMenu(tr("menu.recent"))
         self.recent_menu.aboutToShow.connect(self._fill_recent_menu)
         file_menu.addActions([self.act_save, self.act_save_as])
+        file_menu.addSeparator()
+        file_menu.addActions([self.act_save_package, self.act_open_package])
         file_menu.addSeparator()
         file_menu.addActions([self.act_export, self.act_export_script])
         file_menu.addSeparator()
@@ -912,8 +918,11 @@ class MainWindow(QMainWindow):
             self.open_file(path, ask=False)
 
     def open_file(self, path: str, ask: bool = True) -> None:
-        """Open a project file."""
+        """Open a project file (or unpack and open a package)."""
         if ask and not self.maybe_save():
+            return
+        if Path(path).suffix == PACKAGE_SUFFIX:
+            self.open_package(path)
             return
         try:
             self.document.open(path)
@@ -956,6 +965,48 @@ class MainWindow(QMainWindow):
                         obj.params["path"] = relative_asset_path(str(absolute), new_base)
 
         self.document.edit_project(tr("undo.rebase_images"), rebase)
+
+    def save_package(self) -> None:
+        """Save the project together with all images and sounds as one file."""
+        default = Path(self.settings.last_directory("project")) / f"{self.document.path.stem if self.document.path else tr('window.untitled')}{PACKAGE_SUFFIX}"
+        path, _ = QFileDialog.getSaveFileName(self, tr("dialog.package_save_title"), str(default), tr("dialog.package_filter"))
+        if not path:
+            return
+        target = Path(path)
+        if target.suffix != PACKAGE_SUFFIX:
+            target = target.with_suffix(PACKAGE_SUFFIX)
+        try:
+            missing = save_package(self.document.project, target, self.document.base_dir)
+        except OSError as error:
+            QMessageBox.critical(self, tr("dialog.save_failed"), tr("dialog.save_failed_text", path=str(target), error=str(error)))
+            return
+        if missing:
+            QMessageBox.warning(self, tr("dialog.package_missing_title"), tr("dialog.package_missing", files="\n".join(missing)))
+        self.show_status(tr("status.package_saved", path=str(target)))
+
+    def open_package_dialog(self) -> None:
+        """Choose a package, unpack it into a folder and open it."""
+        if not self.maybe_save():
+            return
+        path, _ = QFileDialog.getOpenFileName(self, tr("dialog.package_open_title"), self.settings.last_directory("project"), tr("dialog.package_filter"))
+        if path:
+            self.open_package(path)
+
+    def open_package(self, path: str, folder: str | None = None) -> None:
+        """Unpack a package (next to it unless ``folder`` is given) and open the project."""
+        package = Path(path)
+        if folder is None:
+            default = package.parent / package.stem
+            folder = QFileDialog.getExistingDirectory(self, tr("dialog.package_folder_title"), str(default.parent)) or ""
+            if not folder:
+                return
+            folder = str(Path(folder) / package.stem)
+        try:
+            project_file = extract_package(package, folder)
+        except (OSError, ProjectFormatError, zipfile.BadZipFile) as error:
+            QMessageBox.critical(self, tr("dialog.open_failed"), tr("dialog.open_failed_text", path=path, error=str(error)))
+            return
+        self.open_file(str(project_file), ask=False)
 
     def _write(self, path: Path) -> bool:
         try:
@@ -1185,6 +1236,8 @@ class MainWindow(QMainWindow):
         if not self.maybe_save():
             event.ignore()
             return
+        self.context.autosaver.discard()
+        self.context.autosaver.stop()
         if self.render.is_busy():
             self.render.cancel()
         self.save_layout()

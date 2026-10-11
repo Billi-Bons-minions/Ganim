@@ -12,6 +12,7 @@ from manim_studio.i18n import tr
 from manim_studio.logging_setup import log
 from manim_studio.render.environment import EnvironmentReport, check_environment
 from manim_studio.render.tex_preview import TexPreviewCache
+from manim_studio.ui.autosave import AutoSaver
 from manim_studio.ui.controller import EditorController
 from manim_studio.ui.document import ProjectDocument
 from manim_studio.ui.editor_state import EditorState
@@ -22,6 +23,28 @@ from manim_studio.ui.settings import AppSettings
 def cache_dir() -> Path:
     """Return the application's cache folder."""
     return Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.CacheLocation))
+
+
+CACHE_FOLDERS = ("render", "still", "tex")
+
+
+def cache_size() -> int:
+    """Bytes used by rendered previews, still images and formula images."""
+    total = 0
+    for name in CACHE_FOLDERS:
+        for path in (cache_dir() / name).rglob("*"):
+            try:
+                if path.is_file():
+                    total += path.stat().st_size
+            except OSError:
+                continue
+    return total
+
+
+def clear_cache() -> None:
+    """Delete the render cache (it is rebuilt when needed)."""
+    for name in CACHE_FOLDERS:
+        shutil.rmtree(cache_dir() / name, ignore_errors=True)
 
 
 def data_dir() -> Path:
@@ -63,6 +86,7 @@ class AppContext(QObject):
         self.tex_cache = TexPreviewCache(cache_dir() / "tex", enabled=settings.latex_preview and latex_found, parent=self)
         self.environment: EnvironmentReport | None = None
         self.render = RenderController(self.document, self.editor, settings, self.latex_available, self.window, self)
+        self.autosaver = AutoSaver(self.document, data_dir() / "autosave", self)
         self._env_signals = _EnvironmentSignals()
         self._env_signals.done.connect(self._on_environment)
         self._checking = False

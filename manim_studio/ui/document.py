@@ -71,17 +71,18 @@ class ProjectDocument(QObject):
         self.project: Project = create_project(default_scene_name)
         self.path: Path | None = None
         self.undo_stack = QUndoStack(self)
+        self._recovered = False
         self.undo_stack.cleanChanged.connect(self._on_clean_changed)
 
     def _on_clean_changed(self, clean: bool) -> None:
-        self.dirtyChanged.emit(not clean)
+        self.dirtyChanged.emit(self.is_dirty)
 
     # --- state ---------------------------------------------------------------
 
     @property
     def is_dirty(self) -> bool:
-        """Return ``True`` if there are unsaved changes."""
-        return not self.undo_stack.isClean()
+        """Return ``True`` if there are unsaved changes (or a recovered backup was not saved yet)."""
+        return self._recovered or not self.undo_stack.isClean()
 
     @property
     def base_dir(self) -> Path | None:
@@ -122,6 +123,7 @@ class ProjectDocument(QObject):
 
     def new(self, default_scene_name: str) -> None:
         """Start an empty project."""
+        self._recovered = False
         self.project = create_project(default_scene_name)
         self._set_path(None)
         self.undo_stack.clear()
@@ -129,6 +131,7 @@ class ProjectDocument(QObject):
 
     def load(self, project: Project) -> None:
         """Show an in-memory project (e.g. an example) as a new, unsaved document."""
+        self._recovered = False
         self.project = project
         self._set_path(None)
         self.undo_stack.clear()
@@ -137,6 +140,7 @@ class ProjectDocument(QObject):
     def open(self, path: str | Path) -> None:
         """Load a project file (raises ``ProjectFormatError``)."""
         project = load_project(path)
+        self._recovered = False
         self.project = project
         self._set_path(Path(path).resolve())
         self.undo_stack.clear()
@@ -148,9 +152,19 @@ class ProjectDocument(QObject):
         if target is None:
             raise ValueError("no file name")
         save_project(self.project, target)
+        self._recovered = False
         self._set_path(target)
         self.undo_stack.setClean()
         self.dirtyChanged.emit(False)
+
+    def restore(self, project: Project, path: Path | None) -> None:
+        """Show a recovered backup; it counts as unsaved until it is saved."""
+        self.project = project
+        self._set_path(path)
+        self.undo_stack.clear()
+        self._recovered = True
+        self.dirtyChanged.emit(True)
+        self.changed.emit()
 
     def _set_path(self, path: Path | None) -> None:
         self.path = path

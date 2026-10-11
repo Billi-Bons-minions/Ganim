@@ -482,3 +482,16 @@ def test_reference_animations_fade_out_all_and_camera(window, qapp) -> None:
     qapp.processEvents()
     assert window.stage.view_scale() > 0
     window.act_camera_view.trigger()
+
+
+def test_open_package_from_window(window, tmp_path) -> None:
+    from manim_studio.model.package import save_package
+    from manim_studio.model.types import ObjectKind
+
+    window.controller.add_object(ObjectKind.CIRCLE)
+    package = tmp_path / "kreis.mspkg"
+    save_package(window.document.project, package, None)
+    window.document.new("leer")
+    window.open_package(str(package), str(tmp_path / "entpackt"))
+    assert window.document.path == (tmp_path / "entpackt" / "project.msproj").resolve()
+    assert [obj.kind for obj in window.editor.scene().objects] == [ObjectKind.CIRCLE]

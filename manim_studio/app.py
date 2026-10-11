@@ -39,9 +39,35 @@ class StudioApplication:
         self._create_window()
         if initial_file:
             QTimer.singleShot(0, lambda: self.window.open_file(initial_file, ask=False))
+        elif self.context.autosaver.backups():
+            QTimer.singleShot(300, self._offer_recovery)
         elif self.settings.show_welcome:
             QTimer.singleShot(450, lambda: self.window.show_welcome())
         QTimer.singleShot(300, self.context.check_environment)
+
+    def _offer_recovery(self) -> None:
+        """Offer to restore unsaved work from an earlier session (e.g. after a crash)."""
+        from datetime import datetime
+
+        backups = self.context.autosaver.backups()
+        if not backups:
+            return
+        backup = backups[0]
+        when = datetime.fromtimestamp(backup.saved_at).strftime("%d.%m.%Y %H:%M")
+        box = QMessageBox(self.window)
+        box.setIcon(QMessageBox.Icon.Question)
+        box.setWindowTitle(tr("recovery.title"))
+        box.setText(tr("recovery.text", name=backup.title or tr("window.untitled"), time=when))
+        restore = box.addButton(tr("recovery.restore"), QMessageBox.ButtonRole.AcceptRole)
+        discard = box.addButton(tr("recovery.discard"), QMessageBox.ButtonRole.DestructiveRole)
+        box.addButton(tr("recovery.later"), QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() is restore:
+            if self.context.autosaver.restore(backup):
+                self.context.editor.reset()
+                self.window.show_status(tr("recovery.restored"))
+        elif box.clickedButton() is discard:
+            self.context.autosaver.forget(backup)
 
     def _apply_preferences(self) -> None:
         from manim_studio.ui.theme import apply_theme

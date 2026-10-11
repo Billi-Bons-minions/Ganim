@@ -68,6 +68,7 @@ def dynamic_keys() -> set[str]:
     keys |= {f"export.scenes.{key}" for key in EXPORT_SCENES} | {f"export.transition.{key}" for key in ("cut", "fade")}
     keys |= {f"prop.step_{key}" for key in ("section", "subcaption", "sound_gain", "sound_offset")}
     keys |= {"banner.code", "lock.code_step", "action.add_code_step", "action.fade_out_all", "action.camera_view"}
+    keys |= {"action.save_package", "action.open_package"}
     keys |= {f"undo.{action}" for action in (VALUE,)}
     keys |= {f"lock.{reason}" for reason in ("transform_conflict",)}
     keys |= {f"prop.{point}_{axis}" for point in ("start", "end", "center") for axis in ("x", "y")}

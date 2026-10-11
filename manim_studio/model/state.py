@@ -2,15 +2,20 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, replace
 
+from manim_studio.model import groups
 from manim_studio.model.entities import Animation, Scene, SceneObject
+from manim_studio.model.extents import base_size, rotated_extent
 from manim_studio.model.geometry import graph_anchor, is_bound_graph
 from manim_studio.model.types import (
     ENTRANCE_ANIMATIONS,
     EXIT_ANIMATIONS,
+    MODIFIER_ANIMATIONS,
     RETURNING_RATE_FUNCTIONS,
     AnimationKind,
+    ObjectKind,
     StepKind,
     Visibility,
 )
@@ -57,17 +62,36 @@ def first_reference(scene: Scene, object_id: str) -> tuple[Animation, bool] | No
     return None
 
 
+def _first_reference_with_groups(scene: Scene, object_id: str) -> tuple[Animation, bool] | None:
+    """Like :func:`first_reference` but also counts animations of enclosing groups."""
+    ids = [object_id] + groups.ancestors(scene, object_id)
+    for step in scene.steps:
+        if step.kind != StepKind.PLAY:
+            continue
+        for anim in step.animations:
+            if anim.target_id in ids:
+                return anim, True
+            if anim.params.get("target") in ids:
+                return anim, False
+    return None
+
+
 def visible_at_start(scene: Scene, obj: SceneObject) -> bool:
     """Decide whether an object is added before the first step.
 
-    In automatic mode an object starts hidden if it is introduced by an
-    entrance animation or first used as the target of a transform.
+    In automatic mode an object starts hidden if it (or a group containing it)
+    is introduced by an entrance animation or first used as the target of a
+    transform.
     """
     if obj.visibility == Visibility.SHOWN:
         return True
     if obj.visibility == Visibility.HIDDEN:
         return False
-    reference = first_reference(scene, obj.id)
+    for group_id in groups.ancestors(scene, obj.id):
+        group = scene.object_by_id(group_id)
+        if group is not None and group.visibility == Visibility.HIDDEN:
+            return False
+    reference = _first_reference_with_groups(scene, obj.id)
     if reference is None:
         return True
     anim, is_main_target = reference
@@ -76,10 +100,47 @@ def visible_at_start(scene: Scene, obj: SceneObject) -> bool:
     return anim.kind not in ENTRANCE_ANIMATIONS
 
 
+_BRACE_THICKNESS = 0.27
+
+
+def brace_anchor(scene: Scene, brace: SceneObject) -> tuple[float, float] | None:
+    """Return the center of a brace attached to another object (estimated)."""
+    target = scene.object_by_id(brace.params.get("target"))
+    if target is None or target.id == brace.id:
+        return None
+    if groups.is_group(target):
+        tx, ty = groups.group_center_of_objects(scene, target.id)
+        left, bottom, right, top = groups.bounds_of(scene, groups.leaves(scene, target.id), {
+            leaf: initial_state(scene, scene.object_by_id(leaf)) for leaf in groups.leaves(scene, target.id)
+        })
+        width, height = right - left, top - bottom
+    else:
+        tx, ty = (graph_anchor(scene, target) if is_bound_graph(scene, target) else (target.x, target.y))
+        width, height = rotated_extent(*base_size(scene, target), target.rotation)
+    buff = float(brace.params.get("buff", 0.2))
+    offset_y = height / 2 + buff + _BRACE_THICKNESS / 2
+    offset_x = width / 2 + buff + _BRACE_THICKNESS / 2
+    direction = brace.params.get("direction", "down")
+    return {
+        "down": (tx, ty - offset_y),
+        "up": (tx, ty + offset_y),
+        "left": (tx - offset_x, ty),
+        "right": (tx + offset_x, ty),
+    }.get(direction, (tx, ty - offset_y))
+
+
 def initial_state(scene: Scene, obj: SceneObject) -> ObjectState:
     """Return the state of an object before the first step."""
-    x, y = graph_anchor(scene, obj) if is_bound_graph(scene, obj) else (obj.x, obj.y)
-    rotation = 0.0 if is_bound_graph(scene, obj) else obj.rotation
+    bound = is_bound_graph(scene, obj)
+    if bound:
+        x, y = graph_anchor(scene, obj)
+    elif groups.is_group(obj):
+        x, y = groups.group_center_of_objects(scene, obj.id)
+    elif obj.kind == ObjectKind.BRACE and brace_anchor(scene, obj) is not None:
+        x, y = brace_anchor(scene, obj)
+    else:
+        x, y = obj.x, obj.y
+    rotation = 0.0 if bound or groups.is_group(obj) else obj.rotation
     return ObjectState(
         object_id=obj.id,
         shape_id=obj.id,
@@ -112,10 +173,13 @@ def _apply_modifier(state: ObjectState, anim: Animation) -> ObjectState:
     return _apply_color(state, anim)
 
 
-def apply_animation(states: dict[str, ObjectState], anim: Animation) -> None:
+def apply_animation(states: dict[str, ObjectState], anim: Animation, scene: Scene | None = None) -> None:
     """Update ``states`` in place with the end result of one animation."""
     current = states.get(anim.target_id)
     if current is None:
+        return
+    if scene is not None and groups.is_group(scene.object_by_id(anim.target_id)):
+        apply_to_group(states, scene, anim, 1.0, partial=False)
         return
     returns = anim.rate_func in RETURNING_RATE_FUNCTIONS
     kind = anim.kind
@@ -142,6 +206,68 @@ def apply_animation(states: dict[str, ObjectState], anim: Animation) -> None:
         states[anim.target_id] = replace(current, visible=True)
 
 
+def _rotate_about(x: float, y: float, cx: float, cy: float, degrees: float) -> tuple[float, float]:
+    radians = math.radians(degrees)
+    dx, dy = x - cx, y - cy
+    return cx + dx * math.cos(radians) - dy * math.sin(radians), cy + dx * math.sin(radians) + dy * math.cos(radians)
+
+
+def apply_to_group(states: dict[str, ObjectState], scene: Scene, anim: Animation, progress: float, partial: bool) -> None:
+    """Apply an animation of a group to all of its members.
+
+    ``progress`` is the eased progress (1.0 for a finished animation);
+    ``partial`` selects the playback variant of the per-member effects.
+    """
+    from manim_studio.model.playback import apply_partial
+
+    leaf_ids = [leaf for leaf in groups.leaves(scene, anim.target_id) if leaf in states]
+    returns = anim.rate_func in RETURNING_RATE_FUNCTIONS and not partial
+    cx, cy = groups.group_center(scene, anim.target_id, states)
+    params = anim.params
+    if anim.kind in MODIFIER_ANIMATIONS - {AnimationKind.CHANGE_COLOR}:
+        if returns:
+            return
+        for leaf in leaf_ids:
+            state = states[leaf]
+            if anim.kind == AnimationKind.MOVE:
+                dx = (float(params.get("x", cx)) - cx) * progress
+                dy = (float(params.get("y", cy)) - cy) * progress
+                states[leaf] = replace(state, x=state.x + dx, y=state.y + dy, visible=True)
+            elif anim.kind == AnimationKind.SCALE:
+                factor = 1 + (float(params.get("factor", 1.0)) - 1) * progress
+                states[leaf] = replace(state, scale=state.scale * factor, x=cx + (state.x - cx) * factor, y=cy + (state.y - cy) * factor, visible=True)
+            else:
+                angle = float(params.get("angle", 0.0)) * progress
+                x, y = _rotate_about(state.x, state.y, cx, cy, angle)
+                states[leaf] = replace(state, rotation=state.rotation + angle, x=x, y=y, visible=True)
+    else:
+        for leaf in leaf_ids:
+            member_anim = Animation(anim.id, anim.kind, leaf, anim.run_time, anim.rate_func, dict(anim.params), anim.delay)
+            if partial:
+                apply_partial(states, member_anim, progress)
+            else:
+                apply_animation(states, member_anim)
+    group_state = states.get(anim.target_id)
+    if group_state is not None:
+        gx, gy = groups.group_center(scene, anim.target_id, states)
+        visible = any(states[leaf].visible for leaf in leaf_ids) if leaf_ids else group_state.visible
+        states[anim.target_id] = replace(group_state, x=gx, y=gy, visible=visible)
+
+
+def refresh_group_states(scene: Scene, states: dict[str, ObjectState]) -> dict[str, ObjectState]:
+    """Recompute group centers and visibility from their members (after members moved on their own)."""
+    for obj in scene.objects:
+        if not groups.is_group(obj) or obj.id not in states:
+            continue
+        leaf_ids = [leaf for leaf in groups.leaves(scene, obj.id) if leaf in states]
+        if not leaf_ids:
+            continue
+        gx, gy = groups.group_center(scene, obj.id, states)
+        visible = any(states[leaf].visible for leaf in leaf_ids)
+        states[obj.id] = replace(states[obj.id], x=gx, y=gy, visible=visible)
+    return states
+
+
 def states_after(scene: Scene, step_index: int) -> dict[str, ObjectState]:
     """Return the state of every object after ``step_index`` (``START`` = before step 1)."""
     states = {obj.id: initial_state(scene, obj) for obj in scene.objects}
@@ -150,7 +276,8 @@ def states_after(scene: Scene, step_index: int) -> dict[str, ObjectState]:
         if step.kind != StepKind.PLAY:
             continue
         for anim in step.animations:
-            apply_animation(states, anim)
+            apply_animation(states, anim, scene)
+        refresh_group_states(scene, states)
     return states
 
 

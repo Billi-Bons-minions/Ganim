@@ -18,6 +18,12 @@ from manim_studio.codegen.literals import (
     py_range,
     py_str,
 )
+from manim_studio.codegen.objects_extra import (
+    EXTRA_CONSTRUCTORS,
+    brace_code,
+    group_code,
+)
+from manim_studio.codegen.objects_extra import text as extra_text
 from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.expression import ExpressionError, parse_expression
@@ -186,6 +192,7 @@ def image_code(obj: SceneObject, base_dir: str | Path | None) -> list[str]:
 
 
 _CONSTRUCTORS: dict[ObjectKind, Callable[[SceneObject], list[str]]] = {
+    **EXTRA_CONSTRUCTORS,
     ObjectKind.CIRCLE: _circle,
     ObjectKind.SQUARE: _square,
     ObjectKind.RECTANGLE: _rectangle,
@@ -194,7 +201,7 @@ _CONSTRUCTORS: dict[ObjectKind, Callable[[SceneObject], list[str]]] = {
     ObjectKind.LINE: _line,
     ObjectKind.ARROW: _arrow,
     ObjectKind.DOT: _dot,
-    ObjectKind.TEXT: _text,
+    ObjectKind.TEXT: extra_text,
     ObjectKind.MATH_TEX: _math_tex,
     ObjectKind.AXES: _axes,
     ObjectKind.NUMBER_PLANE: _number_plane,
@@ -211,6 +218,10 @@ def _placement(obj: SceneObject, variable: str) -> list[str]:
 
 def _post_style(obj: SceneObject, variable: str) -> list[str]:
     lines: list[str] = []
+    if obj.kind == ObjectKind.MATRIX:
+        lines.append(f"{variable}.set_color({py_color(obj.fill_color)})")
+    if obj.kind in (ObjectKind.TEX, ObjectKind.MATRIX, ObjectKind.DECIMAL_NUMBER) and float(obj.fill_opacity) != 1.0:
+        lines.append(f"{variable}.set_fill(opacity={fmt_float(obj.fill_opacity)})")
     if obj.kind == ObjectKind.MATH_TEX and float(obj.fill_opacity) != 1.0:
         lines.append(f"{variable}.set_fill(opacity={fmt_float(obj.fill_opacity)})")
     if obj.kind == ObjectKind.IMAGE:
@@ -221,19 +232,37 @@ def _post_style(obj: SceneObject, variable: str) -> list[str]:
     return lines
 
 
+def _special_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> tuple[list[str], bool] | None:
+    """Code for objects that depend on others; returns ``(lines, needs_placement)``."""
+    variable = names[obj.id]
+    if obj.kind == ObjectKind.GROUP:
+        member_ids = [m for m in obj.params.get("members", []) if m in names]
+        if not member_ids:
+            raise CodegenError("group_empty", obj.name)
+        return group_code(variable, [names[m] for m in member_ids]), False
+    if obj.kind == ObjectKind.BRACE:
+        target = obj.params.get("target")
+        attached = target in names and target != obj.id
+        return brace_code(obj, variable, names[target] if attached else None), not attached
+    return None
+
+
 def object_code(scene: Scene, obj: SceneObject, names: dict[str, str], base_dir: str | Path | None) -> list[str]:
     """Return the lines that create, place and style one object."""
     variable = names[obj.id]
     try:
+        special = _special_code(scene, obj, names)
         axes = bound_axes(scene, obj) if obj.kind == ObjectKind.FUNCTION_GRAPH else None
-        if axes is not None:
-            lines = assign(variable, bound_graph_code(obj, names[axes.id]))
+        if special is not None:
+            lines, place = special
+        elif axes is not None:
+            lines, place = assign(variable, bound_graph_code(obj, names[axes.id])), False
         elif obj.kind == ObjectKind.IMAGE:
-            lines = assign(variable, image_code(obj, base_dir))
+            lines, place = assign(variable, image_code(obj, base_dir)), True
         else:
-            lines = assign(variable, _CONSTRUCTORS[obj.kind](obj))
+            lines, place = assign(variable, _CONSTRUCTORS[obj.kind](obj)), True
         lines += _post_style(obj, variable)
-        if axes is None:
+        if place:
             lines += _placement(obj, variable)
     except LiteralError as error:
         raise CodegenError("value_invalid", f"{obj.name}: {error}") from None
@@ -241,6 +270,39 @@ def object_code(scene: Scene, obj: SceneObject, names: dict[str, str], base_dir:
         if isinstance(error, CodegenError):
             raise
         raise CodegenError("value_invalid", f"{obj.name}: {error}") from None
-    if obj.z_index:
+    if obj.z_index and obj.kind != ObjectKind.GROUP:
         lines.append(f"{variable}.set_z_index({fmt_int(obj.z_index)})")
     return lines
+
+
+def dependencies(scene: Scene, obj: SceneObject) -> list[str]:
+    """Return ids of objects that must be created before ``obj``."""
+    result: list[str] = []
+    if obj.kind == ObjectKind.FUNCTION_GRAPH and bound_axes(scene, obj) is not None:
+        result.append(str(obj.params.get("axes_id")))
+    if obj.kind == ObjectKind.BRACE and obj.params.get("target"):
+        result.append(str(obj.params.get("target")))
+    if obj.kind == ObjectKind.GROUP:
+        result += [str(member) for member in obj.params.get("members", [])]
+    for key in ("graph_id", "other_graph_id"):
+        if obj.params.get(key):
+            result.append(str(obj.params.get(key)))
+    return [dep for dep in result if scene.object_by_id(dep) is not None and dep != obj.id]
+
+
+def creation_order(scene: Scene) -> list[SceneObject]:
+    """Objects sorted so that every object comes after the ones it depends on."""
+    remaining = list(scene.objects)
+    done: set[str] = set()
+    ordered: list[SceneObject] = []
+    while remaining:
+        progress = False
+        for obj in list(remaining):
+            if all(dep in done for dep in dependencies(scene, obj)):
+                ordered.append(obj)
+                done.add(obj.id)
+                remaining.remove(obj)
+                progress = True
+        if not progress:
+            raise CodegenError("dependency_cycle", ", ".join(obj.name for obj in remaining))
+    return ordered

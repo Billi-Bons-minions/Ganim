@@ -265,3 +265,141 @@ def test_step_reorder_and_scrubbing(window) -> None:
     assert window.editor.playhead >= 1.5
     window.playback.stop()
     assert window.editor.playhead is None
+
+
+def test_groups_layers_locking_and_hiding(window) -> None:
+    from PySide6.QtWidgets import QGraphicsItem
+
+    from manim_studio.model.types import ObjectKind
+    from manim_studio.ui.stage.items import GroupItem
+
+    controller = window.controller
+    first = controller.add_object(ObjectKind.CIRCLE, -2.0, 0.0)
+    second = controller.add_object(ObjectKind.SQUARE, 2.0, 0.0)
+    window.editor.select_objects([first, second])
+    window.act_group.trigger()
+    group = window.editor.selected_objects[0]
+    assert window.editor.scene().object_by_id(group).kind == ObjectKind.GROUP
+    assert isinstance(window.stage._items[group], GroupItem)
+    assert window.stage._selectable_id(first) == group
+    assert window.objects.topLevelItemCount() == 1 and window.objects.topLevelItem(0).childCount() == 2
+    window.stage._entered_group = group
+    assert window.stage._selectable_id(first) == first
+    window.editor.select_objects([group])
+    window.act_ungroup.trigger()
+    assert sorted(window.editor.selected_objects) == sorted([first, second])
+    assert window.objects.topLevelItemCount() == 2
+
+    controller.set_locked([first], True)
+    assert not window.stage._items[first].flags() & QGraphicsItem.GraphicsItemFlag.ItemIsSelectable
+    controller.select_all()
+    assert window.editor.selected_objects == [second]
+    controller.set_hidden([second], True)
+    assert not window.stage._items[second].isVisible()
+    window.document.undo_stack.undo()
+    assert window.stage._items[second].isVisible()
+
+    controller.rename_object(second, "Box")
+    assert window.objects.item_for(second).text(0) == "Box"
+
+
+def test_align_zoom_and_rulers(window) -> None:
+    from manim_studio.model.types import ObjectKind
+
+    controller = window.controller
+    first = controller.add_object(ObjectKind.CIRCLE, -2.0, 1.0)
+    second = controller.add_object(ObjectKind.SQUARE, 2.0, -1.0)
+    window.editor.select_objects([first, second])
+    window.arrange("left")
+    assert window.stage.item_rect(first).left() == pytest.approx(window.stage.item_rect(second).left(), abs=0.5)
+    window.arrange("vcenter")
+    assert window.stage.item_rect(first).center().y() == pytest.approx(window.stage.item_rect(second).center().y(), abs=0.5)
+    assert window.top_ruler.isVisible()
+    window.act_rulers.trigger()
+    assert not window.top_ruler.isVisible() and not window.settings.show_rulers
+    window.act_rulers.trigger()
+    zoom = window.stage.view_scale()
+    window.editor.select_objects([first])
+    window.zoom_to_selection()
+    assert window.stage.view_scale() > zoom
+    rect = window.stage.item_rect(second).translated(2 / window.stage.view_scale(), 0)
+    correction, guides = window.stage._object_snap(rect, {second})
+    assert correction.x() == pytest.approx(-2 / window.stage.view_scale(), abs=1e-6) and guides
+
+
+def test_polygon_vertices_and_line_endpoints_on_stage(window, qapp) -> None:
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtTest import QTest
+
+    from manim_studio.model.types import ObjectKind
+    from manim_studio.ui.stage.items import ROLE_ENDPOINT, ROLE_VERTEX
+
+    controller = window.controller
+    polygon = controller.add_object(ObjectKind.POLYGON, 0.0, 0.0)
+    qapp.processEvents()
+    handles = [handle for handle in window.stage._handles if handle.role == ROLE_VERTEX]
+    assert len(handles) == 5
+    before = [list(point) for point in window.editor.scene().object_by_id(polygon).params["points"]]
+    start = window.stage.mapFromScene(handles[1].scenePos())
+    end = start + QPoint(0, -120)
+    viewport = window.stage.viewport()
+    QTest.mousePress(viewport, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
+    QTest.mouseMove(viewport, start + QPoint(0, -60))
+    QTest.mouseMove(viewport, end)
+    QTest.mouseRelease(viewport, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, end)
+    after = window.editor.scene().object_by_id(polygon).params["points"]
+    assert after[1][1] > before[1][1] and after[0] == before[0]
+    controller.remove_vertex(polygon, 0)
+    assert len(window.editor.scene().object_by_id(polygon).params["points"]) == 4
+
+    line = controller.add_object(ObjectKind.LINE, 0.0, 0.0)
+    qapp.processEvents()
+    assert [handle.role for handle in window.stage._handles] == [ROLE_ENDPOINT, ROLE_ENDPOINT]
+    window.stage.endpointMoved.emit(line, 1, 3.0, 2.0)
+    obj = window.editor.scene().object_by_id(line)
+    from manim_studio.model.operations import line_endpoints
+
+    assert line_endpoints(obj)[1] == pytest.approx((3.0, 2.0), abs=1e-4)
+
+
+def test_inspector_editors_and_multi_selection(window) -> None:
+    from PySide6.QtWidgets import QLabel
+
+    from manim_studio.i18n import tr
+    from manim_studio.model.types import ObjectKind
+    from manim_studio.ui.data_editors import FontPicker, PointsEditor, TableEditor, WordColorsEditor
+    from manim_studio.ui.widgets import SpinBox
+
+    controller = window.controller
+    polygon = controller.add_object(ObjectKind.POLYGON, 0.0, 0.0)
+    editor = window.properties.findChild(PointsEditor)
+    assert editor is not None and editor.table.rowCount() == 5
+    editor.table.setCurrentCell(0, 0)
+    editor._add()
+    assert len(window.editor.scene().object_by_id(polygon).params["points"]) == 6
+    assert editor.table.rowCount() == 6
+
+    table = controller.add_object(ObjectKind.TABLE, 3.0, 0.0)
+    grid = window.properties.findChild(TableEditor)
+    width = grid.table.columnCount()
+    grid._add_column()
+    rows = window.editor.scene().object_by_id(table).params["rows"]
+    assert all(len(row) == width + 1 for row in rows)
+
+    text = controller.add_object(ObjectKind.TEXT, 0.0, 2.0)
+    assert window.properties.findChild(FontPicker) is not None
+    words = window.properties.findChild(WordColorsEditor)
+    words._add()
+    assert len(window.editor.scene().object_by_id(text).params["colored_words"]) == 1
+    window.refresh_code()
+    assert "t2c=" in window.code.editor.toPlainText()
+
+    other = controller.add_object(ObjectKind.TEXT, 0.0, -2.0)
+    window.editor.select_objects([text, other])
+    labels = {label.text() for label in window.properties.findChildren(QLabel)}
+    assert tr("param.font_size") in labels and tr("prop.center_x") in labels
+
+    spin = SpinBox(-10.0, 10.0, 0.1, 3)
+    spin.lineEdit().setText("pi/2")
+    spin.interpretText()
+    assert spin.value() == pytest.approx(1.571, abs=1e-3)

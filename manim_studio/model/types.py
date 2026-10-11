@@ -22,6 +22,24 @@ class ObjectKind(str, Enum):
     NUMBER_PLANE = "number_plane"
     FUNCTION_GRAPH = "function_graph"
     IMAGE = "image"
+    NUMBER_LINE = "number_line"
+    VECTOR = "vector"
+    DOUBLE_ARROW = "double_arrow"
+    DASHED_LINE = "dashed_line"
+    BRACE = "brace"
+    POLYGON = "polygon"
+    REGULAR_POLYGON = "regular_polygon"
+    STAR = "star"
+    ARC = "arc"
+    SECTOR = "sector"
+    ANNULUS = "annulus"
+    DECIMAL_NUMBER = "decimal_number"
+    TABLE = "table"
+    MATRIX = "matrix"
+    CODE = "code"
+    TEX = "tex"
+    MARKUP_TEXT = "markup_text"
+    GROUP = "group"
 
 
 class AnimationKind(str, Enum):
@@ -115,6 +133,14 @@ RATE_FUNCTIONS: dict[str, str] = {
 
 #: Rate functions that end where they started (f(1) == 0).
 RETURNING_RATE_FUNCTIONS = frozenset({"there_and_back", "there_and_back_with_pause", "wiggle"})
+
+#: Kinds whose Manim objects need a LaTeX installation.
+LATEX_KINDS = frozenset({ObjectKind.MATH_TEX, ObjectKind.TEX, ObjectKind.MATRIX})
+
+#: Line-like kinds that get two endpoint handles on the stage.
+LINE_KINDS = frozenset(
+    {ObjectKind.LINE, ObjectKind.ARROW, ObjectKind.VECTOR, ObjectKind.DOUBLE_ARROW, ObjectKind.DASHED_LINE}
+)
 
 #: Manim frame size in scene units (16:9).
 FRAME_WIDTH = 8.0 * 16.0 / 9.0

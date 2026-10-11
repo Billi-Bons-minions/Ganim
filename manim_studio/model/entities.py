@@ -37,6 +37,8 @@ class SceneObject:
     z_index: int = 0
     visibility: Visibility = Visibility.AUTO
     params: dict[str, Any] = field(default_factory=dict)
+    locked: bool = False
+    editor_hidden: bool = False
 
 
 @dataclass

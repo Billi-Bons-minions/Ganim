@@ -70,16 +70,36 @@ def add_object(scene: Scene, obj: SceneObject, index: int | None = None) -> str:
     return obj.id
 
 
+#: Object parameters that refer to other objects.
+REFERENCE_PARAMS = ("axes_id", "target", "graph_id", "other_graph_id")
+
+
+def _expand_for_delete(scene: Scene, object_ids: Iterable[str]) -> set[str]:
+    ids: set[str] = set()
+    for object_id in object_ids:
+        ids.add(object_id)
+        obj = scene.object_by_id(object_id)
+        if obj is not None and obj.kind.value == "group":
+            ids |= _expand_for_delete(scene, obj.params.get("members", []))
+    return ids
+
+
 def remove_objects(scene: Scene, object_ids: Iterable[str]) -> None:
-    """Delete objects together with all animations and references using them."""
-    ids = set(object_ids)
+    """Delete objects (groups with their members) and everything referring to them."""
+    ids = _expand_for_delete(scene, object_ids)
     scene.objects = [obj for obj in scene.objects if obj.id not in ids]
     for obj in scene.objects:
-        if obj.params.get("axes_id") in ids:
-            obj.params["axes_id"] = None
+        for key in REFERENCE_PARAMS:
+            if obj.params.get(key) in ids:
+                obj.params[key] = None
+        if isinstance(obj.params.get("members"), list):
+            obj.params["members"] = [member for member in obj.params["members"] if member not in ids]
+    empty_groups = [obj.id for obj in scene.objects if obj.kind.value == "group" and not obj.params.get("members")]
+    if empty_groups:
+        scene.objects = [obj for obj in scene.objects if obj.id not in empty_groups]
     for step in scene.steps:
         step.animations = [
-            anim for anim in step.animations if anim.target_id not in ids and anim.params.get("target") not in ids
+            anim for anim in step.animations if anim.target_id not in ids | set(empty_groups) and anim.params.get("target") not in ids
         ]
 
 
@@ -100,19 +120,31 @@ def set_object_param(scene: Scene, object_id: str, key: str, value: Any) -> None
     obj.params[key] = value
 
 
-def translate_objects(scene: Scene, object_ids: Iterable[str], dx: float, dy: float) -> None:
-    """Move objects by a delta."""
+def _movable_leaves(scene: Scene, object_ids: Iterable[str]) -> list[str]:
+    from manim_studio.model import groups
+
+    result: list[str] = []
     for object_id in object_ids:
+        for leaf in groups.leaves(scene, object_id):
+            if leaf not in result:
+                result.append(leaf)
+    return result
+
+
+def translate_objects(scene: Scene, object_ids: Iterable[str], dx: float, dy: float) -> None:
+    """Move objects (groups move all their members) by a delta."""
+    for object_id in _movable_leaves(scene, object_ids):
         obj = require_object(scene, object_id)
         obj.x = round(obj.x + dx, 6)
         obj.y = round(obj.y + dy, 6)
 
 
-def scale_object(scene: Scene, object_id: str, factor: float) -> None:
-    """Scale all size parameters of an object by ``factor``."""
-    obj = require_object(scene, object_id)
+def _scale_params(obj: SceneObject, factor: float) -> None:
     for spec in kind_info(obj.kind).params:
         if not spec.scalable:
+            continue
+        if spec.key == "points":
+            obj.params["points"] = [[round(float(x) * factor, 4), round(float(y) * factor, 4)] for x, y in obj.params.get("points", [])]
             continue
         value = float(obj.params.get(spec.key, spec.default)) * factor
         if spec.minimum is not None:
@@ -122,10 +154,198 @@ def scale_object(scene: Scene, object_id: str, factor: float) -> None:
         obj.params[spec.key] = round(value, 4)
 
 
-def rotate_object(scene: Scene, object_id: str, delta: float) -> None:
-    """Rotate an object by ``delta`` degrees."""
+def scale_object(scene: Scene, object_id: str, factor: float) -> None:
+    """Scale an object's size parameters (groups: members around the group center)."""
+    from manim_studio.model import groups
+
     obj = require_object(scene, object_id)
-    obj.rotation = round((obj.rotation + delta + 180.0) % 360.0 - 180.0, 4)
+    if not groups.is_group(obj):
+        _scale_params(obj, factor)
+        return
+    cx, cy = groups.group_center_of_objects(scene, object_id)
+    for leaf in groups.leaves(scene, object_id):
+        member = require_object(scene, leaf)
+        _scale_params(member, factor)
+        member.x = round(cx + (member.x - cx) * factor, 6)
+        member.y = round(cy + (member.y - cy) * factor, 6)
+
+
+def rotate_object(scene: Scene, object_id: str, delta: float) -> None:
+    """Rotate an object by ``delta`` degrees (groups: around the group center)."""
+    import math
+
+    from manim_studio.model import groups
+
+    obj = require_object(scene, object_id)
+    targets = groups.leaves(scene, object_id) if groups.is_group(obj) else [object_id]
+    cx, cy = groups.group_center_of_objects(scene, object_id) if groups.is_group(obj) else (obj.x, obj.y)
+    radians = math.radians(delta)
+    for leaf in targets:
+        member = require_object(scene, leaf)
+        member.rotation = round((member.rotation + delta + 180.0) % 360.0 - 180.0, 4)
+        if groups.is_group(obj):
+            dx, dy = member.x - cx, member.y - cy
+            member.x = round(cx + dx * math.cos(radians) - dy * math.sin(radians), 6)
+            member.y = round(cy + dx * math.sin(radians) + dy * math.cos(radians), 6)
+
+
+def group_objects(scene: Scene, object_ids: list[str], name: str) -> str:
+    """Put objects into a new group and return the group id."""
+    from manim_studio.model import groups
+    from manim_studio.model.factory import create_object
+    from manim_studio.model.types import ObjectKind
+
+    ids = [object_id for object_id in dict.fromkeys(object_ids) if scene.object_by_id(object_id) is not None]
+    if len(ids) < 2:
+        raise ModelError("a group needs at least two objects")
+    for object_id in ids:
+        parent = groups.parent_group(scene, object_id)
+        if parent is not None:
+            require_object(scene, parent).params["members"].remove(object_id)
+    group = create_object(ObjectKind.GROUP, name, members=list(ids))
+    first = min(scene.objects.index(require_object(scene, object_id)) for object_id in ids)
+    scene.objects.insert(first, group)
+    return group.id
+
+
+def ungroup(scene: Scene, group_id: str) -> list[str]:
+    """Dissolve a group; its animations are copied to the members. Returns the members."""
+    from manim_studio.model import groups
+    from manim_studio.model.factory import clone_animation
+    from manim_studio.model.types import TRANSFORM_ANIMATIONS
+
+    group = require_object(scene, group_id)
+    if not groups.is_group(group):
+        raise ModelError("not a group")
+    member_ids = list(group.params.get("members", []))
+    parent = groups.parent_group(scene, group_id)
+    if parent is not None:
+        parent_members = require_object(scene, parent).params["members"]
+        index = parent_members.index(group_id)
+        parent_members[index:index + 1] = member_ids
+    for step in scene.steps:
+        updated: list[Animation] = []
+        for anim in step.animations:
+            if anim.target_id != group_id:
+                updated.append(anim)
+                continue
+            if anim.kind in TRANSFORM_ANIMATIONS:
+                continue
+            for member in member_ids:
+                copy_anim = clone_animation(anim)
+                copy_anim.target_id = member
+                updated.append(copy_anim)
+        step.animations = updated
+    scene.objects.remove(group)
+    for obj in scene.objects:
+        if obj.params.get("target") == group_id:
+            obj.params["target"] = None
+    return member_ids
+
+
+def reorder_objects(scene: Scene, ordered_ids: list[str]) -> None:
+    """Reorder the object list (drawing order) to match ``ordered_ids``."""
+    by_id = {obj.id: obj for obj in scene.objects}
+    if sorted(ordered_ids) != sorted(by_id):
+        raise ModelError("object order does not match the scene")
+    scene.objects = [by_id[object_id] for object_id in ordered_ids]
+
+
+def set_editor_flags(scene: Scene, object_ids: Iterable[str], locked: bool | None = None, hidden: bool | None = None) -> None:
+    """Lock or hide objects in the editor (has no effect on the rendered video)."""
+    for object_id in object_ids:
+        obj = require_object(scene, object_id)
+        if locked is not None:
+            obj.locked = locked
+        if hidden is not None:
+            obj.editor_hidden = hidden
+
+
+def _points_center(points: list[list[float]]) -> tuple[float, float]:
+    xs = [float(point[0]) for point in points]
+    ys = [float(point[1]) for point in points]
+    return (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+
+
+def _set_points_anchored(obj: SceneObject, points: list[list[float]]) -> None:
+    """Replace the vertices and shift the center so that unchanged vertices stay in place.
+
+    The object position is the center of the vertices' bounding box (Manim's
+    ``move_to``), so the center moves with the bounding box, rotated like the shape.
+    """
+    import math
+
+    old = obj.params.get("points", [])
+    if old and points:
+        (ox, oy), (nx, ny) = _points_center(old), _points_center(points)
+        dx, dy = nx - ox, ny - oy
+        radians = math.radians(obj.rotation)
+        obj.x = round(obj.x + dx * math.cos(radians) - dy * math.sin(radians), 6)
+        obj.y = round(obj.y + dx * math.sin(radians) + dy * math.cos(radians), 6)
+    obj.params["points"] = points
+
+
+def _polygon_points(obj: SceneObject) -> list[list[float]]:
+    return [[float(x), float(y)] for x, y in obj.params.get("points", [])]
+
+
+def set_polygon_point(scene: Scene, object_id: str, index: int, x: float, y: float) -> None:
+    """Move one vertex of a polygon (in the polygon's own coordinates); the others keep their place."""
+    obj = require_object(scene, object_id)
+    points = _polygon_points(obj)
+    if not 0 <= index < len(points):
+        raise ModelError("unknown vertex")
+    points[index] = [round(x, 4), round(y, 4)]
+    _set_points_anchored(obj, points)
+
+
+def insert_polygon_point(scene: Scene, object_id: str, index: int, x: float, y: float) -> None:
+    """Insert a vertex before ``index``."""
+    obj = require_object(scene, object_id)
+    points = _polygon_points(obj)
+    points.insert(max(0, min(index, len(points))), [round(x, 4), round(y, 4)])
+    _set_points_anchored(obj, points)
+
+
+def remove_polygon_point(scene: Scene, object_id: str, index: int) -> None:
+    """Remove a vertex (at least three remain)."""
+    obj = require_object(scene, object_id)
+    points = _polygon_points(obj)
+    if len(points) <= 3:
+        raise ModelError("a polygon needs at least three vertices")
+    if not 0 <= index < len(points):
+        raise ModelError("unknown vertex")
+    points.pop(index)
+    _set_points_anchored(obj, points)
+
+
+MIN_LINE_LENGTH = 0.05
+
+
+def line_endpoints(obj: SceneObject) -> tuple[tuple[float, float], tuple[float, float]]:
+    """Return the start and end point of a line-like object."""
+    import math
+
+    half = float(obj.params.get("length", 3.0)) / 2
+    radians = math.radians(obj.rotation)
+    dx, dy = half * math.cos(radians), half * math.sin(radians)
+    return (obj.x - dx, obj.y - dy), (obj.x + dx, obj.y + dy)
+
+
+def set_line_endpoint(scene: Scene, object_id: str, which: int, x: float, y: float) -> None:
+    """Move the start (0) or end (1) of a line; the other end stays where it is."""
+    import math
+
+    obj = require_object(scene, object_id)
+    ends = list(line_endpoints(obj))
+    ends[1 if which else 0] = (x, y)
+    (x0, y0), (x1, y1) = ends
+    length = math.hypot(x1 - x0, y1 - y0)
+    if length < MIN_LINE_LENGTH:
+        raise ModelError("line too short")
+    obj.x, obj.y = round((x0 + x1) / 2, 6), round((y0 + y1) / 2, 6)
+    obj.rotation = round(math.degrees(math.atan2(y1 - y0, x1 - x0)), 6)
+    obj.params["length"] = round(length, 6)
 
 
 def change_z_index(scene: Scene, object_ids: Iterable[str], delta: int) -> None:
@@ -136,7 +356,11 @@ def change_z_index(scene: Scene, object_ids: Iterable[str], delta: int) -> None:
 
 
 def paste_objects(scene: Scene, objects: Iterable[SceneObject], dx: float, dy: float) -> list[str]:
-    """Insert copies of objects (new ids and names) and return their ids."""
+    """Insert copies of objects (new ids and names) and return the top-level ids.
+
+    Groups keep their members if they are part of ``objects``; references to
+    objects that are not copied stay as they are (or are cleared if missing).
+    """
     originals = list(objects)
     copies: list[SceneObject] = []
     names = [obj.name for obj in scene.objects]
@@ -148,12 +372,16 @@ def paste_objects(scene: Scene, objects: Iterable[SceneObject], dx: float, dy: f
         copies.append(clone)
     mapping = {old.id: new.id for old, new in zip(originals, copies)}
     remap_references(copies, [], mapping)
+    existing = {obj.id for obj in scene.objects} | set(mapping.values())
     for clone in copies:
-        if clone.params.get("axes_id") and scene.object_by_id(clone.params["axes_id"]) is None:
-            if clone.params["axes_id"] not in mapping.values():
-                clone.params["axes_id"] = None
+        for key in REFERENCE_PARAMS:
+            if clone.params.get(key) and clone.params[key] not in existing:
+                clone.params[key] = None
+        if isinstance(clone.params.get("members"), list):
+            clone.params["members"] = [member for member in clone.params["members"] if member in mapping.values()]
         scene.objects.append(clone)
-    return [clone.id for clone in copies]
+    member_ids = {member for clone in copies for member in clone.params.get("members", []) or []}
+    return [clone.id for clone in copies if clone.id not in member_ids]
 
 
 # --- steps and animations ----------------------------------------------------

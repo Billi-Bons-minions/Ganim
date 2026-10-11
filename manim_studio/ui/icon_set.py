@@ -498,6 +498,37 @@ def _distribute(horizontal: bool) -> Drawer:
     return draw
 
 
+def _table_edit(row: bool, add: bool) -> Drawer:
+    def draw(p: QPainter) -> None:
+        _rect(p, 3, 3, 13, 13, 1.5)
+        if row:
+            _line(p, 3, 9.5, 16, 9.5)
+        else:
+            _line(p, 9.5, 3, 9.5, 16)
+        _line(p, 15, 19, 22, 19)
+        if add:
+            _line(p, 18.5, 15.5, 18.5, 22.5)
+
+    return draw
+
+
+def _ruler(p: QPainter) -> None:
+    _poly(p, [(3, 9), (21, 9), (21, 16), (3, 16)], closed=True)
+    for x in (6, 9, 12, 15, 18):
+        _line(p, x, 9, x, 12 if x % 2 else 13.5)
+
+
+def _zoom_selection(p: QPainter) -> None:
+    _magnifier(p)
+    _rect(p, 7, 7, 6, 6, 1)
+
+
+def _vertex(p: QPainter) -> None:
+    _poly(p, [(4, 19), (10, 5), (20, 10), (17, 20)], closed=True)
+    for x, y in ((4, 19), (10, 5), (20, 10), (17, 20)):
+        _rect(p, x - 2, y - 2, 4, 4, 0.5, fill=True)
+
+
 # --- animation kinds ---------------------------------------------------------------------
 
 
@@ -664,6 +695,13 @@ ICONS: dict[str, Drawer] = {
     "align_bottom": _align("bottom"),
     "distribute_h": _distribute(True),
     "distribute_v": _distribute(False),
+    "row_add": _table_edit(True, True),
+    "row_remove": _table_edit(True, False),
+    "column_add": _table_edit(False, True),
+    "column_remove": _table_edit(False, False),
+    "zoom_selection": _zoom_selection,
+    "ruler": _ruler,
+    "vertex": _vertex,
     "a_create": _a_create,
     "a_write": _a_write,
     "a_draw_border_then_fill": _a_draw_fill,
@@ -733,7 +771,7 @@ class PaintedIconEngine(QIconEngine):
         painter.end()
         return QPixmap.fromImage(image)
 
-    def clone(self) -> "PaintedIconEngine":
+    def clone(self) -> PaintedIconEngine:
         return PaintedIconEngine(self.name, self.color)
 
 

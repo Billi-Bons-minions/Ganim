@@ -10,8 +10,10 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog, QWidget
 
 from manim_studio.i18n import tr
+from manim_studio.model import groups
 from manim_studio.model import operations as ops
 from manim_studio.model.animation_builder import allowed_for_objects, build_animations
+from manim_studio.model.arrange import arrange_deltas, move_layer
 from manim_studio.model.assets import relative_asset_path
 from manim_studio.model.entities import Scene
 from manim_studio.model.factory import (
@@ -31,6 +33,7 @@ from manim_studio.model.stage_edits import (
     check_edit,
     color_edit,
     is_recording,
+    move_each_edit,
     move_edit,
     rotate_edit,
     scale_edit,
@@ -178,14 +181,133 @@ class EditorController(QObject):
         self.editor.select_objects(new_ids or [])
 
     def select_all(self) -> None:
-        """Select every object of the scene."""
-        self.editor.select_objects([obj.id for obj in self.scene().objects])
+        """Select every top-level object that is neither locked nor hidden in the editor."""
+        scene = self.scene()
+        ids = []
+        for obj in scene.objects:
+            top = groups.top_level(scene, obj.id)
+            top_obj = scene.object_by_id(top)
+            if top not in ids and top_obj is not None and not top_obj.locked and not top_obj.editor_hidden:
+                ids.append(top)
+        self.editor.select_objects(ids)
 
     def change_layer(self, delta: int) -> None:
         """Move the selected objects up or down in the layer order."""
         ids = list(self.editor.selected_objects)
         if ids:
             self._edit(tr("undo.layer"), lambda s: ops.change_z_index(s, ids, delta))
+
+    # --- groups, arranging and layers ---------------------------------------------------
+
+    def group_selection(self) -> None:
+        """Put the selected objects into a new group."""
+        ids = list(self.editor.selected_objects)
+        if len(ids) < 2:
+            self.statusMessage.emit(tr("status.group_needs_two"))
+            return
+        name = unique_name([obj.name for obj in self.scene().objects], tr("kind.group"))
+        group_id = self._edit(tr("undo.group"), lambda s: ops.group_objects(s, ids, name))
+        if group_id:
+            self.editor.select_objects([group_id])
+
+    def ungroup_selection(self) -> None:
+        """Dissolve the selected groups and select their members."""
+        scene = self.scene()
+        group_ids = [i for i in self.editor.selected_objects if groups.is_group(scene.object_by_id(i))]
+        if not group_ids:
+            return
+
+        def mutate(s: Scene) -> list[str]:
+            members: list[str] = []
+            for group_id in group_ids:
+                members += ops.ungroup(s, group_id)
+            return members
+
+        members = self._edit(tr("undo.ungroup"), mutate)
+        self.editor.select_objects(members or [])
+
+    def can_group(self) -> bool:
+        """Return ``True`` if the selection can be grouped."""
+        return len(self.editor.selected_objects) >= 2
+
+    def can_ungroup(self) -> bool:
+        """Return ``True`` if a group is selected."""
+        scene = self.scene()
+        return any(groups.is_group(scene.object_by_id(i)) for i in self.editor.selected_objects)
+
+    def arrange(self, mode: str, boxes: dict[str, tuple[float, float, float, float]]) -> None:
+        """Align or distribute objects given their drawn bounds (Manim units)."""
+        deltas = arrange_deltas(boxes, mode)
+        moving = {object_id: delta for object_id, delta in deltas.items() if abs(delta[0]) > 1e-6 or abs(delta[1]) > 1e-6}
+        if not moving:
+            return
+        allowed, message = self.edit_policy(MOVE, list(moving))
+        if not allowed:
+            self.statusMessage.emit(message)
+            return
+        self._announce_recording(list(moving), MOVE)
+        self._edit(tr(f"undo.arrange.{mode}"), move_each_edit(self.editor.cursor, moving))
+
+    def set_locked(self, ids: list[str], locked: bool) -> None:
+        """Lock or unlock objects in the editor."""
+        if ids:
+            self._edit(tr("undo.lock" if locked else "undo.unlock"), lambda s: ops.set_editor_flags(s, ids, locked=locked))
+            if locked:
+                self.editor.select_objects([i for i in self.editor.selected_objects if i not in ids])
+
+    def set_hidden(self, ids: list[str], hidden: bool) -> None:
+        """Hide or show objects in the editor (the video is not affected)."""
+        if ids:
+            self._edit(tr("undo.hide" if hidden else "undo.show"), lambda s: ops.set_editor_flags(s, ids, hidden=hidden))
+            if hidden:
+                self.editor.select_objects([i for i in self.editor.selected_objects if i not in ids])
+
+    def toggle_locked(self, ids: list[str] | None = None) -> None:
+        """Lock the objects, or unlock them if all are locked."""
+        ids = list(ids if ids is not None else self.editor.selected_objects)
+        objects = [self.scene().object_by_id(i) for i in ids]
+        self.set_locked(ids, not all(obj is not None and obj.locked for obj in objects))
+
+    def toggle_hidden(self, ids: list[str] | None = None) -> None:
+        """Hide the objects in the editor, or show them if all are hidden."""
+        ids = list(ids if ids is not None else self.editor.selected_objects)
+        objects = [self.scene().object_by_id(i) for i in ids]
+        self.set_hidden(ids, not all(obj is not None and obj.editor_hidden for obj in objects))
+
+    def rename_object(self, object_id: str, name: str) -> None:
+        """Give an object a new name."""
+        name = name.strip()
+        obj = self.scene().object_by_id(object_id)
+        if name and obj is not None and name != obj.name:
+            self._edit(tr("undo.rename_object"), lambda s: ops.update_object(s, object_id, name=name))
+
+    def move_layer(self, object_id: str, below_id: str | None, above_id: str | None) -> None:
+        """Reorder an object in the layer list (drag and drop)."""
+        self._edit(tr("undo.layer"), lambda s: move_layer(s, object_id, below_id, above_id))
+
+    # --- vertices and endpoints (start of the timeline only) ----------------------------
+
+    def _point_edit(self, text: str, mutate) -> None:
+        try:
+            self._edit(text, mutate)
+        except ops.ModelError:
+            self.statusMessage.emit(tr("status.point_edit_failed"))
+
+    def move_vertex(self, object_id: str, index: int, x: float, y: float) -> None:
+        """Move a polygon vertex (coordinates in the polygon's own system)."""
+        self._point_edit(tr("undo.vertex"), lambda s: ops.set_polygon_point(s, object_id, index, x, y))
+
+    def insert_vertex(self, object_id: str, index: int, x: float, y: float) -> None:
+        """Add a polygon vertex before ``index``."""
+        self._point_edit(tr("undo.vertex_add"), lambda s: ops.insert_polygon_point(s, object_id, index, x, y))
+
+    def remove_vertex(self, object_id: str, index: int) -> None:
+        """Delete a polygon vertex."""
+        self._point_edit(tr("undo.vertex_remove"), lambda s: ops.remove_polygon_point(s, object_id, index))
+
+    def set_line_endpoint(self, object_id: str, which: int, x: float, y: float) -> None:
+        """Move the start (0) or end (1) of a line to a scene position."""
+        self._point_edit(tr("undo.endpoint"), lambda s: ops.set_line_endpoint(s, object_id, which, x, y))
 
     # --- stage manipulation ---------------------------------------------------------
 

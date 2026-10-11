@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -31,11 +32,22 @@ from manim_studio.codegen import CodegenError, CodegenOptions, generate_script
 from manim_studio.examples import EXAMPLES, example_by_key
 from manim_studio.i18n import tr
 from manim_studio.logging_setup import log
+from manim_studio.model.arrange import (
+    ALIGN_BOTTOM,
+    ALIGN_HCENTER,
+    ALIGN_LEFT,
+    ALIGN_RIGHT,
+    ALIGN_TOP,
+    ALIGN_VCENTER,
+    DISTRIBUTE_H,
+    DISTRIBUTE_MODES,
+    DISTRIBUTE_V,
+)
 from manim_studio.model.assets import relative_asset_path, resolve_asset_path
-from manim_studio.model.serialization import FILE_SUFFIX, ProjectFormatError
 from manim_studio.model.playback import state_at_time, step_start_time
-from manim_studio.model.state import START, states_after
+from manim_studio.model.serialization import FILE_SUFFIX, ProjectFormatError
 from manim_studio.model.stage_edits import is_recording
+from manim_studio.model.state import START, states_after
 from manim_studio.model.types import AnimationKind, ObjectKind, StepKind
 from manim_studio.ui.chrome import PanelFrame, SegmentedControl, StageBanner, Toast, action_button, separator, tool_button
 from manim_studio.ui.context import AppContext, cache_dir
@@ -61,9 +73,10 @@ from manim_studio.ui.panels.player_panel import PlayerPanel
 from manim_studio.ui.panels.properties_panel import PropertiesPanel
 from manim_studio.ui.panels.timeline_panel import TimelinePanel, build_animation_menu, format_time
 from manim_studio.ui.playback import PlaybackController
-from manim_studio.ui.still_preview import StillPreview
 from manim_studio.ui.stage.drawing import PX, StageResources
+from manim_studio.ui.stage.ruler import Ruler, RulerCorner
 from manim_studio.ui.stage.view import StageView
+from manim_studio.ui.still_preview import StillPreview
 from manim_studio.ui.theme import current_palette, px
 from manim_studio.ui.tutorial import TourStep, TutorialOverlay
 
@@ -73,6 +86,17 @@ MODE_STAGE = 0
 MODE_PREVIEW = 1
 BOTTOM_TIMELINE = 0
 BOTTOM_LOG = 2
+#: Align and distribute commands: (mode, icon, shortcut).
+ARRANGE_ACTIONS = (
+    (ALIGN_LEFT, "align_left", "Ctrl+Alt+Left"),
+    (ALIGN_HCENTER, "align_center_h", None),
+    (ALIGN_RIGHT, "align_right", "Ctrl+Alt+Right"),
+    (ALIGN_TOP, "align_top", "Ctrl+Alt+Up"),
+    (ALIGN_VCENTER, "align_center_v", None),
+    (ALIGN_BOTTOM, "align_bottom", "Ctrl+Alt+Down"),
+    (DISTRIBUTE_H, "distribute_h", None),
+    (DISTRIBUTE_V, "distribute_v", None),
+)
 
 
 class MainWindow(QMainWindow):
@@ -165,7 +189,8 @@ class MainWindow(QMainWindow):
         self.act_settings = self._action("settings", self.open_settings, std.Preferences, "settings")
         self.act_new_scene = self._action("new_scene", c.add_scene, "Ctrl+Shift+N", "plus")
         self.act_duplicate_scene = self._action("duplicate_scene", c.duplicate_scene, None, "duplicate")
-        self.act_rename_scene = self._action("rename_scene", lambda: c.rename_scene(), "F2")
+        self.act_rename_scene = self._action("rename_scene", lambda: c.rename_scene())
+        self.act_rename = self._action("rename", self.rename_selected, "F2")
         self.act_delete_scene = self._action("delete_scene", lambda: c.delete_scene(), None, "trash")
         self.act_add_step = self._action("add_step", lambda: c.add_step(StepKind.PLAY), "Ctrl+T", "plus")
         self.act_add_wait = self._action("add_wait", lambda: c.add_step(StepKind.WAIT), "Ctrl+W", "clock")
@@ -175,14 +200,25 @@ class MainWindow(QMainWindow):
         self.act_next_step = self._action("next_step", lambda: c.go_to_step(1), "PgDown", "chevron_right")
         self.act_start = self._action("go_start", lambda: self.editor.inspect_step(START), "Home", "skip_back")
         self.act_end = self._action("go_end", lambda: self.editor.inspect_step(len(self.editor.scene().steps) - 1), "End", "skip_forward")
-        self.act_grid = self._action("show_grid", self._on_view_options, "Ctrl+G", "grid", checkable=True)
+        self.act_group = self._action("group", c.group_selection, "Ctrl+G", "group")
+        self.act_ungroup = self._action("ungroup", c.ungroup_selection, "Ctrl+Shift+G", "ungroup")
+        self.act_lock = self._action("lock", lambda: c.toggle_locked(), "Ctrl+L", "lock")
+        self.act_hide = self._action("hide_in_editor", lambda: c.toggle_hidden(), "Ctrl+Shift+H", "eye_off")
+        self.arrange_actions: dict[str, QAction] = {}
+        for mode, icon_name, shortcut in ARRANGE_ACTIONS:
+            action = self._action(f"arrange.{mode}", lambda _checked=False, m=mode: self.arrange(m), shortcut, icon_name)
+            self.arrange_actions[mode] = action
+        self.act_grid = self._action("show_grid", self._on_view_options, "Ctrl+Alt+G", "grid", checkable=True)
         self.act_grid.setChecked(self.settings.show_grid)
-        self.act_snap = self._action("snap", self._on_view_options, "Ctrl+Shift+G", "magnet", checkable=True)
+        self.act_snap = self._action("snap", self._on_view_options, "Ctrl+Alt+S", "magnet", checkable=True)
         self.act_snap.setChecked(self.settings.snap)
         self.act_show_hidden = self._action("show_hidden", self._on_view_options, "Ctrl+H", "eye", checkable=True)
         self.act_show_hidden.setChecked(self.settings.show_hidden)
         self.act_exact = self._action("exact_view", self._on_exact_toggled, "Ctrl+Shift+X", "render", checkable=True)
+        self.act_rulers = self._action("show_rulers", self._on_view_options, "Ctrl+R", "ruler", checkable=True)
+        self.act_rulers.setChecked(self.settings.show_rulers)
         self.act_fit = self._action("fit", lambda: self.stage.fit_frame(), "Ctrl+0", "fit")
+        self.act_zoom_selection = self._action("zoom_selection", self.zoom_to_selection, "Ctrl+Shift+0", "zoom_selection")
         self.act_zoom_in = self._action("zoom_in", lambda: self.stage.zoom(1.25), std.ZoomIn, "zoom_in")
         self.act_zoom_out = self._action("zoom_out", lambda: self.stage.zoom(0.8), std.ZoomOut, "zoom_out")
         self.act_preview = self._action("preview", self.start_preview, "F5", "render")
@@ -223,9 +259,11 @@ class MainWindow(QMainWindow):
         edit_menu.addSeparator()
         edit_menu.addActions([self.act_cut, self.act_copy, self.act_paste, self.act_duplicate, self.act_delete, self.act_select_all])
         edit_menu.addSeparator()
-        edit_menu.addActions([self.act_forward, self.act_backward])
+        edit_menu.addActions([self.act_rename, self.act_lock, self.act_hide])
         edit_menu.addSeparator()
         edit_menu.addAction(self.act_settings)
+        arrange_menu = bar.addMenu(tr("menu.arrange"))
+        self._fill_arrange_menu(arrange_menu)
         insert_menu = bar.addMenu(tr("menu.insert"))
         for kind in LIBRARY_ORDER:
             action = insert_menu.addAction(kind_icon(kind), tr(f"kind.{kind.value}"))
@@ -244,9 +282,9 @@ class MainWindow(QMainWindow):
         timeline_menu.addSeparator()
         timeline_menu.addActions([self.act_play, self.act_stop_playback])
         view_menu = bar.addMenu(tr("menu.view"))
-        view_menu.addActions([self.act_grid, self.act_snap, self.act_show_hidden, self.act_exact])
+        view_menu.addActions([self.act_grid, self.act_snap, self.act_rulers, self.act_show_hidden, self.act_exact])
         view_menu.addSeparator()
-        view_menu.addActions([self.act_fit, self.act_zoom_in, self.act_zoom_out])
+        view_menu.addActions([self.act_fit, self.act_zoom_selection, self.act_zoom_in, self.act_zoom_out])
         self.panels_menu = view_menu.addMenu(tr("menu.panels"))
         render_menu = bar.addMenu(tr("menu.render"))
         render_menu.addActions([self.act_preview, self.act_preview_from, self.act_cancel, self.act_export])
@@ -310,12 +348,23 @@ class MainWindow(QMainWindow):
         toolbar.setContentsMargins(px(10), px(6), px(10), px(6))
         toolbar.setSpacing(px(2))
         toolbar.addWidget(self.mode_switch)
+        toolbar.addSpacing(px(10))
+        self.arrange_tools = QWidget()
+        arrange = QHBoxLayout(self.arrange_tools)
+        arrange.setContentsMargins(0, 0, 0, 0)
+        arrange.setSpacing(px(1))
+        for action in (self.act_group, self.act_ungroup):
+            arrange.addWidget(action_button(action))
+        arrange.addWidget(separator(vertical=True))
+        for mode, _icon, _shortcut in ARRANGE_ACTIONS:
+            arrange.addWidget(action_button(self.arrange_actions[mode]))
+        toolbar.addWidget(self.arrange_tools)
         toolbar.addStretch(1)
         self.stage_tools = QWidget()
         tools = QHBoxLayout(self.stage_tools)
         tools.setContentsMargins(0, 0, 0, 0)
         tools.setSpacing(px(2))
-        for action in (self.act_grid, self.act_snap, self.act_show_hidden, self.act_exact):
+        for action in (self.act_grid, self.act_snap, self.act_rulers, self.act_show_hidden, self.act_exact):
             tools.addWidget(action_button(action))
         tools.addWidget(separator(vertical=True))
         tools.addWidget(action_button(self.act_zoom_out))
@@ -325,12 +374,21 @@ class MainWindow(QMainWindow):
         self.zoom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         tools.addWidget(self.zoom_label)
         tools.addWidget(action_button(self.act_zoom_in))
+        tools.addWidget(action_button(self.act_zoom_selection))
         tools.addWidget(action_button(self.act_fit))
         toolbar.addWidget(self.stage_tools)
         stage_holder = QWidget()
-        stage_layout = QVBoxLayout(stage_holder)
+        stage_layout = QGridLayout(stage_holder)
         stage_layout.setContentsMargins(0, 0, 0, 0)
-        stage_layout.addWidget(self.stage)
+        stage_layout.setSpacing(0)
+        self.ruler_corner = RulerCorner()
+        self.top_ruler = Ruler(self.stage, Qt.Orientation.Horizontal)
+        self.left_ruler = Ruler(self.stage, Qt.Orientation.Vertical)
+        stage_layout.addWidget(self.ruler_corner, 0, 0)
+        stage_layout.addWidget(self.top_ruler, 0, 1)
+        stage_layout.addWidget(self.left_ruler, 1, 0)
+        stage_layout.addWidget(self.stage, 1, 1)
+        self._show_rulers(self.settings.show_rulers)
         self.banner = StageBanner(self.stage)
         self.toast = Toast(self.stage)
         self.empty_hint = QLabel(self.stage)
@@ -366,7 +424,7 @@ class MainWindow(QMainWindow):
 
     def _build_layout(self) -> None:
         self.library = LibraryPanel()
-        self.objects = ObjectsPanel(self.document, self.editor)
+        self.objects = ObjectsPanel(self.document, self.editor, self.controller)
         self.properties = PropertiesPanel(self.document, self.editor, self.settings, self.context.latex_status, self.controller)
         self.left_split = QSplitter(Qt.Orientation.Vertical)
         self.left_split.addWidget(PanelFrame(tr("dock.library"), self.library))
@@ -447,6 +505,10 @@ class MainWindow(QMainWindow):
         self.stage.cursorMoved.connect(self._on_cursor_moved)
         self.stage.statusMessage.connect(self.show_status)
         self.stage.zoomChanged.connect(self._on_zoom_changed)
+        self.stage.vertexMoved.connect(lambda object_id, index, x, y: (self._before_stage_edit(), self.controller.move_vertex(object_id, index, x, y)))
+        self.stage.vertexInserted.connect(lambda object_id, index, x, y: (self._before_stage_edit(), self.controller.insert_vertex(object_id, index, x, y)))
+        self.stage.vertexMenuRequested.connect(self._show_vertex_menu)
+        self.stage.endpointMoved.connect(lambda object_id, which, x, y: (self._before_stage_edit(), self.controller.set_line_endpoint(object_id, which, x, y)))
         self.objects.contextMenuRequested.connect(self.show_object_menu)
         self.library.objectRequested.connect(self._on_library_request)
         self.scene_tabs.currentChanged.connect(self._on_tab_changed)
@@ -490,10 +552,12 @@ class MainWindow(QMainWindow):
         self.resources.base_dir = self.document.base_dir
         playhead = self.editor.playhead
         states = state_at_time(scene, playhead) if playhead is not None else states_after(scene, cursor)
+        self.stage.set_point_editing(cursor == START and playhead is None)
         self.stage.set_content(scene, states, self.resources, self.editor.selected_objects, self.act_show_hidden.isChecked())
         self.stage.set_motion_paths(self._motion_paths(scene, cursor) if playhead is None else [])
         self.empty_hint.setVisible(not scene.objects)
         self._update_banner()
+        self._update_selection_tools()
         if self.act_exact.isChecked():
             if playhead is None:
                 self.still.request()
@@ -612,6 +676,73 @@ class MainWindow(QMainWindow):
 
     def _on_selection_changed(self) -> None:
         self.stage.set_selection(self.editor.selected_objects)
+        self._update_selection_tools()
+
+    def _update_selection_tools(self) -> None:
+        count = len(self.editor.selected_objects)
+        self.act_group.setEnabled(self.controller.can_group())
+        self.act_ungroup.setEnabled(self.controller.can_ungroup())
+        for mode, action in self.arrange_actions.items():
+            action.setEnabled(count >= (3 if mode in DISTRIBUTE_MODES else 1))
+        for action in (self.act_lock, self.act_hide, self.act_rename, self.act_zoom_selection):
+            action.setEnabled(count >= 1)
+        rect = self.stage.selection_rect()
+        if count and not rect.isNull():
+            self.top_ruler.set_selection_range(rect.left() / PX, rect.right() / PX)
+            self.left_ruler.set_selection_range(-rect.bottom() / PX, -rect.top() / PX)
+        else:
+            self.top_ruler.set_selection_range(None, None)
+            self.left_ruler.set_selection_range(None, None)
+
+    def selection_boxes(self) -> dict[str, tuple[float, float, float, float]]:
+        """Drawn bounds of the selected objects as ``(left, bottom, right, top)`` in Manim units."""
+        boxes = {}
+        for object_id in self.editor.selected_objects:
+            rect = self.stage.item_rect(object_id)
+            if not rect.isNull():
+                boxes[object_id] = (rect.left() / PX, -rect.bottom() / PX, rect.right() / PX, -rect.top() / PX)
+        return boxes
+
+    def arrange(self, mode: str) -> None:
+        """Align or distribute the selected objects."""
+        self._before_stage_edit()
+        self.controller.arrange(mode, self.selection_boxes())
+
+    def zoom_to_selection(self) -> None:
+        """Zoom onto the selected objects."""
+        rect = self.stage.selection_rect()
+        if not rect.isNull():
+            self.set_center_mode(MODE_STAGE)
+            self.stage.zoom_to(rect)
+
+    def rename_selected(self) -> None:
+        """Rename the selected object inline in the layer list (or the scene)."""
+        selected = self.editor.selected_objects
+        if len(selected) == 1:
+            self.objects.edit_name(selected[0])
+        elif not selected:
+            self.controller.rename_scene()
+
+    def _fill_arrange_menu(self, menu: QMenu) -> None:
+        menu.addActions([self.act_group, self.act_ungroup])
+        menu.addSeparator()
+        for mode, _icon, _shortcut in ARRANGE_ACTIONS:
+            if mode == DISTRIBUTE_MODES[0]:
+                menu.addSeparator()
+            menu.addAction(self.arrange_actions[mode])
+        menu.addSeparator()
+        menu.addActions([self.act_forward, self.act_backward])
+
+    def _show_vertex_menu(self, global_position: QPoint, object_id: str, index: int) -> None:
+        menu = QMenu(self)
+        obj = self.editor.scene().object_by_id(object_id)
+        action = menu.addAction(icon("trash"), tr("action.remove_vertex"), lambda: self.controller.remove_vertex(object_id, index))
+        action.setEnabled(obj is not None and len(obj.params.get("points", [])) > 3)
+        menu.exec(global_position)
+
+    def _show_rulers(self, show: bool) -> None:
+        for widget in (self.ruler_corner, self.top_ruler, self.left_ruler):
+            widget.setVisible(show)
 
     def _on_tex_ready(self, _latex: str) -> None:
         self.refresh_stage()
@@ -692,7 +823,9 @@ class MainWindow(QMainWindow):
             menu.addSeparator()
             menu.addActions([self.act_cut, self.act_copy, self.act_paste, self.act_duplicate, self.act_delete])
             menu.addSeparator()
-            menu.addActions([self.act_forward, self.act_backward])
+            menu.addActions([self.act_rename, self.act_lock, self.act_hide])
+            arrange_menu = menu.addMenu(icon("align_left"), tr("menu.arrange"))
+            self._fill_arrange_menu(arrange_menu)
         else:
             add = menu.addMenu(icon("plus"), tr("menu.insert"))
             scene_pos = self.stage.mapToScene(self.stage.mapFromGlobal(global_position))
@@ -710,6 +843,8 @@ class MainWindow(QMainWindow):
         self.settings.show_grid = self.act_grid.isChecked()
         self.settings.snap = self.act_snap.isChecked()
         self.settings.show_hidden = self.act_show_hidden.isChecked()
+        self.settings.show_rulers = self.act_rulers.isChecked()
+        self._show_rulers(self.settings.show_rulers)
         self.stage.set_grid(self.settings.show_grid, self.settings.grid_step, self.settings.snap)
         self.refresh_stage()
 

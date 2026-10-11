@@ -246,6 +246,9 @@ QListWidget, QListView, QTreeView, QTableWidget, QTableView {{ background: {p.pa
 QListWidget::item, QTreeView::item {{ padding: {px(3)}px {px(4)}px; border-radius: {px(6)}px; }}
 QListWidget::item:selected, QTreeView::item:selected {{ background: {p.accent_soft}; color: {p.text}; }}
 QListWidget::item:hover:!selected, QTreeView::item:hover:!selected {{ background: {p.hover}; }}
+QTreeView#LayerTree::item {{ border-radius: 0px; padding: {px(3)}px {px(2)}px; }}
+QTreeView#LayerTree::branch:selected {{ background: {p.accent_soft}; }}
+QTreeView#LayerTree::branch:hover:!selected {{ background: {p.hover}; }}
 QTableWidget {{ gridline-color: {p.border}; background: {p.field}; border: 1px solid {p.border_strong}; border-radius: {r}px; }}
 QHeaderView::section {{ background: {p.raised}; color: {p.text_muted}; border: none; border-bottom: 1px solid {p.border}; padding: {px(4)}px; }}
 QStatusBar {{ background: {p.window}; color: {p.text_muted}; border-top: 1px solid {p.border}; }}

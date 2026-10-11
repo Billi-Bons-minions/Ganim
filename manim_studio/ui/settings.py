@@ -138,6 +138,14 @@ class AppSettings:
     def show_hidden(self, value: bool) -> None:
         self._settings.setValue("show_hidden", value)
 
+    @property
+    def show_rulers(self) -> bool:
+        return _to_bool(self._settings.value("show_rulers"), True)
+
+    @show_rulers.setter
+    def show_rulers(self, value: bool) -> None:
+        self._settings.setValue("show_rulers", value)
+
     # --- files -------------------------------------------------------------
 
     @property

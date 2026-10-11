@@ -16,6 +16,11 @@ GESTURES = (
     ("shortcuts.zoom", "shortcuts.zoom_keys"),
     ("shortcuts.pan", "shortcuts.pan_keys"),
     ("shortcuts.rotate_snap", "shortcuts.rotate_snap_keys"),
+    ("shortcuts.enter_group", "shortcuts.enter_group_keys"),
+    ("shortcuts.leave_group", "shortcuts.leave_group_keys"),
+    ("shortcuts.add_vertex", "shortcuts.add_vertex_keys"),
+    ("shortcuts.remove_vertex", "shortcuts.remove_vertex_keys"),
+    ("shortcuts.endpoints", "shortcuts.endpoints_keys"),
 )
 
 

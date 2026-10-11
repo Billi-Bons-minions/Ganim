@@ -53,6 +53,178 @@ def _sine(m: float, s: float, amplitude: float) -> QPainterPath:
     return path
 
 
+def _regular(cx: float, cy: float, radius: float, corners: int, start: float = -90.0) -> QPolygonF:
+    return QPolygonF(
+        [
+            QPointF(cx + radius * math.cos(math.radians(start + 360 * k / corners)), cy + radius * math.sin(math.radians(start + 360 * k / corners)))
+            for k in range(corners)
+        ]
+    )
+
+
+def _number_line(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.setPen(QPen(neutral, w))
+    p.drawLine(QPointF(m * 0.6, s * 0.45), QPointF(s - m * 0.6, s * 0.45))
+    for index in range(5):
+        x = m + (s - 2 * m) * index / 4
+        p.drawLine(QPointF(x, s * 0.36), QPointF(x, s * 0.54))
+    _text(p, QRectF(0, s * 0.52, s, s * 0.4), "0  1  2", stroke, size=0.55)
+
+
+def _vector(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.setPen(QPen(neutral, w))
+    p.drawEllipse(QPointF(m, s - m), w * 1.2, w * 1.2)
+    p.setPen(QPen(stroke, w * 1.2))
+    _arrow(p, QPointF(m, s - m), QPointF(s - m, m * 1.5), stroke)
+
+
+def _double_arrow(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    _arrow(p, QPointF(s / 2, s / 2), QPointF(s - m, s / 2), stroke)
+    _arrow(p, QPointF(s / 2, s / 2), QPointF(m, s / 2), stroke)
+
+
+def _dashed_line(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    pen = QPen(stroke, w, Qt.PenStyle.DashLine, Qt.PenCapStyle.FlatCap)
+    p.setPen(pen)
+    p.drawLine(QPointF(m, s - m), QPointF(s - m, m))
+
+
+def _brace(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    path = QPainterPath(QPointF(m, s * 0.35))
+    path.quadTo(QPointF(m, s * 0.5), QPointF(s * 0.3, s * 0.5))
+    path.lineTo(QPointF(s * 0.42, s * 0.5))
+    path.quadTo(QPointF(s * 0.5, s * 0.5), QPointF(s * 0.5, s * 0.64))
+    path.quadTo(QPointF(s * 0.5, s * 0.5), QPointF(s * 0.58, s * 0.5))
+    path.lineTo(QPointF(s * 0.7, s * 0.5))
+    path.quadTo(QPointF(s - m, s * 0.5), QPointF(s - m, s * 0.35))
+    p.drawPath(path)
+
+
+def _polygon(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.drawPolygon(QPolygonF([QPointF(m, s * 0.7), QPointF(s * 0.32, m), QPointF(s - m, s * 0.35), QPointF(s * 0.7, s - m)]))
+
+
+def _regular_polygon(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.drawPolygon(_regular(s / 2, s / 2, s / 2 - m, 6, 0.0))
+
+
+def _star(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    outer, inner = s / 2 - m * 0.7, (s / 2 - m * 0.7) * 0.45
+    points = []
+    for k in range(10):
+        radius = outer if k % 2 == 0 else inner
+        angle = math.radians(-90 + 36 * k)
+        points.append(QPointF(s / 2 + radius * math.cos(angle), s * 0.53 + radius * math.sin(angle)))
+    p.drawPolygon(QPolygonF(points))
+
+
+def _arc_icon(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawArc(QRectF(m, m, s - 2 * m, s - 2 * m), 0, 200 * 16)
+
+
+def _sector(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.drawPie(QRectF(m, m, s - 2 * m, s - 2 * m), 20 * 16, 110 * 16)
+
+
+def _annulus(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    ring = QPainterPath()
+    ring.addEllipse(QRectF(m, m, s - 2 * m, s - 2 * m))
+    inner = s * 0.2
+    ring.addEllipse(QRectF(s / 2 - inner, s / 2 - inner, 2 * inner, 2 * inner))
+    p.drawPath(ring)
+
+
+def _decimal(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    _text(p, QRectF(0, 0, s, s), "3.14", stroke, size=0.36)
+
+
+def _cells(p: QPainter, s: float, m: float, w: float, stroke: QColor, neutral: QColor, rows: int, columns: int) -> QRectF:
+    box = QRectF(m, s * 0.24, s - 2 * m, s * 0.52)
+    p.setPen(QPen(neutral, w * 0.7))
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    for row in range(rows):
+        for column in range(columns):
+            cell = QRectF(box.x() + box.width() * column / columns, box.y() + box.height() * row / rows, box.width() / columns, box.height() / rows)
+            p.drawRect(cell)
+    return box
+
+
+def _table(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    box = _cells(p, s, m, w, stroke, neutral, 2, 3)
+    p.fillRect(QRectF(box.x(), box.y(), box.width(), box.height() / 2), fill)
+
+
+def _matrix(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    for left in (True, False):
+        x = m if left else s - m
+        inward = s * 0.08 * (1 if left else -1)
+        p.drawPolyline(QPolygonF([QPointF(x + inward, m), QPointF(x, m), QPointF(x, s - m), QPointF(x + inward, s - m)]))
+    _text(p, QRectF(0, s * 0.18, s, s * 0.32), "1  0", stroke, size=0.62)
+    _text(p, QRectF(0, s * 0.5, s, s * 0.32), "0  1", stroke, size=0.62)
+
+
+def _code(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.setPen(QPen(neutral, w * 0.8))
+    p.drawRoundedRect(QRectF(m * 0.6, m, s - 1.2 * m, s - 2 * m), 3, 3)
+    p.setPen(QPen(stroke, w))
+    for index, length in enumerate((0.5, 0.35, 0.42)):
+        y = s * (0.38 + index * 0.13)
+        indent = s * (0.24 if index == 1 else 0.18)
+        p.drawLine(QPointF(indent, y), QPointF(indent + s * length, y))
+
+
+def _tex(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    _text(p, QRectF(0, 0, s, s), "TeX", stroke, italic=True, size=0.38)
+
+
+def _markup(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    font = QFont("Sans")
+    font.setPixelSize(max(1, round(s * 0.44)))
+    font.setBold(True)
+    p.setFont(font)
+    p.setPen(stroke)
+    p.drawText(QRectF(0, 0, s * 0.55, s), Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, "A")
+    font.setBold(False)
+    font.setItalic(True)
+    p.setFont(font)
+    p.setPen(neutral)
+    p.drawText(QRectF(s * 0.52, 0, s * 0.48, s), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, "a")
+
+
+def _group(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.drawEllipse(QRectF(m * 1.4, s * 0.38, s * 0.36, s * 0.36))
+    p.drawRoundedRect(QRectF(s * 0.46, m * 1.4, s * 0.34, s * 0.34), 2, 2)
+    dashed = QPen(neutral, w * 0.7, Qt.PenStyle.DashLine)
+    p.setPen(dashed)
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawRect(QRectF(m * 0.6, m * 0.6, s - 1.2 * m, s - 1.2 * m))
+
+
+_EXTRA_DRAWERS = {
+    ObjectKind.NUMBER_LINE: _number_line,
+    ObjectKind.VECTOR: _vector,
+    ObjectKind.DOUBLE_ARROW: _double_arrow,
+    ObjectKind.DASHED_LINE: _dashed_line,
+    ObjectKind.BRACE: _brace,
+    ObjectKind.POLYGON: _polygon,
+    ObjectKind.REGULAR_POLYGON: _regular_polygon,
+    ObjectKind.STAR: _star,
+    ObjectKind.ARC: _arc_icon,
+    ObjectKind.SECTOR: _sector,
+    ObjectKind.ANNULUS: _annulus,
+    ObjectKind.DECIMAL_NUMBER: _decimal,
+    ObjectKind.TABLE: _table,
+    ObjectKind.MATRIX: _matrix,
+    ObjectKind.CODE: _code,
+    ObjectKind.TEX: _tex,
+    ObjectKind.MARKUP_TEXT: _markup,
+    ObjectKind.GROUP: _group,
+}
+
+
 def draw_kind(painter: QPainter, kind: ObjectKind, size: float) -> None:
     """Draw the symbol of an object kind into a square of ``size`` pixels."""
     stroke, fill, neutral = _accent()
@@ -103,6 +275,8 @@ def draw_kind(painter: QPainter, kind: ObjectKind, size: float) -> None:
         painter.setPen(QPen(stroke, width))
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawPath(_sine(m, s, (s / 2 - m) * 0.8))
+    elif kind in _EXTRA_DRAWERS:
+        _EXTRA_DRAWERS[kind](painter, s, m, width, stroke, fill, neutral)
     else:
         painter.setPen(QPen(neutral, width))
         painter.setBrush(Qt.BrushStyle.NoBrush)
@@ -134,7 +308,7 @@ class _KindIconEngine(QIconEngine):
         painter.end()
         return QPixmap.fromImage(image)
 
-    def clone(self) -> "_KindIconEngine":
+    def clone(self) -> _KindIconEngine:
         return _KindIconEngine(self.kind)
 
 
@@ -205,7 +379,7 @@ class _RateIconEngine(QIconEngine):
         painter.end()
         return QPixmap.fromImage(image)
 
-    def clone(self) -> "_RateIconEngine":
+    def clone(self) -> _RateIconEngine:
         return _RateIconEngine(self.name)
 
 

@@ -143,3 +143,50 @@ def test_effects_combined_with_movement_keep_the_object_usable(tmp_path) -> None
     assert rendered.width == pytest.approx(4.0, abs=1e-3)
     assert rendered.get_fill_opacity() == pytest.approx(0.5, abs=1e-3)
     assert rendered.get_stroke_opacity() == pytest.approx(1.0, abs=1e-3)
+
+
+def test_all_new_object_kinds_render(tmp_path) -> None:
+    from manim_studio.model.factory import create_animation, create_object
+
+    def obj(kind, name, x=0.0, y=0.0, **params):
+        item = create_object(kind, name, x, y, **params)
+        return item
+
+    square = obj(ObjectKind.SQUARE, "Quadrat", -5.0, 2.0)
+    objects = [
+        square,
+        obj(ObjectKind.NUMBER_LINE, "Zahlenstrahl", 0.0, -3.0, length=8.0),
+        obj(ObjectKind.VECTOR, "Vektor", -5.0, -1.0),
+        obj(ObjectKind.DOUBLE_ARROW, "Doppelpfeil", -2.0, -1.0, length=2.0),
+        obj(ObjectKind.DASHED_LINE, "Gestrichelt", 1.0, -1.0, length=2.0),
+        obj(ObjectKind.BRACE, "Klammer", target=square.id, label="Seite a"),
+        obj(ObjectKind.BRACE, "Freie Klammer", 4.0, 3.0, direction="right", label="frei"),
+        obj(ObjectKind.POLYGON, "Polygon", -2.0, 2.0),
+        obj(ObjectKind.REGULAR_POLYGON, "Sechseck", 1.0, 2.0, n=6, radius=0.8),
+        obj(ObjectKind.STAR, "Stern", 3.5, 1.5),
+        obj(ObjectKind.ARC, "Bogen", -5.0, -2.0),
+        obj(ObjectKind.SECTOR, "Sektor", -3.0, -2.0),
+        obj(ObjectKind.ANNULUS, "Ring", 5.0, -2.0),
+        obj(ObjectKind.DECIMAL_NUMBER, "Zahl", 0.0, 3.3, value=3.14159, decimals=2, unit="cm", show_sign=True),
+        obj(ObjectKind.TABLE, "Tabelle", 5.0, 0.0, rows=[["x", "y"], ["1"]]),
+        obj(ObjectKind.CODE, "Code", 0.0, 0.5),
+        obj(ObjectKind.MARKUP_TEXT, "Markup", 0.0, -2.0, font_size=28.0),
+        obj(ObjectKind.TEXT, "Absatz", 2.5, -2.0, text="Zeile eins\nzwei", alignment="center", line_spacing=1.2,
+            colored_words=[["eins", "#FC6255"]], font_size=28.0),
+    ]
+    group = obj(ObjectKind.GROUP, "Gruppe", members=[objects[2].id, objects[3].id])
+    objects.append(group)
+    steps = [
+        play(*(create_animation(AnimationKind.FADE_IN, item.id, run_time=0.2) for item in objects if item.kind != ObjectKind.GROUP)),
+        play(create_animation(AnimationKind.MOVE, group.id, run_time=0.2, x=-3.5, y=0.0),
+             create_animation(AnimationKind.ROTATE, objects[9].id, run_time=0.2, angle=36.0)),
+    ]
+    if shutil.which("latex") and shutil.which("dvisvgm"):
+        objects.append(obj(ObjectKind.TEX, "Tex", 0.0, -3.6, font_size=30.0))
+        objects.append(obj(ObjectKind.MATRIX, "Matrix", 5.0, 3.0))
+        steps.append(play(create_animation(AnimationKind.WRITE, objects[-2].id, run_time=0.2), create_animation(AnimationKind.CREATE, objects[-1].id, run_time=0.2)))
+    scene = Scene(id="s", name="Neu", objects=objects, steps=steps)
+    script = generate_script(make_project(scene))
+    result = run_manim(tmp_path, script, "Neu", "--format", "png")
+    assert result.returncode == 0, result.stdout + result.stderr + script
+    assert list((tmp_path / "media").rglob("*.png"))

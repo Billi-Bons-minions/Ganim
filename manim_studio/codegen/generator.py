@@ -11,10 +11,10 @@ from manim_studio.codegen.errors import CodegenError
 from manim_studio.codegen.formatting import indent_lines
 from manim_studio.codegen.literals import LiteralError, py_color
 from manim_studio.codegen.naming import class_names, variable_names
-from manim_studio.codegen.objects import object_code
+from manim_studio.codegen.objects import creation_order, object_code
 from manim_studio.model.entities import Project, Scene
-from manim_studio.model.geometry import is_bound_graph
 from manim_studio.model.state import visible_at_start
+from manim_studio.model.types import ObjectKind
 
 
 @dataclass(frozen=True)
@@ -35,16 +35,14 @@ DEFAULT_OPTIONS = CodegenOptions()
 
 
 def _object_lines(scene: Scene, names: dict[str, str], base_dir: str | Path | None) -> list[str]:
-    ordered = [obj for obj in scene.objects if not is_bound_graph(scene, obj)]
-    ordered += [obj for obj in scene.objects if is_bound_graph(scene, obj)]
     lines: list[str] = []
-    for obj in ordered:
+    for obj in creation_order(scene):
         lines += object_code(scene, obj, names, base_dir)
     return lines
 
 
 def _initial_add_line(scene: Scene, names: dict[str, str]) -> list[str]:
-    shown = [names[obj.id] for obj in scene.objects if visible_at_start(scene, obj)]
+    shown = [names[obj.id] for obj in creation_order(scene) if obj.kind != ObjectKind.GROUP and visible_at_start(scene, obj)]
     return [f"self.add({', '.join(shown)})"] if shown else []
 
 

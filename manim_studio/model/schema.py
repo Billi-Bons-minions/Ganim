@@ -27,6 +27,10 @@ class ParamType(str, Enum):
     CHOICE = "choice"
     FILE = "file"
     OBJECT_REF = "object_ref"
+    FONT = "font"
+    POINTS = "points"
+    TABLE = "table"
+    WORD_COLORS = "word_colors"
 
 
 @dataclass(frozen=True)
@@ -85,6 +89,14 @@ def _range_params(prefix: str, low: float, high: float, step: float, length: flo
     )
 
 
+ALIGNMENTS = ("left", "center", "right")
+CODE_LANGUAGES = ("python", "javascript", "typescript", "java", "c", "cpp", "csharp", "rust", "go", "html", "css", "bash", "json", "sql", "latex")
+
+
+def _font_size(default: float, key: str = "font_size") -> ParamSpec:
+    return ParamSpec(key, ParamType.FLOAT, default, minimum=1.0, maximum=500.0, step=1.0, decimals=1, scalable=True)
+
+
 _WHITE = "#FFFFFF"
 _YELLOW = "#F7D96F"
 
@@ -130,10 +142,13 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         ObjectKind.TEXT,
         (
             ParamSpec("text", ParamType.TEXT, "Text"),
-            ParamSpec("font_size", ParamType.FLOAT, 48.0, minimum=1.0, maximum=500.0, step=1.0, decimals=1, scalable=True),
-            ParamSpec("font", ParamType.STRING, ""),
+            _font_size(48.0),
+            ParamSpec("font", ParamType.FONT, ""),
             ParamSpec("bold", ParamType.BOOL, False),
             ParamSpec("italic", ParamType.BOOL, False),
+            ParamSpec("alignment", ParamType.CHOICE, "left", choices=ALIGNMENTS),
+            ParamSpec("line_spacing", ParamType.FLOAT, 0.0, minimum=0.0, maximum=5.0, step=0.1),
+            ParamSpec("colored_words", ParamType.WORD_COLORS, []),
         ),
         _TEXT_STYLE,
         (("fill_color", _WHITE), ("fill_opacity", 1.0)),
@@ -190,6 +205,152 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         ),
         frozenset(),
     ),
+    ObjectKind.NUMBER_LINE: KindInfo(
+        ObjectKind.NUMBER_LINE,
+        (
+            ParamSpec("x_min", ParamType.FLOAT, -5.0, minimum=-1000.0, maximum=1000.0, step=1.0),
+            ParamSpec("x_max", ParamType.FLOAT, 5.0, minimum=-1000.0, maximum=1000.0, step=1.0),
+            ParamSpec("x_step", ParamType.FLOAT, 1.0, minimum=0.01, maximum=1000.0, step=0.5),
+            _length("length", 10.0, minimum=0.1),
+            ParamSpec("show_numbers", ParamType.BOOL, True),
+            ParamSpec("tips", ParamType.BOOL, False),
+        ),
+        _AXES_STYLE,
+        (("stroke_color", _WHITE), ("stroke_width", 2.0)),
+    ),
+    ObjectKind.VECTOR: KindInfo(ObjectKind.VECTOR, (_length("length", 2.0),), _LINE_STYLE, (("stroke_color", _YELLOW),)),
+    ObjectKind.DOUBLE_ARROW: KindInfo(
+        ObjectKind.DOUBLE_ARROW, (_length("length", 3.0),), _LINE_STYLE, (("stroke_color", _WHITE),)
+    ),
+    ObjectKind.DASHED_LINE: KindInfo(
+        ObjectKind.DASHED_LINE,
+        (
+            _length("length", 3.0),
+            ParamSpec("dash_length", ParamType.FLOAT, 0.15, minimum=0.02, maximum=5.0, step=0.05, scalable=True),
+            ParamSpec("dashed_ratio", ParamType.FLOAT, 0.5, minimum=0.05, maximum=0.95, step=0.05),
+        ),
+        _LINE_STYLE,
+        (("stroke_color", _WHITE),),
+    ),
+    ObjectKind.BRACE: KindInfo(
+        ObjectKind.BRACE,
+        (
+            ParamSpec("target", ParamType.OBJECT_REF, None, optional=True),
+            ParamSpec("direction", ParamType.CHOICE, "down", choices=("down", "up", "left", "right")),
+            ParamSpec("label", ParamType.STRING, ""),
+            _font_size(36.0, key="label_size"),
+            _length("width", 3.0),
+            ParamSpec("buff", ParamType.FLOAT, 0.2, minimum=0.0, maximum=5.0, step=0.05),
+        ),
+        _TEXT_STYLE,
+        (("fill_color", _WHITE), ("fill_opacity", 1.0)),
+    ),
+    ObjectKind.POLYGON: KindInfo(
+        ObjectKind.POLYGON,
+        (ParamSpec("points", ParamType.POINTS, [[-1.5, -1.0], [1.5, -1.0], [2.0, 0.8], [0.0, 1.6], [-2.0, 0.8]], scalable=True),),
+        _SHAPE_STYLE,
+        (("stroke_color", "#83C167"), ("fill_color", "#83C167")),
+    ),
+    ObjectKind.REGULAR_POLYGON: KindInfo(
+        ObjectKind.REGULAR_POLYGON,
+        (ParamSpec("n", ParamType.INT, 6, minimum=3, maximum=40), _length("radius", 1.0)),
+        _SHAPE_STYLE,
+        (("stroke_color", "#5CD0B3"), ("fill_color", "#5CD0B3")),
+    ),
+    ObjectKind.STAR: KindInfo(
+        ObjectKind.STAR,
+        (ParamSpec("n", ParamType.INT, 5, minimum=3, maximum=40), _length("outer_radius", 1.2), _length("inner_radius", 0.5)),
+        _SHAPE_STYLE,
+        (("stroke_color", _YELLOW), ("fill_color", _YELLOW), ("fill_opacity", 0.6)),
+    ),
+    ObjectKind.ARC: KindInfo(
+        ObjectKind.ARC,
+        (
+            _length("radius", 1.5),
+            ParamSpec("start_angle", ParamType.FLOAT, 0.0, minimum=-360.0, maximum=360.0, step=15.0, decimals=1),
+            ParamSpec("angle", ParamType.FLOAT, 120.0, minimum=-360.0, maximum=360.0, step=15.0, decimals=1),
+        ),
+        _LINE_STYLE,
+        (("stroke_color", _WHITE),),
+    ),
+    ObjectKind.SECTOR: KindInfo(
+        ObjectKind.SECTOR,
+        (
+            _length("radius", 1.5),
+            ParamSpec("start_angle", ParamType.FLOAT, 0.0, minimum=-360.0, maximum=360.0, step=15.0, decimals=1),
+            ParamSpec("angle", ParamType.FLOAT, 90.0, minimum=-360.0, maximum=360.0, step=15.0, decimals=1),
+        ),
+        _SHAPE_STYLE,
+        (("stroke_color", "#F0AC5F"), ("fill_color", "#F0AC5F"), ("fill_opacity", 0.6)),
+    ),
+    ObjectKind.ANNULUS: KindInfo(
+        ObjectKind.ANNULUS,
+        (_length("inner_radius", 0.7), _length("outer_radius", 1.3)),
+        _SHAPE_STYLE,
+        (("stroke_color", "#9A72AC"), ("fill_color", "#9A72AC"), ("fill_opacity", 0.6), ("stroke_width", 0.0)),
+    ),
+    ObjectKind.DECIMAL_NUMBER: KindInfo(
+        ObjectKind.DECIMAL_NUMBER,
+        (
+            ParamSpec("value", ParamType.FLOAT, 0.0, minimum=-1e9, maximum=1e9, step=1.0, decimals=4),
+            ParamSpec("decimals", ParamType.INT, 2, minimum=0, maximum=10),
+            _font_size(48.0),
+            ParamSpec("show_sign", ParamType.BOOL, False),
+            ParamSpec("unit", ParamType.STRING, ""),
+        ),
+        _TEXT_STYLE,
+        (("fill_color", _WHITE), ("fill_opacity", 1.0)),
+    ),
+    ObjectKind.TABLE: KindInfo(
+        ObjectKind.TABLE,
+        (
+            ParamSpec("rows", ParamType.TABLE, [["x", "f(x)"], ["1", "1"], ["2", "4"], ["3", "9"]]),
+            _font_size(32.0),
+            ParamSpec("outer_lines", ParamType.BOOL, True),
+            ParamSpec("h_buff", ParamType.FLOAT, 1.0, minimum=0.05, maximum=10.0, step=0.1, scalable=True),
+            ParamSpec("v_buff", ParamType.FLOAT, 0.5, minimum=0.05, maximum=10.0, step=0.1, scalable=True),
+        ),
+        frozenset({"stroke_color", "stroke_width", "fill_color"}),
+        (("stroke_color", _WHITE), ("stroke_width", 2.0), ("fill_color", _WHITE)),
+    ),
+    ObjectKind.MATRIX: KindInfo(
+        ObjectKind.MATRIX,
+        (
+            ParamSpec("rows", ParamType.TABLE, [["1", "0"], ["0", "1"]]),
+            ParamSpec("h_buff", ParamType.FLOAT, 1.3, minimum=0.05, maximum=10.0, step=0.1, scalable=True),
+            ParamSpec("v_buff", ParamType.FLOAT, 0.8, minimum=0.05, maximum=10.0, step=0.1, scalable=True),
+        ),
+        _TEXT_STYLE,
+        (("fill_color", _WHITE), ("fill_opacity", 1.0)),
+    ),
+    ObjectKind.CODE: KindInfo(
+        ObjectKind.CODE,
+        (
+            ParamSpec("code", ParamType.TEXT, "def quadrat(x):\n    return x ** 2"),
+            ParamSpec("language", ParamType.CHOICE, "python", choices=CODE_LANGUAGES),
+            _font_size(24.0),
+            ParamSpec("line_numbers", ParamType.BOOL, True),
+            ParamSpec("background", ParamType.CHOICE, "rectangle", choices=("rectangle", "window")),
+        ),
+        frozenset(),
+    ),
+    ObjectKind.TEX: KindInfo(
+        ObjectKind.TEX,
+        (ParamSpec("tex", ParamType.LATEX, r"Der Satz $a^2 + b^2 = c^2$"), _font_size(48.0)),
+        _TEXT_STYLE,
+        (("fill_color", _WHITE), ("fill_opacity", 1.0)),
+    ),
+    ObjectKind.MARKUP_TEXT: KindInfo(
+        ObjectKind.MARKUP_TEXT,
+        (
+            ParamSpec("markup", ParamType.TEXT, '<b>Fett</b>, <i>kursiv</i> und <span fgcolor="#FC6255">rot</span>'),
+            _font_size(48.0),
+            ParamSpec("font", ParamType.FONT, ""),
+        ),
+        _TEXT_STYLE,
+        (("fill_color", _WHITE), ("fill_opacity", 1.0)),
+    ),
+    ObjectKind.GROUP: KindInfo(ObjectKind.GROUP, (), frozenset()),
 }
 
 #: Shift directions offered for FadeIn/FadeOut.
@@ -268,6 +429,8 @@ def is_vector_object(kind: ObjectKind, params: dict[str, Any]) -> bool:
 
 def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: dict[str, Any]) -> bool:
     """Return ``True`` if the animation can be applied to the object."""
+    if obj_kind == ObjectKind.GROUP and anim_kind in (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM):
+        return False
     if anim_kind in _VECTOR_ONLY:
         return is_vector_object(obj_kind, params)
     return True

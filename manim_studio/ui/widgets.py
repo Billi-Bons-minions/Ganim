@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Callable
 
 from PySide6.QtCore import QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QAction, QColor, QFocusEvent, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QAction, QColor, QFocusEvent, QIcon, QPainter, QPixmap, QValidator
 from PySide6.QtWidgets import (
     QColorDialog,
     QDoubleSpinBox,
@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from manim_studio.i18n import tr
+from manim_studio.model.expression import evaluate_number
 from manim_studio.model.types import MANIM_COLORS
 
 DEBOUNCE_MS = 450
@@ -134,7 +135,10 @@ class DebouncedTextEdit(QPlainTextEdit):
 
 
 class SpinBox(QDoubleSpinBox):
-    """Double spin box that only commits on Enter, focus loss or arrow clicks."""
+    """Double spin box that only commits on Enter, focus loss or arrow clicks.
+
+    Besides plain numbers it accepts small terms such as ``pi/2`` or ``3*1.5``.
+    """
 
     def __init__(self, minimum: float, maximum: float, step: float, decimals: int, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -150,6 +154,20 @@ class SpinBox(QDoubleSpinBox):
             super().wheelEvent(event)
         else:
             event.ignore()
+
+    def validate(self, text: str, position: int) -> object:
+        value = evaluate_number(text)
+        if value is not None and self.minimum() <= value <= self.maximum():
+            return QValidator.State.Acceptable, text, position
+        return QValidator.State.Intermediate, text, position
+
+    def valueFromText(self, text: str) -> float:  # noqa: N802 - Qt API
+        value = evaluate_number(text)
+        return self.value() if value is None else max(self.minimum(), min(self.maximum(), value))
+
+    def fixup(self, text: str) -> str:
+        value = evaluate_number(text)
+        return self.textFromValue(self.value() if value is None else value)
 
 
 class FileField(QWidget):

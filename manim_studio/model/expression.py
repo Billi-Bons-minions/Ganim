@@ -310,3 +310,25 @@ def check_expression(text: str) -> ExpressionError | None:
     except ExpressionError as error:
         return error
     return None
+
+
+def evaluate_number(text: str) -> float | None:
+    """Evaluate a constant term such as ``pi/2`` or ``1,5`` (``None`` if it is not one)."""
+    import math
+
+    source = text.strip()
+    if not source:
+        return None
+    if "," in source and "." not in source and source.count(",") == 1:
+        source = source.replace(",", ".")
+    try:
+        expression = parse_expression(source)
+    except ExpressionError:
+        return None
+    if _mentions_variable(expression.tree):
+        return None
+    try:
+        value = expression.evaluate(0.0)
+    except (ArithmeticError, ValueError, OverflowError):
+        return None
+    return value if math.isfinite(value) else None

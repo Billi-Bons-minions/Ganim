@@ -11,24 +11,32 @@ from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPen, QPixmap, QWheelEvent
 from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QWidget
 
+from manim_studio.model import groups
 from manim_studio.model.entities import Scene
 from manim_studio.model.stage_edits import MOVE, ROTATE, SCALE
 from manim_studio.model.state import ObjectState
-from manim_studio.model.types import FRAME_HEIGHT, FRAME_WIDTH
+from manim_studio.model.types import FRAME_HEIGHT, FRAME_WIDTH, LINE_KINDS, ObjectKind
 from manim_studio.ui.stage.drawing import PX, StageResources, build_drawing, pt
 from manim_studio.ui.stage.effects import Effects
-from manim_studio.ui.theme import color as theme_color
 from manim_studio.ui.stage.items import (
+    ROLE_ENDPOINT,
     ROLE_ROTATE,
+    ROLE_VERTEX,
+    GroupItem,
     HandleItem,
     ObjectItem,
     attach_handles,
+    attach_point_handles,
 )
+from manim_studio.ui.theme import color as theme_color
 
 KIND_MIME = "application/x-manim-studio-kind"
 FRAME_MARGIN = 0.6
 ROTATION_SNAP = 15.0
 SCALE_SNAP = 0.05
+GUIDE_DISTANCE = 7.0
+DRAG_VERTEX = "vertex"
+DRAG_ENDPOINT = "endpoint"
 
 #: ``policy(action, object_ids) -> (allowed, message)``
 EditPolicy = Callable[[str, list[str]], tuple[bool, str]]
@@ -45,6 +53,8 @@ class _Drag:
     rotation: float = 0.0
     value: float = 0.0
     delta: QPointF = field(default_factory=QPointF)
+    handle: HandleItem | None = None
+    point: QPointF = field(default_factory=QPointF)
 
 
 class StageView(QGraphicsView):
@@ -59,6 +69,11 @@ class StageView(QGraphicsView):
     cursorMoved = Signal(float, float)
     statusMessage = Signal(str)
     zoomChanged = Signal(float)
+    viewChanged = Signal()
+    vertexMoved = Signal(str, int, float, float)
+    vertexInserted = Signal(str, int, float, float)
+    vertexMenuRequested = Signal(QPoint, str, int)
+    endpointMoved = Signal(str, int, float, float)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -73,6 +88,8 @@ class StageView(QGraphicsView):
         self.setAcceptDrops(True)
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.horizontalScrollBar().valueChanged.connect(lambda _value: self.viewChanged.emit())
+        self.verticalScrollBar().valueChanged.connect(lambda _value: self.viewChanged.emit())
         self._items: dict[str, ObjectItem] = {}
         self._handles: list[HandleItem] = []
         self._selection: list[str] = []
@@ -86,13 +103,21 @@ class StageView(QGraphicsView):
         self._snap = True
         self._auto_fit = True
         self._motion_paths: list[tuple[QPointF, QPointF]] = []
+        self._guides: list[tuple[QPointF, QPointF]] = []
         self._exact_item: QGraphicsPixmapItem | None = None
+        self._scene_model: Scene | None = None
+        self._entered_group: str | None = None
+        self._point_editing = False
 
     # --- configuration --------------------------------------------------------
 
     def set_policy(self, policy: EditPolicy) -> None:
         """Install the function that decides which edits are allowed."""
         self._policy = policy
+
+    def set_point_editing(self, enabled: bool) -> None:
+        """Allow editing polygon vertices and line endpoints (only at the start)."""
+        self._point_editing = enabled
 
     def set_exact_image(self, path: object) -> None:
         """Show a Manim-rendered PNG of the frame instead of the approximate drawing."""
@@ -113,7 +138,7 @@ class StageView(QGraphicsView):
             self._exact_item.setZValue(-1_000_000)
             self._exact_item.setTransformationMode(Qt.TransformationMode.SmoothTransformation)
             self._scene.addItem(self._exact_item)
-        frame = QRectF(pt(-FRAME_WIDTH / 2, FRAME_HEIGHT / 2), pt(FRAME_WIDTH / 2, -FRAME_HEIGHT / 2))
+        frame = self.frame_rect()
         self._exact_item.setPixmap(pixmap)
         self._exact_item.setPos(frame.topLeft())
         self._exact_item.setScale(frame.width() / max(1, pixmap.width()))
@@ -135,13 +160,25 @@ class StageView(QGraphicsView):
         self._show_grid, self._grid_step, self._snap = show, max(0.05, step), snap
         self.viewport().update()
 
+    @staticmethod
+    def frame_rect() -> QRectF:
+        """Return the Manim frame in scene pixels."""
+        return QRectF(pt(-FRAME_WIDTH / 2, FRAME_HEIGHT / 2), pt(FRAME_WIDTH / 2, -FRAME_HEIGHT / 2))
+
     def fit_frame(self) -> None:
         """Zoom so that the whole Manim frame is visible."""
-        half_w, half_h = FRAME_WIDTH / 2 + FRAME_MARGIN, FRAME_HEIGHT / 2 + FRAME_MARGIN
-        self.fitInView(QRectF(pt(-half_w, half_h), pt(half_w, -half_h)), Qt.AspectRatioMode.KeepAspectRatio)
+        self.fitInView(self.frame_rect().adjusted(-FRAME_MARGIN * PX, -FRAME_MARGIN * PX, FRAME_MARGIN * PX, FRAME_MARGIN * PX), Qt.AspectRatioMode.KeepAspectRatio)
         self._auto_fit = True
-        self._refresh_handles()
-        self.zoomChanged.emit(self.zoom_percent())
+        self._after_zoom()
+
+    def zoom_to(self, rect: QRectF) -> None:
+        """Zoom onto a scene rectangle (e.g. the selection)."""
+        if rect.isEmpty():
+            return
+        margin = max(rect.width(), rect.height()) * 0.25 + PX * 0.5
+        self.fitInView(rect.adjusted(-margin, -margin, margin, margin), Qt.AspectRatioMode.KeepAspectRatio)
+        self._auto_fit = False
+        self._after_zoom()
 
     def zoom(self, factor: float) -> None:
         """Zoom in (>1) or out (<1)."""
@@ -149,8 +186,12 @@ class StageView(QGraphicsView):
         factor = max(0.02 / current, min(factor, 20.0 / current))
         self.scale(factor, factor)
         self._auto_fit = False
+        self._after_zoom()
+
+    def _after_zoom(self) -> None:
         self._refresh_handles()
         self.zoomChanged.emit(self.zoom_percent())
+        self.viewChanged.emit()
 
     def view_scale(self) -> float:
         """Return the current zoom (screen pixels per scene pixel)."""
@@ -173,15 +214,20 @@ class StageView(QGraphicsView):
         """Synchronize the items with the model state."""
         self._updating = True
         self._clear_handles()
+        self._scene_model = scene
         self._background = QColor(scene.background_color)
+        if self._entered_group is not None and not groups.is_group(scene.object_by_id(self._entered_group)):
+            self._entered_group = None
         known = set()
         for index, obj in enumerate(scene.objects):
             state = states.get(obj.id)
-            if state is None:
+            if state is None or groups.is_group(obj):
                 continue
             known.add(obj.id)
             item = self._items.get(obj.id)
-            if item is None:
+            if item is None or isinstance(item, GroupItem):
+                if item is not None:
+                    self._scene.removeItem(item)
                 item = ObjectItem(obj.id)
                 self._items[obj.id] = item
                 self._scene.addItem(item)
@@ -191,18 +237,55 @@ class StageView(QGraphicsView):
             if morph_shape is not None:
                 effects.morph = build_drawing(scene, morph_shape, state, resources)
             item.set_drawing(build_drawing(scene, shape, state, resources), ghost=not state.visible, effects=effects)
-            item.setVisible(state.visible or show_hidden)
+            item.setVisible((state.visible or show_hidden) and not obj.editor_hidden)
+            item.locked = obj.locked
+            item.setFlag(item.GraphicsItemFlag.ItemIsSelectable, not obj.locked)
             item.setPos(pt(state.x, state.y))
             item.setRotation(-state.rotation)
             item.setScale(state.scale)
             item.setZValue(obj.z_index * 10_000 + index)
             item.content_hidden = self._exact_item is not None
+        self._sync_groups(scene, known)
         for object_id in [object_id for object_id in self._items if object_id not in known]:
             self._scene.removeItem(self._items.pop(object_id))
         self._apply_selection(selected)
         self._updating = False
         self._refresh_handles()
         self.viewport().update()
+
+    def _sync_groups(self, scene: Scene, known: set[str]) -> None:
+        for obj in scene.objects:
+            if not groups.is_group(obj):
+                continue
+            members = [self._items[leaf] for leaf in groups.leaves(scene, obj.id) if leaf in self._items and self._items[leaf].isVisible()]
+            item = self._items.get(obj.id)
+            if not isinstance(item, GroupItem):
+                if item is not None:
+                    self._scene.removeItem(item)
+                item = GroupItem(obj.id)
+                self._items[obj.id] = item
+                self._scene.addItem(item)
+            known.add(obj.id)
+            rect = QRectF()
+            for member in members:
+                rect = rect.united(member.mapRectToScene(member.drawing.bounds))
+            item.set_rect(rect if not rect.isNull() else QRectF(0, 0, 1, 1))
+            item.setVisible(bool(members))
+            item.setZValue(5_000_000)
+
+    def item_rect(self, object_id: str) -> QRectF:
+        """Return the drawn bounds of an object (or group) in scene pixels."""
+        item = self._items.get(object_id)
+        if item is None:
+            return QRectF()
+        return item.mapRectToScene(item.drawing.bounds)
+
+    def selection_rect(self) -> QRectF:
+        """Return the union of the selected objects' bounds."""
+        rect = QRectF()
+        for object_id in self._selection:
+            rect = rect.united(self.item_rect(object_id))
+        return rect
 
     def _apply_selection(self, selected: list[str]) -> None:
         self._selection = [object_id for object_id in selected if object_id in self._items]
@@ -227,19 +310,45 @@ class StageView(QGraphicsView):
         if len(self._selection) != 1:
             return
         item = self._items.get(self._selection[0])
-        if item is None or not item.isVisible():
+        if item is None or not item.isVisible() or item.locked:
+            return
+        obj = self._scene_model.object_by_id(item.object_id) if self._scene_model else None
+        if obj is not None and self._point_editing and obj.kind in LINE_KINDS:
+            half = item.drawing.bounds.width() / 2
+            self._handles = attach_point_handles(item, [QPointF(-half, 0), QPointF(half, 0)], ROLE_ENDPOINT)
             return
         self._handles = attach_handles(item, self.view_scale(), can_rotate=True)
+        if obj is not None and self._point_editing and obj.kind == ObjectKind.POLYGON:
+            offset = item.drawing.offset
+            local = [pt(float(x), float(y)) - offset for x, y in obj.params.get("points", [])]
+            self._handles += attach_point_handles(item, local, ROLE_VERTEX)
 
     # --- selection ------------------------------------------------------------
+
+    def _selectable_id(self, object_id: str) -> str:
+        """Map a clicked object to what gets selected (its group unless entered)."""
+        if self._scene_model is None:
+            return object_id
+        chain = [object_id] + groups.ancestors(self._scene_model, object_id)
+        if self._entered_group in chain:
+            index = chain.index(self._entered_group)
+            return chain[index - 1] if index > 0 else object_id
+        return chain[-1]
 
     def _on_scene_selection(self) -> None:
         if self._updating:
             return
-        current = {item.object_id for item in self._scene.selectedItems() if isinstance(item, ObjectItem)}
+        current: list[str] = []
+        for item in self._scene.selectedItems():
+            if isinstance(item, ObjectItem) and not isinstance(item, GroupItem):
+                target = self._selectable_id(item.object_id)
+                if target not in current:
+                    current.append(target)
         ordered = [object_id for object_id in self._selection if object_id in current]
-        ordered += sorted(object_id for object_id in current if object_id not in ordered)
-        self._selection = ordered
+        ordered += [object_id for object_id in current if object_id not in ordered]
+        self._updating = True
+        self._apply_selection(ordered)
+        self._updating = False
         self._refresh_handles()
         self.selectionEdited.emit(list(ordered))
 
@@ -249,7 +358,7 @@ class StageView(QGraphicsView):
 
     def _object_item_at(self, position: QPoint) -> ObjectItem | None:
         for item in self.items(position):
-            if isinstance(item, ObjectItem) and item.isVisible():
+            if isinstance(item, ObjectItem) and not isinstance(item, GroupItem) and item.isVisible() and not item.locked:
                 return item
         return None
 
@@ -269,6 +378,38 @@ class StageView(QGraphicsView):
             return round(value, 4)
         return round(round(value / self._grid_step) * self._grid_step, 4)
 
+    def _snap_point(self, scene_pos: QPointF, modifiers: Qt.KeyboardModifier) -> QPointF:
+        return QPointF(self._snap_value(scene_pos.x() / PX, modifiers) * PX, -self._snap_value(-scene_pos.y() / PX, modifiers) * PX)
+
+    def _guide_candidates(self, moving: set[str]) -> tuple[list[float], list[float]]:
+        xs, ys = [0.0], [0.0]
+        for object_id, item in self._items.items():
+            if object_id in moving or not item.isVisible() or isinstance(item, GroupItem):
+                continue
+            rect = item.mapRectToScene(item.drawing.bounds)
+            xs += [rect.left(), rect.center().x(), rect.right()]
+            ys += [rect.top(), rect.center().y(), rect.bottom()]
+        frame = self.frame_rect()
+        xs += [frame.left(), frame.right()]
+        ys += [frame.top(), frame.bottom()]
+        return xs, ys
+
+    def _object_snap(self, rect: QRectF, moving: set[str]) -> tuple[QPointF, list[tuple[QPointF, QPointF]]]:
+        """Return a correction that aligns ``rect`` with other objects, plus guide lines."""
+        threshold = GUIDE_DISTANCE / max(self.view_scale(), 0.01)
+        xs, ys = self._guide_candidates(moving)
+        best_x = min(((c - v, c) for v in (rect.left(), rect.center().x(), rect.right()) for c in xs), key=lambda d: abs(d[0]), default=(math.inf, 0))
+        best_y = min(((c - v, c) for v in (rect.top(), rect.center().y(), rect.bottom()) for c in ys), key=lambda d: abs(d[0]), default=(math.inf, 0))
+        dx = best_x[0] if abs(best_x[0]) <= threshold else 0.0
+        dy = best_y[0] if abs(best_y[0]) <= threshold else 0.0
+        guides = []
+        visible = self.mapToScene(self.viewport().rect()).boundingRect()
+        if dx or abs(best_x[0]) <= threshold:
+            guides.append((QPointF(best_x[1], visible.top()), QPointF(best_x[1], visible.bottom())))
+        if dy or abs(best_y[0]) <= threshold:
+            guides.append((QPointF(visible.left(), best_y[1]), QPointF(visible.right(), best_y[1])))
+        return QPointF(dx, dy), guides
+
     # --- mouse ------------------------------------------------------------------
 
     def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802 - Qt API
@@ -276,6 +417,13 @@ class StageView(QGraphicsView):
         if event.button() == Qt.MouseButton.MiddleButton:
             self._pan_origin = position
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            return
+        if event.button() == Qt.MouseButton.RightButton:
+            handle = self._handle_at(position)
+            if handle is not None and handle.role == ROLE_VERTEX and self._selection:
+                self.vertexMenuRequested.emit(event.globalPosition().toPoint(), self._selection[0], handle.index)
+                return
+            super().mousePressEvent(event)
             return
         if event.button() != Qt.MouseButton.LeftButton:
             super().mousePressEvent(event)
@@ -287,17 +435,50 @@ class StageView(QGraphicsView):
             return
         item = self._object_item_at(position)
         if item is None:
+            self._entered_group = None
             super().mousePressEvent(event)
             return
+        target = self._selectable_id(item.object_id)
         if event.modifiers() & (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier):
-            ids = [i for i in self._selection if i != item.object_id]
-            if item.object_id not in self._selection:
-                ids.append(item.object_id)
+            ids = [i for i in self._selection if i != target]
+            if target not in self._selection:
+                ids.append(target)
             self._emit_selection(ids)
             return
-        if item.object_id not in self._selection:
-            self._emit_selection([item.object_id])
+        if target not in self._selection:
+            self._emit_selection([target])
         self._start_move(self.mapToScene(position))
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:  # noqa: N802 - Qt API
+        position = event.position().toPoint()
+        item = self._object_item_at(position)
+        if item is None or self._scene_model is None:
+            super().mouseDoubleClickEvent(event)
+            return
+        top = groups.top_level(self._scene_model, item.object_id)
+        if top != item.object_id and self._entered_group != top:
+            self._entered_group = top
+            self._emit_selection([self._selectable_id(item.object_id)])
+            self.statusMessage.emit("")
+            return
+        obj = self._scene_model.object_by_id(item.object_id)
+        if obj is not None and obj.kind == ObjectKind.POLYGON and self._point_editing:
+            self._insert_vertex(obj.id, self.mapToScene(position))
+
+    def _insert_vertex(self, object_id: str, scene_pos: QPointF) -> None:
+        item = self._items[object_id]
+        obj = self._scene_model.object_by_id(object_id) if self._scene_model else None
+        if obj is None:
+            return
+        offset = item.drawing.offset
+        corners = [item.mapToScene(pt(float(x), float(y)) - offset) for x, y in obj.params.get("points", [])]
+        best_index, best_distance = 0, math.inf
+        for index, start in enumerate(corners):
+            end = corners[(index + 1) % len(corners)]
+            distance = _segment_distance(scene_pos, start, end)
+            if distance < best_distance:
+                best_index, best_distance = index + 1, distance
+        self.vertexInserted.emit(object_id, best_index, scene_pos.x() / PX, -scene_pos.y() / PX)
 
     def _allowed(self, action: str, ids: list[str]) -> bool:
         allowed, message = self._policy(action, ids)
@@ -305,19 +486,33 @@ class StageView(QGraphicsView):
             self.statusMessage.emit(message)
         return allowed
 
+    def _moving_item_ids(self, ids: list[str]) -> list[str]:
+        result = list(ids)
+        if self._scene_model is not None:
+            for object_id in ids:
+                for leaf in groups.leaves(self._scene_model, object_id):
+                    if leaf not in result:
+                        result.append(leaf)
+        return [object_id for object_id in result if object_id in self._items]
+
     def _start_move(self, press: QPointF) -> None:
         ids = list(self._selection)
         if not self._allowed(MOVE, ids):
             return
-        origins = {object_id: QPointF(self._items[object_id].pos()) for object_id in ids}
+        origins = {object_id: QPointF(self._items[object_id].pos()) for object_id in self._moving_item_ids(ids)}
         self._drag = _Drag(MOVE, press, ids, origins)
 
     def _start_handle_drag(self, handle: HandleItem, press: QPointF) -> None:
         object_id = self._selection[0]
+        item = self._items[object_id]
+        if handle.role in (ROLE_VERTEX, ROLE_ENDPOINT):
+            if self._allowed(MOVE, [object_id]):
+                mode = DRAG_VERTEX if handle.role == ROLE_VERTEX else DRAG_ENDPOINT
+                self._drag = _Drag(mode, press, [object_id], handle=handle, point=item.mapToScene(handle.pos()))
+            return
         action = ROTATE if handle.role == ROLE_ROTATE else SCALE
         if not self._allowed(action, [object_id]):
             return
-        item = self._items[object_id]
         self._drag = _Drag(action, press, [object_id], center=QPointF(item.pos()), scale=item.scale(), rotation=item.rotation())
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:  # noqa: N802 - Qt API
@@ -333,22 +528,36 @@ class StageView(QGraphicsView):
         if self._drag is None:
             super().mouseMoveEvent(event)
             return
-        if self._drag.mode == MOVE:
+        mode = self._drag.mode
+        if mode == MOVE:
             self._update_move(scene_pos, event.modifiers())
-        elif self._drag.mode == SCALE:
+        elif mode == SCALE:
             self._update_scale(scene_pos, event.modifiers())
-        else:
+        elif mode == ROTATE:
             self._update_rotation(scene_pos, event.modifiers())
+        else:
+            self._update_point(scene_pos, event.modifiers())
 
     def _update_move(self, scene_pos: QPointF, modifiers: Qt.KeyboardModifier) -> None:
         drag = self._drag
         assert drag is not None
-        primary = drag.origins[drag.ids[0]]
-        raw = primary + (scene_pos - drag.press)
-        snapped = QPointF(self._snap_value(raw.x() / PX, modifiers) * PX, -self._snap_value(-raw.y() / PX, modifiers) * PX)
-        drag.delta = snapped - primary
+        primary = drag.origins.get(drag.ids[0], next(iter(drag.origins.values()), QPointF()))
+        raw_delta = scene_pos - drag.press
+        snapped = self._snap_point(primary + raw_delta, modifiers)
+        delta = snapped - primary if self._snapping(modifiers) else raw_delta
+        self._guides = []
+        if self._snapping(modifiers):
+            rect = QRectF()
+            for object_id in drag.ids:
+                rect = rect.united(self.item_rect(object_id).translated(raw_delta - (self._items[object_id].pos() - drag.origins.get(object_id, self._items[object_id].pos()))))
+            correction, guides = self._object_snap(rect, set(drag.origins))
+            if correction.x() or correction.y():
+                delta = QPointF(raw_delta.x() + correction.x() if correction.x() else delta.x(), raw_delta.y() + correction.y() if correction.y() else delta.y())
+                self._guides = guides
+        drag.delta = delta
         for object_id, origin in drag.origins.items():
             self._items[object_id].setPos(origin + drag.delta)
+        self.viewport().update()
 
     def _update_scale(self, scene_pos: QPointF, modifiers: Qt.KeyboardModifier) -> None:
         drag = self._drag
@@ -376,12 +585,22 @@ class StageView(QGraphicsView):
         self._items[drag.ids[0]].setRotation(drag.rotation - delta)
         self.statusMessage.emit(f"{delta:+.0f}°")
 
+    def _update_point(self, scene_pos: QPointF, modifiers: Qt.KeyboardModifier) -> None:
+        drag = self._drag
+        assert drag is not None and drag.handle is not None
+        drag.point = self._snap_point(scene_pos, modifiers)
+        item = self._items[drag.ids[0]]
+        drag.handle.setPos(item.mapFromScene(drag.point))
+        self.statusMessage.emit(f"({drag.point.x() / PX:.2f}, {-drag.point.y() / PX:.2f})")
+
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # noqa: N802 - Qt API
         if event.button() == Qt.MouseButton.MiddleButton and self._pan_origin is not None:
             self._pan_origin = None
             self.unsetCursor()
             return
         drag, self._drag = self._drag, None
+        self._guides = []
+        self.viewport().update()
         if drag is None:
             super().mouseReleaseEvent(event)
             return
@@ -391,12 +610,18 @@ class StageView(QGraphicsView):
             self.scaleRequested.emit(drag.ids[0], drag.value)
         elif drag.mode == ROTATE and abs(drag.value) > 1e-4:
             self.rotateRequested.emit(drag.ids[0], drag.value)
+        elif drag.mode in (DRAG_VERTEX, DRAG_ENDPOINT) and drag.handle is not None:
+            signal = self.vertexMoved if drag.mode == DRAG_VERTEX else self.endpointMoved
+            signal.emit(drag.ids[0], drag.handle.index, round(drag.point.x() / PX, 4), round(-drag.point.y() / PX, 4))
 
     def contextMenuEvent(self, event) -> None:  # noqa: N802 - Qt API
+        if self._handle_at(event.pos()) is not None:
+            return
         item = self._object_item_at(event.pos())
-        if item is not None and item.object_id not in self._selection:
-            self._emit_selection([item.object_id])
-        self.contextMenuRequested.emit(event.globalPos(), item.object_id if item else "")
+        target = self._selectable_id(item.object_id) if item is not None else ""
+        if target and target not in self._selection:
+            self._emit_selection([target])
+        self.contextMenuRequested.emit(event.globalPos(), target)
 
     # --- keyboard and wheel -------------------------------------------------------
 
@@ -407,6 +632,11 @@ class StageView(QGraphicsView):
             Qt.Key.Key_Up: (0.0, 1.0),
             Qt.Key.Key_Down: (0.0, -1.0),
         }
+        if event.key() == Qt.Key.Key_Escape and self._entered_group is not None:
+            group = self._entered_group
+            self._entered_group = None
+            self._emit_selection([group])
+            return
         if event.key() in offsets and self._selection:
             step = 1.0 if event.modifiers() & Qt.KeyboardModifier.ShiftModifier else (self._grid_step if self._snap else 0.1)
             dx, dy = offsets[event.key()]
@@ -425,6 +655,7 @@ class StageView(QGraphicsView):
         super().resizeEvent(event)
         if self._auto_fit:
             self.fit_frame()
+        self.viewChanged.emit()
 
     # --- drag and drop from the library -------------------------------------------------
 
@@ -456,7 +687,7 @@ class StageView(QGraphicsView):
 
     def drawBackground(self, painter: QPainter, rect: QRectF) -> None:  # noqa: N802 - Qt API
         painter.fillRect(rect, theme_color("stage_outside"))
-        frame = QRectF(pt(-FRAME_WIDTH / 2, FRAME_HEIGHT / 2), pt(FRAME_WIDTH / 2, -FRAME_HEIGHT / 2))
+        frame = self.frame_rect()
         painter.fillRect(frame, self._background)
         if self._show_grid:
             self._draw_grid(painter, rect)
@@ -467,9 +698,15 @@ class StageView(QGraphicsView):
         painter.drawRect(frame)
 
     def drawForeground(self, painter: QPainter, rect: QRectF) -> None:  # noqa: N802 - Qt API
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        if self._guides:
+            guide = QPen(theme_color("accent"), 1.0, Qt.PenStyle.DashLine)
+            guide.setCosmetic(True)
+            painter.setPen(guide)
+            for start, end in self._guides:
+                painter.drawLine(start, end)
         if not self._motion_paths:
             return
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         record = theme_color("record")
         pen = QPen(record, 2.0, Qt.PenStyle.DashLine)
         pen.setCosmetic(True)
@@ -520,3 +757,12 @@ class StageView(QGraphicsView):
         while y <= rect.bottom():
             painter.drawLine(QPointF(rect.left(), y), QPointF(rect.right(), y))
             y += spacing
+
+
+def _segment_distance(point: QPointF, start: QPointF, end: QPointF) -> float:
+    dx, dy = end.x() - start.x(), end.y() - start.y()
+    length = dx * dx + dy * dy
+    if length == 0:
+        return math.hypot(point.x() - start.x(), point.y() - start.y())
+    t = max(0.0, min(1.0, ((point.x() - start.x()) * dx + (point.y() - start.y()) * dy) / length))
+    return math.hypot(point.x() - start.x() - t * dx, point.y() - start.y() - t * dy)

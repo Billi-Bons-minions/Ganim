@@ -6,11 +6,13 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from manim_studio.model import groups
 from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import STEP_TOGETHER, Animation, Scene, SceneObject, Step
 from manim_studio.model.expression import check_expression
 from manim_studio.model.schema import animation_allowed
 from manim_studio.model.types import (
+    LATEX_KINDS,
     MODIFIER_ANIMATIONS,
     RATE_FUNCTIONS,
     TRANSFORM_ANIMATIONS,
@@ -54,11 +56,24 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
     params = obj.params
     if obj.kind == ObjectKind.TEXT and not str(params.get("text", "")).strip():
         add(ERROR, "text_empty")
-    if obj.kind == ObjectKind.MATH_TEX:
-        if not str(params.get("latex", "")).strip():
-            add(ERROR, "latex_empty")
-        if not latex_available:
-            add(ERROR, "latex_unavailable")
+    if obj.kind == ObjectKind.MATH_TEX and not str(params.get("latex", "")).strip():
+        add(ERROR, "latex_empty")
+    if obj.kind == ObjectKind.TEX and not str(params.get("tex", "")).strip():
+        add(ERROR, "latex_empty")
+    if obj.kind in LATEX_KINDS and not latex_available:
+        add(ERROR, "latex_unavailable")
+    if obj.kind == ObjectKind.POLYGON and len(params.get("points", [])) < 3:
+        add(ERROR, "polygon_points")
+    if obj.kind in (ObjectKind.STAR, ObjectKind.ANNULUS):
+        if float(params.get("inner_radius", 0.5)) >= float(params.get("outer_radius", 1.0)):
+            add(ERROR, "radii_invalid")
+    if obj.kind in (ObjectKind.TABLE, ObjectKind.MATRIX) and not any(params.get("rows", [])):
+        add(ERROR, "table_empty")
+    if obj.kind == ObjectKind.GROUP:
+        if not groups.members(scene, obj.id):
+            add(ERROR, "group_empty")
+        elif obj.id in groups.ancestors(scene, obj.id):
+            add(ERROR, "group_cycle")
     if obj.kind in (ObjectKind.AXES, ObjectKind.NUMBER_PLANE):
         for axis in ("x", "y"):
             if float(params.get(f"{axis}_min", 0)) >= float(params.get(f"{axis}_max", 1)):

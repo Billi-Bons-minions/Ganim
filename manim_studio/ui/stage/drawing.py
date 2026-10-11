@@ -71,6 +71,7 @@ class Drawing:
     primitives: list[Primitive] = field(default_factory=list)
     bounds: QRectF = field(default_factory=QRectF)
     hit_path: QPainterPath | None = None
+    offset: QPointF = field(default_factory=QPointF)
 
 
 @dataclass
@@ -175,19 +176,60 @@ def text_font(obj: SceneObject, font_size: float) -> QFont:
     return font
 
 
-def text_path(text: str, font: QFont) -> QPainterPath:
-    """Return a vector path for (possibly multi-line) text, left aligned."""
+def text_path(text: str, font: QFont, alignment: str = "left", line_spacing: float = 0.0) -> QPainterPath:
+    """Return a vector path for (possibly multi-line) text."""
     path = QPainterPath()
-    line_height = QFontMetricsF(font).lineSpacing()
-    for index, line in enumerate(text.split("\n")):
-        path.addText(QPointF(0, index * line_height), font, line)
+    metrics = QFontMetricsF(font)
+    line_height = metrics.lineSpacing() * (line_spacing if line_spacing > 0 else 1.0)
+    lines = text.split("\n")
+    widest = max((metrics.horizontalAdvance(line) for line in lines), default=0.0)
+    for index, line in enumerate(lines):
+        width = metrics.horizontalAdvance(line)
+        offset = {"center": (widest - width) / 2, "right": widest - width}.get(alignment, 0.0)
+        path.addText(QPointF(offset, index * line_height), font, line)
     return path
+
+
+def _colored_segments(line: str, words: list[tuple[str, str]]) -> list[tuple[str, str | None]]:
+    segments: list[tuple[str, str | None]] = []
+    index = 0
+    while index < len(line):
+        match = next(((word, color) for word, color in words if word and line.startswith(word, index)), None)
+        if match is not None:
+            segments.append(match)
+            index += len(match[0])
+        else:
+            if segments and segments[-1][1] is None:
+                segments[-1] = (segments[-1][0] + line[index], None)
+            else:
+                segments.append((line[index], None))
+            index += 1
+    return segments
 
 
 def _text_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
     font = text_font(obj, param_float(obj.params, "font_size", 48.0))
-    path = text_path(str(obj.params.get("text", "")) or " ", font)
-    return [Primitive(path=path, brush=QBrush(_color(state.fill_color, obj.fill_opacity)))]
+    text = str(obj.params.get("text", "")) or " "
+    alignment = str(obj.params.get("alignment", "left"))
+    spacing = param_float(obj.params, "line_spacing", 0.0)
+    words = [(str(w), str(c)) for w, c in obj.params.get("colored_words", []) or [] if str(w)]
+    base = QBrush(_color(state.fill_color, obj.fill_opacity))
+    if not words:
+        return [Primitive(path=text_path(text, font, alignment, spacing), brush=base)]
+    metrics = QFontMetricsF(font)
+    line_height = metrics.lineSpacing() * (spacing if spacing > 0 else 1.0)
+    lines = text.split("\n")
+    widest = max(metrics.horizontalAdvance(line) for line in lines)
+    paths: dict[str | None, QPainterPath] = {}
+    for index, line in enumerate(lines):
+        x = {"center": (widest - metrics.horizontalAdvance(line)) / 2, "right": widest - metrics.horizontalAdvance(line)}.get(alignment, 0.0)
+        for segment, color in _colored_segments(line, words):
+            paths.setdefault(color, QPainterPath()).addText(QPointF(x, index * line_height), font, segment)
+            x += metrics.horizontalAdvance(segment)
+    return [
+        Primitive(path=path, brush=base if color is None else QBrush(_color(color, obj.fill_opacity)))
+        for color, path in paths.items()
+    ]
 
 
 def _tinted_svg(svg: Path, color: str, height_px: float, resources: StageResources) -> QImage | None:
@@ -210,10 +252,10 @@ def _tinted_svg(svg: Path, color: str, height_px: float, resources: StageResourc
     return resources.tinted[key]
 
 
-def _math_tex_primitives(obj: SceneObject, state: ObjectState, resources: StageResources) -> list[Primitive]:
-    latex = str(obj.params.get("latex", ""))
+def tex_image_primitives(obj: SceneObject, state: ObjectState, resources: StageResources, source: str, environment: str) -> list[Primitive]:
+    """LaTeX rendered to an SVG image (or the source text while it compiles)."""
     font_size = param_float(obj.params, "font_size", 48.0)
-    svg = resources.tex.svg_path(latex) if resources.tex is not None else None
+    svg = resources.tex.svg_path(source, environment) if resources.tex is not None else None
     if svg is not None:
         view = QSvgRenderer(str(svg)).viewBoxF()
         scale = TEX_UNITS_PER_PT_AT_48 * font_size / 48.0 * PX
@@ -225,7 +267,11 @@ def _math_tex_primitives(obj: SceneObject, state: ObjectState, resources: StageR
     font = text_font(obj, font_size * 0.8)
     font.setItalic(True)
     color = _color(state.fill_color, obj.fill_opacity * (0.6 if svg is None else 1.0))
-    return [Primitive(path=text_path(latex or " ", font), brush=QBrush(color))]
+    return [Primitive(path=text_path(source or " ", font), brush=QBrush(color))]
+
+
+def _math_tex_primitives(obj: SceneObject, state: ObjectState, resources: StageResources) -> list[Primitive]:
+    return tex_image_primitives(obj, state, resources, str(obj.params.get("latex", "")), "align*")
 
 
 # --- coordinate systems -------------------------------------------------------------
@@ -415,6 +461,11 @@ def _image_primitives(obj: SceneObject, resources: StageResources) -> list[Primi
 
 
 def _shape_drawing(obj: SceneObject, state: ObjectState, scene: Scene, resources: StageResources) -> tuple[list[Primitive], bool]:
+    from manim_studio.ui.stage.drawing_extra import extra_drawing
+
+    extra = extra_drawing(scene, obj, state, resources)
+    if extra is not None:
+        return extra
     params = obj.params
     kind = obj.kind
     if kind == ObjectKind.CIRCLE:
@@ -465,7 +516,7 @@ def _translate(primitive: Primitive, dx: float, dy: float) -> None:
 
 
 def _hit_path(primitives: list[Primitive], bounds: QRectF, kind: ObjectKind) -> QPainterPath:
-    if kind in (ObjectKind.LINE, ObjectKind.ARROW, ObjectKind.FUNCTION_GRAPH):
+    if kind in (ObjectKind.LINE, ObjectKind.ARROW, ObjectKind.FUNCTION_GRAPH, ObjectKind.VECTOR, ObjectKind.DOUBLE_ARROW, ObjectKind.DASHED_LINE, ObjectKind.ARC):
         combined = QPainterPath()
         for primitive in primitives:
             if primitive.path is not None:
@@ -484,11 +535,13 @@ def build_drawing(scene: Scene, shape: SceneObject, state: ObjectState, resource
     bounds = QRectF()
     for primitive in primitives:
         bounds = bounds.united(_primitive_rect(primitive))
+    offset = QPointF()
     if recenter and bounds.isValid():
         center = bounds.center()
         for primitive in primitives:
             _translate(primitive, -center.x(), -center.y())
         bounds.translate(-center.x(), -center.y())
+        offset = QPointF(center)
     if bounds.width() < 4 or bounds.height() < 4:
         bounds = bounds.adjusted(-4, -4, 4, 4)
-    return Drawing(primitives=primitives, bounds=bounds, hit_path=_hit_path(primitives, bounds, shape.kind))
+    return Drawing(primitives=primitives, bounds=bounds, hit_path=_hit_path(primitives, bounds, shape.kind), offset=offset)

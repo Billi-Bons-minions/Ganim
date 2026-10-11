@@ -99,7 +99,11 @@ class ProjectDocument(QObject):
     def edit_project(self, text: str, mutate: Callable[[Project], Any], merge_key: str | None = None) -> Any:
         """Run ``mutate`` on the project and record it as one undo step."""
         before = copy.deepcopy(self.project)
-        result = mutate(self.project)
+        try:
+            result = mutate(self.project)
+        except Exception:
+            self.project = before
+            raise
         if self.project == before:
             return result
         command = SnapshotCommand(self, text, before, copy.deepcopy(self.project), merge_key)

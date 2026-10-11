@@ -10,6 +10,7 @@ import pytest
 
 from manim_studio.examples import EXAMPLES
 from manim_studio.i18n import LANGUAGES, catalog, set_language, tr
+from manim_studio.model.arrange import ALIGN_MODES, DISTRIBUTE_MODES
 from manim_studio.model.expression import ExpressionError
 from manim_studio.model.schema import ANIMATION_PARAMS, KIND_INFO, ParamType
 from manim_studio.model.stage_edits import COLOR, MOVE, ROTATE, SCALE
@@ -57,6 +58,10 @@ def dynamic_keys() -> set[str]:
     keys |= {f"tour.{step}" for step in ("intro", "add_circle", "animate", "timeline", "new_step", "drag", "preview", "done")}
     keys |= {f"library.category.{key}" for key in ("shapes", "lines", "text", "math", "media")}
     keys |= {f"settings.theme.{name}" for name in ("dark", "light")}
+    keys |= {f"{prefix}.arrange.{mode}" for prefix in ("action", "undo") for mode in ALIGN_MODES + DISTRIBUTE_MODES}
+    keys |= {f"prop.{point}_{axis}" for point in ("start", "end", "center") for axis in ("x", "y")}
+    keys |= {f"choice.{spec.key}.{choice}" for info in KIND_INFO.values() for spec in info.params
+             if spec.type == ParamType.CHOICE and spec.key != "language" for choice in spec.choices}
     keys |= {f"dock.{dock}" for dock in ("library", "objects", "properties", "preview", "code", "log", "timeline")}
     keys |= {f"expr.{code}" for code in ("empty", "too_long", "too_complex", "invalid_character", "syntax", "not_allowed",
                                           "missing_parenthesis", "unknown_name", "unknown_function", "wrong_argument_count")}

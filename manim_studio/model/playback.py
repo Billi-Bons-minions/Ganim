@@ -4,9 +4,17 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from manim_studio.model import groups
 from manim_studio.model.entities import Animation, Scene, Step
 from manim_studio.model.rate_functions import rate
-from manim_studio.model.state import START, ObjectState, apply_animation, states_after
+from manim_studio.model.state import (
+    START,
+    ObjectState,
+    apply_animation,
+    apply_to_group,
+    refresh_group_states,
+    states_after,
+)
 from manim_studio.model.types import AnimationKind, StepKind
 
 _SHIFTS = {"up": (0.0, 1.0), "down": (0.0, -1.0), "left": (-1.0, 0.0), "right": (1.0, 0.0)}
@@ -119,10 +127,13 @@ def _partial_modifier(state: ObjectState, anim: Animation, progress: float) -> O
     return replace(state, visible=True, stroke_color=stroke, fill_color=fill)
 
 
-def apply_partial(states: dict[str, ObjectState], anim: Animation, progress: float) -> None:
+def apply_partial(states: dict[str, ObjectState], anim: Animation, progress: float, scene: Scene | None = None) -> None:
     """Update ``states`` with an animation that is ``progress`` (0…1, eased) done."""
     state = states.get(anim.target_id)
     if state is None:
+        return
+    if scene is not None and groups.is_group(scene.object_by_id(anim.target_id)):
+        apply_to_group(states, scene, anim, progress, partial=True)
         return
     kind = anim.kind
     if kind in (
@@ -159,15 +170,15 @@ def _step_state(scene: Scene, index: int, step: Step, local_time: float) -> dict
         return states
     for anim, (start, end) in zip(step.animations, step.windows()):
         if local_time >= end:
-            apply_animation(states, anim)
+            apply_animation(states, anim, scene)
         elif local_time > start:
             linear_progress = (local_time - start) / max(end - start, 1e-9)
             if anim.kind == AnimationKind.CIRCUMSCRIBE:
-                apply_partial(states, anim, linear_progress)
+                apply_partial(states, anim, linear_progress, scene)
             else:
-                apply_partial(states, anim, rate(anim.rate_func, linear_progress))
+                apply_partial(states, anim, rate(anim.rate_func, linear_progress), scene)
         elif anim.kind in (AnimationKind.CREATE, AnimationKind.WRITE, AnimationKind.DRAW_BORDER_THEN_FILL, AnimationKind.FADE_IN, AnimationKind.GROW_FROM_CENTER):
-            apply_partial(states, anim, 0.0)
+            apply_partial(states, anim, 0.0, scene)
     return states
 
 
@@ -180,4 +191,4 @@ def state_at_time(scene: Scene, time: float) -> dict[str, ObjectState]:
         return states_after(scene, len(scene.steps) - 1)
     index = step_at_time(scene, time)
     start, _end = spans[index]
-    return _step_state(scene, index, scene.steps[index], time - start)
+    return refresh_group_states(scene, _step_state(scene, index, scene.steps[index], time - start))

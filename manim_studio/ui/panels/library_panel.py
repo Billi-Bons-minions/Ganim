@@ -16,10 +16,40 @@ from manim_studio.ui.theme import px
 
 #: Library categories in display order.
 CATEGORIES: tuple[tuple[str, tuple[ObjectKind, ...]], ...] = (
-    ("shapes", (ObjectKind.CIRCLE, ObjectKind.SQUARE, ObjectKind.RECTANGLE, ObjectKind.TRIANGLE, ObjectKind.ELLIPSE, ObjectKind.DOT)),
-    ("lines", (ObjectKind.LINE, ObjectKind.ARROW)),
-    ("text", (ObjectKind.TEXT, ObjectKind.MATH_TEX)),
-    ("math", (ObjectKind.AXES, ObjectKind.NUMBER_PLANE, ObjectKind.FUNCTION_GRAPH)),
+    (
+        "shapes",
+        (
+            ObjectKind.CIRCLE,
+            ObjectKind.SQUARE,
+            ObjectKind.RECTANGLE,
+            ObjectKind.TRIANGLE,
+            ObjectKind.ELLIPSE,
+            ObjectKind.DOT,
+            ObjectKind.POLYGON,
+            ObjectKind.REGULAR_POLYGON,
+            ObjectKind.STAR,
+            ObjectKind.ARC,
+            ObjectKind.SECTOR,
+            ObjectKind.ANNULUS,
+        ),
+    ),
+    (
+        "lines",
+        (ObjectKind.LINE, ObjectKind.ARROW, ObjectKind.DOUBLE_ARROW, ObjectKind.DASHED_LINE, ObjectKind.VECTOR, ObjectKind.BRACE),
+    ),
+    ("text", (ObjectKind.TEXT, ObjectKind.MARKUP_TEXT, ObjectKind.MATH_TEX, ObjectKind.TEX, ObjectKind.CODE)),
+    (
+        "math",
+        (
+            ObjectKind.AXES,
+            ObjectKind.NUMBER_PLANE,
+            ObjectKind.FUNCTION_GRAPH,
+            ObjectKind.NUMBER_LINE,
+            ObjectKind.DECIMAL_NUMBER,
+            ObjectKind.MATRIX,
+            ObjectKind.TABLE,
+        ),
+    ),
     ("media", (ObjectKind.IMAGE,)),
 )
 

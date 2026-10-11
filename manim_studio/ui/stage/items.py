@@ -20,6 +20,8 @@ ROTATE_HANDLE_DISTANCE = 28.0
 
 ROLE_SCALE = "scale"
 ROLE_ROTATE = "rotate"
+ROLE_VERTEX = "vertex"
+ROLE_ENDPOINT = "endpoint"
 
 
 class ObjectItem(QGraphicsObject):
@@ -166,20 +168,47 @@ class ObjectItem(QGraphicsObject):
         painter.drawRect(self.drawing.bounds)
 
 
-class HandleItem(QGraphicsItem):
-    """A small square (scale) or circle (rotate) attached to an object item."""
+class GroupItem(ObjectItem):
+    """Invisible frame around a group's members (selection outline and handles)."""
 
-    def __init__(self, parent: ObjectItem, role: str, corner: QPointF | None = None) -> None:
+    def __init__(self, object_id: str) -> None:
+        super().__init__(object_id)
+        self.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+
+    def set_rect(self, rect: QRectF) -> None:
+        """Place the frame on ``rect`` (scene coordinates)."""
+        self.prepareGeometryChange()
+        self.setPos(rect.center())
+        self.setRotation(0)
+        self.setScale(1)
+        local = QRectF(-rect.width() / 2, -rect.height() / 2, rect.width(), rect.height())
+        self.drawing = Drawing(bounds=local)
+        self.update()
+
+    def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: QWidget | None = None) -> None:
+        if self.isSelected():
+            pen = QPen(theme_color("accent"), 1.4, Qt.PenStyle.DashDotLine)
+            pen.setCosmetic(True)
+            painter.setPen(pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawRect(self.drawing.bounds)
+
+
+class HandleItem(QGraphicsItem):
+    """A small square (scale), circle (rotate) or diamond (vertex/endpoint) handle."""
+
+    def __init__(self, parent: ObjectItem, role: str, corner: QPointF | None = None, index: int = -1) -> None:
         super().__init__(parent)
         self.role = role
         self.corner = corner
+        self.index = index
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations, True)
         self.setZValue(10_000)
-        cursor = Qt.CursorShape.CrossCursor if role == ROLE_ROTATE else Qt.CursorShape.SizeFDiagCursor
-        self.setCursor(cursor)
+        cursors = {ROLE_ROTATE: Qt.CursorShape.CrossCursor, ROLE_SCALE: Qt.CursorShape.SizeFDiagCursor}
+        self.setCursor(cursors.get(role, Qt.CursorShape.PointingHandCursor))
 
     def boundingRect(self) -> QRectF:  # noqa: N802 - Qt API
-        half = HANDLE_SIZE / 2 + 1
+        half = HANDLE_SIZE / 2 + 2
         return QRectF(-half, -half, 2 * half, 2 * half)
 
     def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: QWidget | None = None) -> None:
@@ -189,6 +218,9 @@ class HandleItem(QGraphicsItem):
         half = HANDLE_SIZE / 2
         if self.role == ROLE_ROTATE:
             painter.drawEllipse(QPointF(0, 0), half, half)
+        elif self.role in (ROLE_VERTEX, ROLE_ENDPOINT):
+            painter.setBrush(QBrush(theme_color("accent")))
+            painter.drawPolygon([QPointF(0, -half - 1), QPointF(half + 1, 0), QPointF(0, half + 1), QPointF(-half - 1, 0)])
         else:
             painter.drawRect(QRectF(-half, -half, HANDLE_SIZE, HANDLE_SIZE))
 
@@ -207,4 +239,14 @@ def attach_handles(item: ObjectItem, view_scale: float, can_rotate: bool) -> lis
         distance = ROTATE_HANDLE_DISTANCE / max(view_scale * item.scale(), 0.01)
         rotate.setPos(QPointF(bounds.center().x(), bounds.top() - distance))
         handles.append(rotate)
+    return handles
+
+
+def attach_point_handles(item: ObjectItem, local_points: list[QPointF], role: str) -> list[HandleItem]:
+    """Create one draggable handle per vertex or endpoint (local item coordinates)."""
+    handles = []
+    for index, point in enumerate(local_points):
+        handle = HandleItem(item, role, QPointF(point), index)
+        handle.setPos(point)
+        handles.append(handle)
     return handles

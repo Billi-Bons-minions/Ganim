@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QFont, QFontDatabase, QIcon
 from PySide6.QtWidgets import (
     QApplication,
@@ -19,8 +19,8 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QLabel,
-    QScrollArea,
     QMenu,
+    QScrollArea,
     QSpinBox,
     QToolButton,
     QVBoxLayout,
@@ -29,12 +29,16 @@ from PySide6.QtWidgets import (
 
 from manim_studio.codegen.naming import class_names
 from manim_studio.i18n import has, tr
+from manim_studio.model import groups
 from manim_studio.model import operations as ops
+from manim_studio.model.animation_builder import allowed_for_objects
+from manim_studio.model.arrange import ALIGN_MODES, DISTRIBUTE_MODES
 from manim_studio.model.assets import relative_asset_path
 from manim_studio.model.entities import STEP_LAGGED, STEP_MODES, STEP_TOGETHER, Animation, SceneObject, Step
 from manim_studio.model.expression import check_expression
 from manim_studio.model.geometry import is_bound_graph
 from manim_studio.model.schema import (
+    STYLE_FIELDS,
     ParamSpec,
     ParamType,
     animation_allowed,
@@ -43,20 +47,34 @@ from manim_studio.model.schema import (
 )
 from manim_studio.model.stage_edits import COLOR, MOVE, ROTATE, SCALE, is_recording, step_animation
 from manim_studio.model.state import first_reference, states_after, visible_at_start
-from manim_studio.model.types import RATE_FUNCTIONS, TRANSFORM_ANIMATIONS, AnimationKind, ObjectKind, StepKind, Visibility
+from manim_studio.model.types import (
+    LINE_KINDS,
+    RATE_FUNCTIONS,
+    TRANSFORM_ANIMATIONS,
+    AnimationKind,
+    ObjectKind,
+    StepKind,
+    Visibility,
+)
 from manim_studio.ui.animation_preview import PreviewHover
 from manim_studio.ui.controller import EditorController
+from manim_studio.ui.data_editors import (
+    FontPicker,
+    PointsEditor,
+    TableEditor,
+    WordColorsEditor,
+)
 from manim_studio.ui.document import ProjectDocument
-from manim_studio.ui.flow_layout import flow_container
 from manim_studio.ui.editor_state import (
     INSPECT_ANIMATION,
     INSPECT_OBJECTS,
     INSPECT_STEP,
     EditorState,
 )
-from manim_studio.ui.settings import AppSettings
+from manim_studio.ui.flow_layout import flow_container
 from manim_studio.ui.icon_set import icon
 from manim_studio.ui.icons import kind_icon, rate_icon
+from manim_studio.ui.settings import AppSettings
 from manim_studio.ui.theme import px
 from manim_studio.ui.widgets import (
     ColorButton,
@@ -67,6 +85,8 @@ from manim_studio.ui.widgets import (
 )
 
 Reader = Callable[[], Any]
+#: Widget property: the editor protects its own in-progress edits, so it may always be refreshed.
+ALWAYS_REFRESH = "alwaysRefresh"
 Shower = Callable[[Any], None]
 
 _STYLE_SPECS = {
@@ -90,6 +110,13 @@ ANIMATION_GROUPS: tuple[tuple[str, tuple[AnimationKind, ...]], ...] = (
 TRANSFORM_TARGET_KINDS = (
     ObjectKind.SQUARE, ObjectKind.CIRCLE, ObjectKind.RECTANGLE, ObjectKind.TRIANGLE, ObjectKind.ELLIPSE, ObjectKind.TEXT, ObjectKind.MATH_TEX
 )
+#: Icons of the align/distribute buttons in the multi-selection inspector.
+ARRANGE_ICONS = tuple(
+    zip(
+        ALIGN_MODES + DISTRIBUTE_MODES,
+        ("align_left", "align_center_h", "align_right", "align_top", "align_center_v", "align_bottom", "distribute_h", "distribute_v"),
+    )
+)
 _DELAY_SPEC = ParamSpec("delay", ParamType.FLOAT, 0.0, minimum=0.0, maximum=600.0, step=0.1)
 _RUN_TIME_SPEC = ParamSpec("run_time", ParamType.FLOAT, 1.0, minimum=0.05, maximum=120.0, step=0.25)
 
@@ -105,7 +132,8 @@ class Binding:
     def refresh(self) -> None:
         """Show the current model value unless the user is editing the widget."""
         focus = QApplication.focusWidget()
-        if focus is not None and (focus is self.widget or self.widget.isAncestorOf(focus)):
+        guarded = not self.widget.property(ALWAYS_REFRESH)
+        if guarded and focus is not None and (focus is self.widget or self.widget.isAncestorOf(focus)):
             return
         try:
             value = self.read()
@@ -219,6 +247,8 @@ class _Form:
 
 class PropertiesPanel(QScrollArea):
     """Edits whatever :class:`EditorState` currently inspects."""
+
+    arrangeRequested = Signal(str)
 
     def __init__(
         self,
@@ -405,6 +435,16 @@ class PropertiesPanel(QScrollArea):
             return field, lambda value: field.set_path(str(value or ""))
         if spec.type == ParamType.OBJECT_REF:
             return self._object_ref_editor(spec, commit, exclude, allowed)
+        if spec.type == ParamType.FONT:
+            picker = FontPicker()
+            picker.committed.connect(commit)
+            return picker, picker.set_value
+        if spec.type in (ParamType.POINTS, ParamType.TABLE, ParamType.WORD_COLORS):
+            editors = {ParamType.POINTS: PointsEditor, ParamType.TABLE: TableEditor, ParamType.WORD_COLORS: WordColorsEditor}
+            grid = editors[spec.type]()
+            grid.setProperty(ALWAYS_REFRESH, True)
+            grid.committed.connect(commit)
+            return grid, grid.set_value
         edit = DebouncedLineEdit()
         if spec.type == ParamType.EXPRESSION:
             edit.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
@@ -455,6 +495,9 @@ class PropertiesPanel(QScrollArea):
 
     def _build_object(self, form: _Form, key: tuple) -> None:
         object_id, kind = key[2], key[3]
+        if kind == ObjectKind.GROUP:
+            self._build_group(form, key)
+            return
         info = kind_info(kind)
         form.header(tr(f"kind.{kind.value}"), kind_icon(kind))
         name_edit = DebouncedLineEdit()
@@ -463,7 +506,7 @@ class PropertiesPanel(QScrollArea):
             and self._edit(tr("prop.name"), lambda s: ops.update_object(s, object_id, name=text.strip()), f"obj:{object_id}:name")
         )
         form.row(tr("prop.name"), name_edit, lambda: self._object(object_id).name, lambda v: _set_line(name_edit, v))
-        self._animate_section(form, object_id)
+        self._animate_section(form, [object_id])
         recording = key[4]
         if recording >= 0:
             self._step_section(form, object_id, recording)
@@ -474,6 +517,8 @@ class PropertiesPanel(QScrollArea):
             widget.setEnabled(not bound)
         if bound:
             form.note(lambda: tr("prop.bound_graph_note"))
+        if kind in LINE_KINDS and recording < 0:
+            self._endpoint_rows(form, object_id)
         if info.params:
             form.section(tr("section.content"))
             for spec in info.params:
@@ -501,16 +546,19 @@ class PropertiesPanel(QScrollArea):
 
     # --- animate section ---------------------------------------------------------------
 
-    def _animation_button(self, kind: AnimationKind, object_id: str, simultaneous: QCheckBox) -> QToolButton:
+    def _animation_button(self, kind: AnimationKind, object_ids: list[str], simultaneous: QCheckBox) -> QToolButton:
         button = QToolButton()
         button.setIcon(icon(f"a_{kind.value}"))
         button.setIconSize(QSize(px(16), px(16)))
         button.setText(tr(f"anim_short.{kind.value}"))
         button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         button.setProperty("variant", "button")
-        obj = self._object(object_id)
-        button.setEnabled(animation_allowed(kind, obj.kind, obj.params))
+        allowed = allowed_for_objects(self.editor.scene(), kind, object_ids)
+        if kind in TRANSFORM_ANIMATIONS:
+            allowed = allowed and len(object_ids) == 1
+        button.setEnabled(allowed)
         self.hover.attach(button, kind)
+        object_id = object_ids[0]
         if kind in TRANSFORM_ANIMATIONS:
             menu = QMenu(button)
             menu.aboutToShow.connect(lambda: self._fill_transform_menu(menu, kind, object_id, simultaneous.isChecked()))
@@ -540,7 +588,7 @@ class PropertiesPanel(QScrollArea):
                 lambda _checked=False, k=new_kind: self.controller.add_transform_to_new(kind, object_id, k, same_step)
             )
 
-    def _animate_section(self, form: _Form, object_id: str) -> None:
+    def _animate_section(self, form: _Form, object_ids: list[str]) -> None:
         form.section(tr("section.animate"))
         simultaneous = QCheckBox()
         cursor = self.editor.cursor
@@ -558,7 +606,7 @@ class PropertiesPanel(QScrollArea):
             column.addWidget(caption)
             container, flow = flow_container(px(4))
             for kind in kinds:
-                button = self._animation_button(kind, object_id, simultaneous)
+                button = self._animation_button(kind, object_ids, simultaneous)
                 self.animation_buttons[kind] = button
                 flow.addWidget(button)
             column.addWidget(container)
@@ -618,22 +666,165 @@ class PropertiesPanel(QScrollArea):
     def _build_multi(self, form: _Form, key: tuple) -> None:
         ids = list(key[2])
         form.header(tr("prop.multi_header", count=len(ids)), icon("group"))
+        form.header_widget(self._arrange_bar(len(ids)))
+        self._animate_section(form, ids)
+        self._selection_position_rows(form, ids, tr("section.position"))
+        objects = [self._object(object_id) for object_id in ids]
+        style_fields = [f for f in STYLE_FIELDS if any(f in kind_info(obj.kind).style for obj in objects)]
+        if style_fields:
+            form.section(tr("section.style"))
+            for field in style_fields:
+                self._multi_field_row(form, ids, field, _STYLE_SPECS[field], tr(f"prop.{field}"))
+        shared = self._shared_params(objects)
+        if shared:
+            form.section(tr("section.shared_content"))
+            for spec in shared:
+                self._multi_param_row(form, ids, spec)
+        form.section(tr("section.layer"))
+        layer = ParamSpec("z_index", ParamType.INT, 0, minimum=-100, maximum=100)
+        self._multi_field_row(form, ids, "z_index", layer, tr("prop.z_index"))
         form.note(lambda: tr("prop.multi_note"))
-        for field in ("stroke_color", "fill_color", "fill_opacity"):
-            spec = _STYLE_SPECS[field]
-            label = tr(f"prop.{field}")
 
-            def commit(value: Any, field: str = field, label: str = label) -> None:
-                def mutate(scene) -> None:
-                    for object_id in ids:
-                        obj = scene.object_by_id(object_id)
-                        if obj is not None and field in kind_info(obj.kind).style:
-                            setattr(obj, field, value)
+    def _arrange_bar(self, count: int) -> QWidget:
+        bar, row = flow_container(px(1))
+        entries = [("group", "group", None)] + [(mode, icon_name, mode) for mode, icon_name in ARRANGE_ICONS]
+        for name, icon_name, mode in entries:
+            button = QToolButton()
+            button.setIcon(icon(icon_name))
+            button.setIconSize(QSize(px(18), px(18)))
+            button.setToolTip(tr(f"action.{name}") if mode is None else tr(f"action.arrange.{mode}"))
+            if mode is None:
+                button.clicked.connect(self.controller.group_selection)
+            else:
+                button.setEnabled(count >= (3 if mode in DISTRIBUTE_MODES else 1))
+                button.clicked.connect(lambda _checked=False, m=mode: self.arrangeRequested.emit(m))
+            row.addWidget(button)
+        return bar
 
-                self._edit(label, mutate, f"multi:{','.join(ids)}:{field}")
+    def _selection_bounds(self, ids: list[str]) -> tuple[float, float, float, float]:
+        scene = self.editor.scene()
+        leaves = [leaf for object_id in ids for leaf in groups.leaves(scene, object_id)]
+        return groups.bounds_of(scene, leaves, states_after(scene, self.editor.cursor))
 
-            widget, show = self._param_editor(spec, commit)
-            form.row(label, widget, lambda field=field: getattr(self._object(ids[0]), field), show)
+    def _selection_position_rows(self, form: _Form, ids: list[str], title: str) -> None:
+        """Center of several objects (or a group); editing moves all of them."""
+        form.section(title)
+        for axis in ("x", "y"):
+            def read(axis: str = axis) -> float:
+                left, bottom, right, top = self._selection_bounds(ids)
+                return round((left + right) / 2 if axis == "x" else (bottom + top) / 2, 3)
+
+            def commit(value: Any, axis: str = axis, read=read) -> None:
+                delta = float(value) - read()
+                if abs(delta) > 1e-9:
+                    dx, dy = (delta, 0.0) if axis == "x" else (0.0, delta)
+                    self.controller.move_objects(ids, dx, dy)
+
+            widget, show = self._float_editor(_POSITION_SPEC, commit)
+            form.row(tr(f"prop.center_{axis}"), widget, read, show)
+
+    def _multi_field_row(self, form: _Form, ids: list[str], field: str, spec: ParamSpec, label: str) -> None:
+        def applies(obj: SceneObject) -> bool:
+            return field == "z_index" or field in kind_info(obj.kind).style
+
+        def commit(value: Any) -> None:
+            def mutate(scene) -> None:
+                for object_id in ids:
+                    obj = scene.object_by_id(object_id)
+                    if obj is not None and applies(obj):
+                        setattr(obj, field, value)
+
+            self._edit(label, mutate, f"multi:{','.join(ids)}:{field}")
+
+        def read() -> Any:
+            first = next(obj for obj in (self._object(i) for i in ids) if applies(obj))
+            return getattr(first, field)
+
+        widget, show = self._param_editor(spec, commit)
+        form.row(label, widget, read, show)
+
+    @staticmethod
+    def _shared_params(objects: list[SceneObject]) -> list[ParamSpec]:
+        """Parameters that all objects have (same key and type) and that make sense in bulk."""
+        bulk_types = {ParamType.FLOAT, ParamType.INT, ParamType.BOOL, ParamType.CHOICE, ParamType.COLOR, ParamType.FONT}
+        first, *rest = objects
+        shared = []
+        for spec in kind_info(first.kind).params:
+            if spec.type not in bulk_types:
+                continue
+            if all((other := kind_info(obj.kind).param(spec.key)) is not None and other.type == spec.type for obj in rest):
+                shared.append(spec)
+        return shared
+
+    def _multi_param_row(self, form: _Form, ids: list[str], spec: ParamSpec) -> None:
+        label = tr(f"param.{spec.key}")
+
+        def commit(value: Any) -> None:
+            def mutate(scene) -> None:
+                for object_id in ids:
+                    ops.set_object_param(scene, object_id, spec.key, value)
+
+            self._edit(label, mutate, f"multi:{','.join(ids)}:p:{spec.key}")
+
+        widget, show = self._param_editor(spec, commit)
+        form.row(label, widget, lambda: self._object(ids[0]).params.get(spec.key, spec.default), show)
+
+    # --- groups ------------------------------------------------------------------------------
+
+    def _build_group(self, form: _Form, key: tuple) -> None:
+        group_id = key[2]
+        form.header(tr("kind.group"), kind_icon(ObjectKind.GROUP))
+        name_edit = DebouncedLineEdit()
+        name_edit.committed.connect(lambda text: self.controller.rename_object(group_id, text))
+        form.row(tr("prop.name"), name_edit, lambda: self._object(group_id).name, lambda v: _set_line(name_edit, v))
+        self._animate_section(form, [group_id])
+        recording = key[4]
+        if recording >= 0:
+            self._step_section(form, group_id, recording)
+        self._selection_position_rows(form, [group_id], tr("section.start_position") if recording >= 0 else tr("section.position"))
+        form.section(tr("section.members"))
+        form.note(lambda: self._member_summary(group_id))
+        ungroup = QToolButton()
+        ungroup.setIcon(icon("ungroup"))
+        ungroup.setText(tr("action.ungroup"))
+        ungroup.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        ungroup.setProperty("variant", "button")
+        ungroup.clicked.connect(self.controller.ungroup_selection)
+        form.layout.addRow(ungroup)
+        leaves = groups.leaves(self.editor.scene(), group_id)
+        objects = [self._object(leaf) for leaf in leaves]
+        style_fields = [f for f in ("stroke_color", "fill_color", "fill_opacity") if any(f in kind_info(o.kind).style for o in objects)]
+        if style_fields:
+            form.section(tr("section.group_style"))
+            for field in style_fields:
+                self._multi_field_row(form, leaves, field, _STYLE_SPECS[field], tr(f"prop.{field}"))
+        form.note(lambda: tr("prop.group_hint"))
+
+    def _member_summary(self, group_id: str) -> str:
+        scene = self.editor.scene()
+        lines = []
+        for member in groups.members(scene, group_id):
+            obj = scene.object_by_id(member)
+            if obj is not None:
+                lines.append(f"• {obj.name} ({tr(f'kind.{obj.kind.value}')})")
+        return "\n".join(lines)
+
+    # --- line endpoints ----------------------------------------------------------------------
+
+    def _endpoint_rows(self, form: _Form, object_id: str) -> None:
+        for which, prefix in ((0, "start"), (1, "end")):
+            for axis in ("x", "y"):
+                def read(which: int = which, axis: str = axis) -> float:
+                    point = ops.line_endpoints(self._object(object_id))[which]
+                    return round(point[0] if axis == "x" else point[1], 3)
+
+                def commit(value: Any, which: int = which, axis: str = axis) -> None:
+                    x, y = ops.line_endpoints(self._object(object_id))[which]
+                    x, y = (float(value), y) if axis == "x" else (x, float(value))
+                    self.controller.set_line_endpoint(object_id, which, x, y)
+
+                widget, show = self._float_editor(_POSITION_SPEC, commit)
+                form.row(tr(f"prop.{prefix}_{axis}"), widget, read, show)
 
     # --- animation form -------------------------------------------------------------------
 

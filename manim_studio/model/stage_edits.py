@@ -119,6 +119,17 @@ def move_edit(cursor: int, object_ids: list[str], dx: float, dy: float) -> Mutat
     return apply
 
 
+def move_each_edit(cursor: int, deltas: dict[str, tuple[float, float]]) -> Mutation:
+    """Move every object by its own delta (align and distribute)."""
+    moves = [move_edit(cursor, [object_id], dx, dy) for object_id, (dx, dy) in deltas.items() if dx or dy]
+
+    def apply(scene: Scene) -> None:
+        for move in moves:
+            move(scene)
+
+    return apply
+
+
 def scale_edit(cursor: int, object_id: str, factor: float) -> Mutation:
     """Scale an object at the start, or record/adjust a Scale animation."""
 

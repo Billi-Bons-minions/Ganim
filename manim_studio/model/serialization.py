@@ -47,6 +47,8 @@ def object_to_dict(obj: SceneObject) -> dict[str, Any]:
         "z_index": obj.z_index,
         "visibility": obj.visibility.value,
         "params": dict(obj.params),
+        "locked": obj.locked,
+        "editor_hidden": obj.editor_hidden,
     }
 
 
@@ -138,6 +140,8 @@ def object_from_dict(data: dict[str, Any]) -> SceneObject:
         z_index=int(data.get("z_index", 0)),
         visibility=_enum(Visibility, data.get("visibility", "auto"), Visibility.AUTO),
         params=dict(data.get("params", {})),
+        locked=bool(data.get("locked", False)),
+        editor_hidden=bool(data.get("editor_hidden", False)),
     )
 
 

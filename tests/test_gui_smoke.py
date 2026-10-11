@@ -9,33 +9,6 @@ import pytest
 pytestmark = pytest.mark.skipif(importlib.util.find_spec("PySide6") is None, reason="PySide6 is not installed")
 
 
-@pytest.fixture()
-def window(tmp_path, qapp):
-    from PySide6.QtCore import QSettings, QThreadPool
-
-    from manim_studio.i18n import set_language
-    from manim_studio.ui.context import AppContext
-    from manim_studio.ui.main_window import MainWindow
-    from manim_studio.ui.settings import AppSettings
-    from manim_studio.ui.theme import apply_theme
-
-    app = qapp
-    set_language("de")
-    settings = AppSettings(QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat))
-    settings.hidden_environment_warning = "manim,ffmpeg,latex"
-    apply_theme(app, "dark", 1.0, tmp_path / "style")
-    context = AppContext(settings, data_folder=tmp_path / "data")
-    main = MainWindow(context, lambda: None)
-    context.set_window(main)
-    main.show()
-    app.processEvents()
-    yield main
-    main.document.undo_stack.setClean()
-    main.close()
-    QThreadPool.globalInstance().waitForDone(60_000)
-    app.processEvents()
-
-
 def test_acceptance_workflow_without_code(window, tmp_path) -> None:
     from manim_studio.model.types import AnimationKind, ObjectKind
 

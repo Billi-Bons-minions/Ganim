@@ -85,6 +85,8 @@ class UserLibrary(QObject):
     def __init__(self, folder: Path, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self.folder = folder
+        #: Styles added by plugins (a callable returning :class:`Style` objects).
+        self.extra_styles = lambda: []
 
     # --- helpers -----------------------------------------------------------------
 
@@ -113,7 +115,7 @@ class UserLibrary(QObject):
     def styles(self) -> list[Style]:
         data = self._read(self.folder / "styles.json") if (self.folder / "styles.json").exists() else None
         user = [Style(str(item["name"]), dict(item.get("values", {}))) for item in data or [] if isinstance(item, dict) and "name" in item]
-        return list(BUILTIN_STYLES) + user
+        return list(BUILTIN_STYLES) + list(self.extra_styles()) + user
 
     def save_style(self, name: str, values: dict[str, Any]) -> None:
         user = [style for style in self.styles() if not style.builtin and style.name != name]

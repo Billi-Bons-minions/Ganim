@@ -146,6 +146,18 @@ class AppSettings:
     def show_rulers(self, value: bool) -> None:
         self._settings.setValue("show_rulers", value)
 
+    @property
+    def enabled_plugins(self) -> list[str]:
+        value = self._settings.value("enabled_plugins")
+        if not value:
+            return []
+        items = [value] if isinstance(value, str) else list(value)
+        return [str(item) for item in items if item]
+
+    @enabled_plugins.setter
+    def enabled_plugins(self, names: list[str]) -> None:
+        self._settings.setValue("enabled_plugins", list(names))
+
     # --- files -------------------------------------------------------------
 
     @property

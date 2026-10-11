@@ -57,12 +57,15 @@ from manim_studio.model.stage_edits import is_recording
 from manim_studio.model.state import START, parameter_values, states_after
 from manim_studio.model.three_d import is_3d, view_of
 from manim_studio.model.types import AnimationKind, ObjectKind, StepKind
+from manim_studio.plugins import PluginContext
 from manim_studio.templates import BUILTIN_TEMPLATES
 from manim_studio.ui.chrome import PanelFrame, SegmentedControl, StageBanner, Toast, action_button, separator, tool_button
 from manim_studio.ui.context import AppContext, cache_dir
 from manim_studio.ui.dialogs.environment_dialog import EnvironmentDialog
 from manim_studio.ui.dialogs.export_dialog import ExportDialog
+from manim_studio.ui.dialogs.install_dialog import InstallDialog
 from manim_studio.ui.dialogs.messages import codegen_error_text
+from manim_studio.ui.dialogs.plugins_dialog import PluginsDialog
 from manim_studio.ui.dialogs.settings_dialog import SettingsDialog
 from manim_studio.ui.dialogs.shortcuts_dialog import ShortcutsDialog
 from manim_studio.ui.dialogs.welcome_dialog import (
@@ -310,6 +313,8 @@ class MainWindow(QMainWindow):
         view_menu.addSeparator()
         view_menu.addActions([self.act_fit, self.act_zoom_selection, self.act_zoom_in, self.act_zoom_out])
         self.panels_menu = view_menu.addMenu(tr("menu.panels"))
+        self.plugin_menu = bar.addMenu(tr("menu.plugins"))
+        self.plugin_menu.aboutToShow.connect(self._fill_plugin_menu)
         render_menu = bar.addMenu(tr("menu.render"))
         render_menu.addActions([self.act_preview, self.act_preview_from, self.act_cancel, self.act_export])
         render_menu.addSeparator()
@@ -861,12 +866,48 @@ class MainWindow(QMainWindow):
         for template in BUILTIN_TEMPLATES:
             action = self.template_menu.addAction(icon(template.icon), tr(f"template.{template.key}.name"))
             action.triggered.connect(lambda _checked=False, t=template: self.controller.add_scene_from_template(t.build()))
+        plugin_templates = self.context.plugins.contributions.templates
+        if plugin_templates:
+            self.template_menu.addSeparator()
+            for _plugin, name, build in plugin_templates:
+                action = self.template_menu.addAction(icon("package"), name)
+                action.triggered.connect(lambda _checked=False, build=build: self._template_from_plugin(build))
         user = self.context.library.templates()
         if user:
             self.template_menu.addSeparator()
             for template in user:
                 action = self.template_menu.addAction(icon("scene"), template.name)
                 action.triggered.connect(lambda _checked=False, t=template: self.controller.add_scene_from_template(t.create_scene()))
+
+    def _template_from_plugin(self, build) -> None:
+        try:
+            scene = build()
+        except Exception as error:  # noqa: BLE001 - plugin code may fail
+            QMessageBox.warning(self, tr("plugins.title"), tr("plugins.error", error=str(error)))
+            return
+        self.controller.add_scene_from_template(scene)
+
+    def _fill_plugin_menu(self) -> None:
+        self.plugin_menu.clear()
+        actions = self.context.plugins.contributions.actions
+        for plugin, text, callback in actions:
+            action = self.plugin_menu.addAction(icon("package"), text)
+            action.setToolTip(plugin)
+            action.triggered.connect(lambda _checked=False, callback=callback: self._run_plugin_action(callback))
+        if actions:
+            self.plugin_menu.addSeparator()
+        self.plugin_menu.addAction(icon("settings"), tr("plugins.manage"), self.manage_plugins)
+
+    def _run_plugin_action(self, callback) -> None:
+        error = self.context.plugins.run_action(callback, PluginContext(self.controller, self.show_status))
+        if error:
+            QMessageBox.warning(self, tr("plugins.title"), tr("plugins.error", error=error))
+
+    def manage_plugins(self) -> None:
+        """Enable or disable extensions."""
+        dialog = PluginsDialog(self.context.plugins, self.settings, self)
+        if dialog.exec() and dialog.apply():
+            QMessageBox.information(self, tr("plugins.title"), tr("plugins.restart"))
 
     def _fill_delete_template_menu(self) -> None:
         self.delete_template_menu.clear()
@@ -1279,6 +1320,19 @@ class MainWindow(QMainWindow):
             dialog.exec()
             if dialog.dont_show.isChecked():
                 self.settings.hidden_environment_warning = key
+            if dialog.install_requested:
+                self.install_manim()
+
+    def install_manim(self) -> None:
+        """Install Manim with pip into the configured interpreter, then check again."""
+        answer = QMessageBox.question(self, tr("install.title"), tr("install.confirm", python=self.settings.python_path))
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        dialog = InstallDialog(self.settings.python_path, self)
+        dialog.start()
+        dialog.exec()
+        if dialog.succeeded:
+            self.check_environment(interactive=True)
 
     # --- misc -------------------------------------------------------------------------------------------------
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 
-from PySide6.QtCore import QLocale, QTimer
+from PySide6.QtCore import QLibraryInfo, QLocale, QTimer, QTranslator
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from manim_studio import APP_NAME, ORGANIZATION, __version__
@@ -17,10 +17,24 @@ from manim_studio.logging_setup import (
     setup_logging,
 )
 
+_qt_translator: QTranslator | None = None
+
 
 def apply_locale(language: str) -> None:
-    """Set the number format (decimal comma in German)."""
+    """Set the number format (decimal comma in German) and Qt's own texts (OK, Cancel, ...)."""
+    global _qt_translator
     QLocale.setDefault(QLocale(QLocale.Language.German if language == "de" else QLocale.Language.English))
+    app = QApplication.instance()
+    if app is None:
+        return
+    if _qt_translator is not None:
+        app.removeTranslator(_qt_translator)
+        _qt_translator = None
+    if language != "en":
+        translator = QTranslator(app)
+        if translator.load(f"qtbase_{language}", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
+            app.installTranslator(translator)
+            _qt_translator = translator
 
 
 class StudioApplication:

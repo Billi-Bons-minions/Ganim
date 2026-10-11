@@ -4,14 +4,15 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QMenu
 
-from manim_studio.i18n import tr
+from manim_studio.i18n import has, tr
 from manim_studio.ui.icon_set import icon
 from manim_studio.ui.widgets import color_icon
 
 
 def style_title(style) -> str:
     """Display name of a style (built-in styles are translated)."""
-    return tr(f"style.builtin.{style.name}") if style.builtin else style.name
+    key = f"style.builtin.{style.name}"
+    return tr(key) if style.builtin and has(key) else style.name
 
 
 def fill_style_menu(menu: QMenu, controller, library, object_id: str) -> None:

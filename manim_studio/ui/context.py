@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QWidget
 
 from manim_studio.i18n import tr
 from manim_studio.logging_setup import log
+from manim_studio.plugins import PluginManager
 from manim_studio.render.environment import EnvironmentReport, check_environment
 from manim_studio.render.tex_preview import TexPreviewCache
 from manim_studio.ui.autosave import AutoSaver
@@ -18,7 +19,7 @@ from manim_studio.ui.document import ProjectDocument
 from manim_studio.ui.editor_state import EditorState
 from manim_studio.ui.render_controller import RenderController
 from manim_studio.ui.settings import AppSettings
-from manim_studio.ui.user_library import UserLibrary
+from manim_studio.ui.user_library import Style, UserLibrary
 
 
 def cache_dir() -> Path:
@@ -90,6 +91,9 @@ class AppContext(QObject):
         self.environment: EnvironmentReport | None = None
         self.render = RenderController(self.document, self.editor, settings, self.latex_available, self.window, self)
         self.autosaver = AutoSaver(self.document, self.data_folder / "autosave", self)
+        self.plugins = PluginManager(self.data_folder / "plugins", lambda: self.settings.enabled_plugins, self)
+        self.library.extra_styles = lambda: [Style(name, values, True) for _plugin, name, values in self.plugins.contributions.styles]
+        self.plugins.load_enabled()
         self.controller.library = self.library
         self._env_signals = _EnvironmentSignals()
         self._env_signals.done.connect(self._on_environment)

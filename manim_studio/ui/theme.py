@@ -226,6 +226,8 @@ QCheckBox {{ spacing: {px(7)}px; color: {p.text}; }}
 QCheckBox::indicator {{ width: {px(15)}px; height: {px(15)}px; border-radius: {px(4)}px; border: 1px solid {p.border_strong}; background: {p.field}; }}
 QCheckBox::indicator:hover {{ border-color: {p.accent}; }}
 QCheckBox::indicator:checked {{ background: {p.accent}; border-color: {p.accent}; image: url({images['check']}); }}
+QAbstractItemView::indicator {{ width: {px(15)}px; height: {px(15)}px; border-radius: {px(4)}px; border: 1px solid {p.border_strong}; background: {p.field}; }}
+QAbstractItemView::indicator:checked {{ background: {p.accent}; border-color: {p.accent}; image: url({images['check']}); }}
 QRadioButton::indicator {{ width: {px(14)}px; height: {px(14)}px; border-radius: {px(7)}px; border: 1px solid {p.border_strong}; background: {p.field}; }}
 QRadioButton::indicator:checked {{ background: {p.accent}; border: {px(4)}px solid {p.field}; }}
 QScrollBar:vertical {{ background: transparent; width: {px(10)}px; margin: {px(2)}px; }}

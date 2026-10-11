@@ -66,9 +66,17 @@ class EnvironmentDialog(QDialog):
         text.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
         self.dont_show = QCheckBox(tr("env.dont_show"))
         self.dont_show.setVisible(show_checkbox and not report.all_found)
+        self.install_requested = False
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
         buttons.accepted.connect(self.accept)
+        if not report.manim.found:
+            install = buttons.addButton(tr("install.button"), QDialogButtonBox.ButtonRole.ActionRole)
+            install.clicked.connect(self._request_install)
         layout = QVBoxLayout(self)
         layout.addWidget(text)
         layout.addWidget(self.dont_show)
         layout.addWidget(buttons)
+
+    def _request_install(self) -> None:
+        self.install_requested = True
+        self.accept()

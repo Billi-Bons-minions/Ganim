@@ -277,6 +277,40 @@ def highlight_primitives(scene: Scene, obj: SceneObject, state: ObjectState) -> 
     return [_shape_primitive(path, obj, state)]
 
 
+def angle_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
+    """Arc (or right-angle corner) around the intersection plus the optional label."""
+    if len(state.geometry) < 2:
+        return []
+    start, sweep = state.geometry[0], state.geometry[1]
+    radius = param_float(obj.params, "radius", 0.6)
+    r = radius * PX
+    path = QPainterPath()
+    if obj.params.get("right_angle"):
+        a, b = math.radians(start), math.radians(start + sweep)
+        first, second = (math.cos(a), math.sin(a)), (math.cos(b), math.sin(b))
+        path.moveTo(first[0] * r, -first[1] * r)
+        path.lineTo((first[0] + second[0]) * r, -(first[1] + second[1]) * r)
+        path.lineTo(second[0] * r, -second[1] * r)
+    else:
+        rect = QRectF(-r, -r, 2 * r, 2 * r)
+        path.arcMoveTo(rect, start)
+        path.arcTo(rect, start, sweep)
+    primitives = [_stroke_primitive(path, obj, state)]
+    from manim_studio.model.angles import AngleGeometry, angle_label, label_position
+
+    geometry = AngleGeometry(0.0, 0.0, start, sweep, (0.0, 0.0), (0.0, 0.0))
+    label = angle_label(obj, geometry)
+    if label:
+        font = text_font(obj, param_float(obj.params, "label_size", 32.0))
+        text = QPainterPath()
+        text.addText(QPointF(0, 0), font, label)
+        x, y = label_position(obj, geometry)
+        bounds = text.boundingRect()
+        text.translate(x * PX - bounds.center().x(), -y * PX - bounds.center().y())
+        primitives.append(Primitive(path=text, brush=QBrush(_color(state.stroke_color, obj.stroke_opacity))))
+    return primitives
+
+
 # --- text-like -------------------------------------------------------------------------------
 
 
@@ -472,6 +506,8 @@ def extra_drawing(scene: Scene, obj: SceneObject, state: ObjectState, resources:
         return brace_primitives(scene, obj, state)
     if kind == ObjectKind.HIGHLIGHT:
         return highlight_primitives(scene, obj, state), False
+    if kind == ObjectKind.ANGLE:
+        return angle_primitives(obj, state), False
     if kind == ObjectKind.GROUP:
         return [], False
     return None

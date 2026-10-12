@@ -22,6 +22,8 @@ from manim_studio.codegen.literals import (
 )
 from manim_studio.codegen.objects_extra import (
     EXTRA_CONSTRUCTORS,
+    STUDIO_ANGLE,
+    angle_code,
     brace_code,
     group_code,
     highlight_code,
@@ -29,6 +31,7 @@ from manim_studio.codegen.objects_extra import (
 from manim_studio.codegen.objects_extra import text as extra_text
 from manim_studio.codegen.three_d_code import axes_3d_code, curve_3d_code, surface_code
 from manim_studio.model import graphs
+from manim_studio.model.angles import ANGLE_LINE_KEYS, angle_lines
 from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.latex import colored_parts, colorize
@@ -243,6 +246,11 @@ def _special_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> tupl
         if target not in names or target == obj.id:
             raise CodegenError("highlight_target_missing", obj.name)
         return highlight_code(obj, variable, names[str(target)]), False
+    if obj.kind == ObjectKind.ANGLE:
+        lines = angle_lines(scene, obj)
+        if lines is None or any(line.id not in names for line in lines):
+            raise CodegenError("angle_lines_missing", obj.name)
+        return angle_code(obj, variable, names[lines[0].id], names[lines[1].id]), False
     return None
 
 
@@ -288,6 +296,8 @@ def object_code(
     helpers = helpers if helpers is not None else set()
     try:
         special = _special_code(scene, obj, names) or graph_object_code(scene, obj, names, helpers)
+        if obj.kind == ObjectKind.ANGLE:
+            helpers.add(STUDIO_ANGLE)
         if obj.kind == ObjectKind.CAMERA:
             if is_3d(scene):
                 # the 3D camera has no frame: a helper frame steers its center, zoom and roll
@@ -355,6 +365,8 @@ def dependencies(scene: Scene, obj: SceneObject) -> list[str]:
                 result.append(str(obj.params.get(key)))
     if obj.kind in (ObjectKind.BRACE, ObjectKind.HIGHLIGHT) and obj.params.get("target"):
         result.append(str(obj.params.get("target")))
+    if obj.kind == ObjectKind.ANGLE:
+        result += [str(obj.params.get(key)) for key in ANGLE_LINE_KEYS if obj.params.get(key)]
     if obj.kind == ObjectKind.GROUP:
         result += [str(member) for member in obj.params.get("members", [])]
     for key in ("graph_id", "other_graph_id"):

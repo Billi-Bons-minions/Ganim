@@ -47,7 +47,7 @@ from manim_studio.model.stage_edits import (
     would_create,
 )
 from manim_studio.model.state import START, states_after
-from manim_studio.model.types import GRAPH_TOOL_KINDS, REFERENCE_PARAMS, UNADDED_KINDS, UNGROUPABLE, AnimationKind, ObjectKind, StepKind, simultaneous_conflicts
+from manim_studio.model.types import GRAPH_TOOL_KINDS, LINE_KINDS, REFERENCE_PARAMS, UNADDED_KINDS, UNGROUPABLE, AnimationKind, ObjectKind, StepKind, simultaneous_conflicts
 from manim_studio.ui.document import ProjectDocument
 from manim_studio.ui.editor_state import INSPECT_ANIMATION, INSPECT_STEP, EditorState
 from manim_studio.ui.settings import AppSettings
@@ -131,6 +131,14 @@ class EditorController(QObject):
             return existing_camera.id
         if kind == ObjectKind.CAMERA:
             x, y = 0.0, 0.0
+        if kind == ObjectKind.ANGLE and not (params.get("first_line") and params.get("second_line")):
+            selected = [i for i in self.editor.selected_objects if (o := scene.object_by_id(i)) is not None and o.kind in LINE_KINDS]
+            others = [o.id for o in scene.objects if o.kind in LINE_KINDS and o.id not in selected]
+            lines = (selected + others[::-1])[:2] if len(selected) < 2 else selected[:2]
+            if len(lines) < 2:
+                self.statusMessage.emit(tr("status.angle_needs_lines"))
+                return None
+            params["first_line"], params["second_line"] = lines
         if kind == ObjectKind.HIGHLIGHT and not params.get("target"):
             target = next((o for o in (scene.object_by_id(i) for i in self.editor.selected_objects) if o is not None and o.kind not in UNGROUPABLE and o.kind != kind), None)
             if target is None:

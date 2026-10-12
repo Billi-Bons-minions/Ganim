@@ -54,6 +54,7 @@ class ObjectKind(str, Enum):
     SURFACE = "surface"
     CURVE_3D = "curve_3d"
     HIGHLIGHT = "highlight"
+    ANGLE = "angle"
 
 
 class AnimationKind(str, Enum):

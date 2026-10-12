@@ -259,6 +259,45 @@ def highlight_code(obj: SceneObject, variable: str, target_variable: str) -> lis
     return [f"{variable} = always_redraw(lambda: {shape})"]
 
 
+STUDIO_ANGLE = "studio_angle"
+STUDIO_ANGLE_SOURCE = '''def studio_angle(line_1, line_2, radius=0.5, quadrant=(1, 1), other_angle=False, right=False, label="", decimals=-1, font_size=32, **style):
+    """Angle mark between two lines with an optional label (used with always_redraw)."""
+    try:
+        if right:
+            mark = RightAngle(line_1, line_2, length=radius, quadrant=quadrant, **style)
+        else:
+            mark = Angle(line_1, line_2, radius=radius, quadrant=quadrant, other_angle=other_angle, **style)
+        value = Angle(line_1, line_2, quadrant=quadrant, other_angle=other_angle).get_value(degrees=True)
+        spot = Angle(line_1, line_2, radius=radius + 0.3, quadrant=quadrant, other_angle=other_angle)
+    except ValueError:  # the lines do not meet
+        return VGroup()
+    group = VGroup(mark)
+    if decimals >= 0:
+        label = f"{abs(value):.{decimals}f}°"
+    if label and spot.has_points():
+        group.add(Text(label, font_size=font_size, color=mark.get_color()).move_to(spot.point_from_proportion(0.5)))
+    return group'''
+
+
+def angle_code(obj: SceneObject, variable: str, first: str, second: str) -> list[str]:
+    """An angle mark that is recomputed from its two lines in every frame."""
+    quadrant = f"({-1 if obj.params.get('flip_first') else 1}, {-1 if obj.params.get('flip_second') else 1})"
+    arguments = [first, second, f"radius={fmt_float(_f(obj, 'radius', 0.6))}", f"quadrant={quadrant}"]
+    if obj.params.get("reflex"):
+        arguments.append("other_angle=True")
+    if obj.params.get("right_angle"):
+        arguments.append("right=True")
+    label = obj.params.get("label", "none")
+    if label == "symbol" and str(obj.params.get("symbol", "")).strip():
+        arguments.append(f"label={py_str(str(obj.params.get('symbol', '')).strip())}")
+    elif label == "degrees":
+        arguments.append(f"decimals={max(0, int(obj.params.get('decimals', 0)))}")
+    if label != "none":
+        arguments.append(f"font_size={fmt_float(_f(obj, 'label_size', 32.0))}")
+    arguments += [f"color={py_color(obj.stroke_color)}", f"stroke_width={fmt_float(obj.stroke_width)}", f"stroke_opacity={fmt_float(obj.stroke_opacity)}"]
+    return [f"{variable} = always_redraw(lambda: {STUDIO_ANGLE}({', '.join(arguments)}))"]
+
+
 def group_code(variable: str, member_variables: list[str]) -> list[str]:
     """``VGroup`` of existing objects."""
     return [f"{variable} = VGroup({', '.join(member_variables)})"]

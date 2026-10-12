@@ -300,6 +300,24 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         _SHAPE_STYLE,
         (("stroke_color", "#F7D96F"), ("fill_color", "#000000"), ("fill_opacity", 0.0), ("stroke_width", 4.0)),
     ),
+    ObjectKind.ANGLE: KindInfo(
+        ObjectKind.ANGLE,
+        (
+            ParamSpec("first_line", ParamType.OBJECT_REF, None),
+            ParamSpec("second_line", ParamType.OBJECT_REF, None),
+            ParamSpec("radius", ParamType.FLOAT, 0.6, minimum=0.05, maximum=10.0, step=0.1),
+            ParamSpec("right_angle", ParamType.BOOL, False),
+            ParamSpec("flip_first", ParamType.BOOL, False),
+            ParamSpec("flip_second", ParamType.BOOL, False),
+            ParamSpec("reflex", ParamType.BOOL, False),
+            ParamSpec("label", ParamType.CHOICE, "none", choices=("none", "symbol", "degrees")),
+            ParamSpec("symbol", ParamType.STRING, "α", visible_when=("label", ("symbol",))),
+            ParamSpec("decimals", ParamType.INT, 0, minimum=0, maximum=4, visible_when=("label", ("degrees",))),
+            _font_size(32.0, key="label_size"),
+        ),
+        _LINE_STYLE,
+        (("stroke_color", "#F7D96F"),),
+    ),
     ObjectKind.BRACE: KindInfo(
         ObjectKind.BRACE,
         (
@@ -705,7 +723,7 @@ _NOT_FOR_HIGHLIGHTS = (
 
 def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: dict[str, Any]) -> bool:
     """Return ``True`` if the animation can be applied to the object."""
-    if obj_kind == ObjectKind.HIGHLIGHT and anim_kind in _NOT_FOR_HIGHLIGHTS:
+    if obj_kind in (ObjectKind.HIGHLIGHT, ObjectKind.ANGLE) and anim_kind in _NOT_FOR_HIGHLIGHTS:
         return False
     if obj_kind == ObjectKind.GROUP and anim_kind in (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM):
         return False

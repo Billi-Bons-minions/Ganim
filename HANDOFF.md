@@ -68,6 +68,10 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
 - 3D-Szenen: Kamerafahrten (Bewegen, Zoom, Rollen) funktionieren jetzt über einen unsichtbaren Steuerrahmen (`studio_camera_frame`). Vorher war nur Umkreisen erlaubt.
 - 2D-Szenen: Kamera-Drehen wird verständlich abgelehnt, weil Manims 2D-Kamera das Bild nur verzerrt hätte.
 - Verschachtelte Gruppen bleiben nach dem Löschen ihrer Mitglieder nicht mehr leer zurück.
+- Neue Objektart „Winkel“ zwischen zwei Linien (Angle bzw. RightAngle):
+  - Optional mit Symbol oder Gradzahl beschriftet.
+  - Folgt den Linien (`always_redraw`), mit umgekehrten Linien und Außenwinkel.
+  - Bühne und Manim stimmen überein.
 
 ### Halbfertig
 - (nichts)

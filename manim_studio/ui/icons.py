@@ -110,6 +110,17 @@ def _highlight(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: 
     p.drawRoundedRect(QRectF(m * 0.6, s * 0.22, s - 1.2 * m, s * 0.56), s * 0.08, s * 0.08)
 
 
+def _angle(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.setPen(QPen(neutral, w))
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    corner = QPointF(m, s - m)
+    p.drawLine(corner, QPointF(s - m, s - m))
+    p.drawLine(corner, QPointF(s * 0.72, s * 0.28))
+    p.setPen(QPen(QColor("#F7D96F"), w))
+    radius = s * 0.36
+    p.drawArc(QRectF(corner.x() - radius, corner.y() - radius, 2 * radius, 2 * radius), 0, 46 * 16)
+
+
 def _polygon(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
     p.drawPolygon(QPolygonF([QPointF(m, s * 0.7), QPointF(s * 0.32, m), QPointF(s - m, s * 0.35), QPointF(s * 0.7, s - m)]))
 
@@ -370,6 +381,7 @@ _EXTRA_DRAWERS = {
     ObjectKind.DASHED_LINE: _dashed_line,
     ObjectKind.BRACE: _brace,
     ObjectKind.HIGHLIGHT: _highlight,
+    ObjectKind.ANGLE: _angle,
     ObjectKind.POLYGON: _polygon,
     ObjectKind.REGULAR_POLYGON: _regular_polygon,
     ObjectKind.STAR: _star,

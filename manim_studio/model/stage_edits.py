@@ -72,6 +72,8 @@ def check_edit(scene: Scene, cursor: int, object_ids: Iterable[str], action: str
             return EditCheck(False, "bound_graph", object_id)
         if obj is not None and obj.kind == ObjectKind.HIGHLIGHT and action in (MOVE, SCALE, ROTATE) and scene.object_by_id(obj.params.get("target")):
             return EditCheck(False, "attached", object_id)
+        if obj is not None and obj.kind == ObjectKind.ANGLE and action in (MOVE, SCALE, ROTATE):
+            return EditCheck(False, "attached", object_id)
         if obj is not None and obj.kind == ObjectKind.CAMERA and action == ROTATE:
             from manim_studio.model.three_d import is_3d
 

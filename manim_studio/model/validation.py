@@ -88,6 +88,15 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
 
         if not is_3d(scene):
             add(ERROR, "camera_rotation_2d")
+    if obj.kind == ObjectKind.ANGLE:
+        from manim_studio.model.angles import angle_geometry, angle_lines
+        from manim_studio.model.state import initial_state, refresh_attached_states
+
+        lines = angle_lines(scene, obj)
+        if lines is None:
+            add(ERROR, "angle_lines_missing")
+        elif angle_geometry(scene, obj, refresh_attached_states(scene, {line.id: initial_state(scene, line) for line in lines})) is None:
+            add(WARNING, "angle_parallel")
     if obj.kind == ObjectKind.HIGHLIGHT:
         target = scene.object_by_id(obj.params.get("target"))
         if target is None or target.id == obj.id or target.kind in UNGROUPABLE or target.kind == ObjectKind.HIGHLIGHT:

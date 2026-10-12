@@ -53,6 +53,8 @@ class ObjectState:
     #: Orientation of a 3D camera (degrees).
     phi: float = 0.0
     theta: float = 0.0
+    #: Extra geometry of attached objects (angle marks: start angle and sweep in degrees).
+    geometry: tuple[float, ...] = ()
 
 
 def first_reference(scene: Scene, object_id: str) -> tuple[Animation, bool] | None:
@@ -318,11 +320,20 @@ def refresh_group_states(scene: Scene, states: dict[str, ObjectState]) -> dict[s
 def refresh_attached_states(scene: Scene, states: dict[str, ObjectState]) -> dict[str, ObjectState]:
     """Highlights follow their target: same place, turn and size (Manim redraws them every frame)."""
     for obj in scene.objects:
-        if obj.kind != ObjectKind.HIGHLIGHT or obj.id not in states:
+        if obj.id not in states:
             continue
-        target = states.get(str(obj.params.get("target")))
-        if target is not None and target.object_id != obj.id:
-            states[obj.id] = replace(states[obj.id], x=target.x, y=target.y, rotation=target.rotation, scale=target.scale)
+        if obj.kind == ObjectKind.HIGHLIGHT:
+            target = states.get(str(obj.params.get("target")))
+            if target is not None and target.object_id != obj.id:
+                states[obj.id] = replace(states[obj.id], x=target.x, y=target.y, rotation=target.rotation, scale=target.scale)
+        elif obj.kind == ObjectKind.ANGLE:
+            from manim_studio.model.angles import angle_geometry
+
+            geometry = angle_geometry(scene, obj, states)
+            if geometry is None:
+                states[obj.id] = replace(states[obj.id], geometry=())
+            else:
+                states[obj.id] = replace(states[obj.id], x=geometry.x, y=geometry.y, rotation=0.0, scale=1.0, geometry=(geometry.start, geometry.sweep))
     return states
 
 

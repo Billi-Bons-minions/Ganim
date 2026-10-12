@@ -489,3 +489,21 @@ def test_camera_flights_in_3d_scenes(tmp_path) -> None:
     assert "camera_frame = studio_camera_frame(self)" in script and "camera_frame.animate(" in script
     result = run_manim(tmp_path, script, "Flug", "--dry_run")
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+
+
+def test_angle_marks_follow_rotating_lines(tmp_path) -> None:
+    base = make_object(ObjectKind.LINE, "Basis", "a", 0.0, 0.0, length=4.0)
+    arm = make_object(ObjectKind.ARROW, "Arm", "b", 0.0, 0.0)
+    arm.rotation = 30.0
+    marks = [
+        make_object(ObjectKind.ANGLE, "W1", "w1", first_line="a", second_line="b", label="degrees"),
+        make_object(ObjectKind.ANGLE, "W2", "w2", first_line="a", second_line="b", right_angle=True, flip_first=True, label="symbol", symbol="β"),
+    ]
+    scene = Scene(
+        id="s",
+        name="Winkel",
+        objects=[base, arm, *marks],
+        steps=[play(make_animation(AnimationKind.CREATE, "w1", run_time=0.3)), play(make_animation(AnimationKind.ROTATE, "b", angle=120.0, run_time=0.5))],
+    )
+    result = run_manim(tmp_path, generate_script(make_project(scene)), "Winkel", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]

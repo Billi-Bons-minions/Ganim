@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import time
-
 import pytest
 
 from manim_studio.codegen import generate_script
@@ -41,9 +39,9 @@ def test_vector_field_in_the_app(window) -> None:
     assert "a.get_value()" in script and parameter
     window.document.edit_scene("p", window.editor.scene_id, lambda s: ops.set_object_param(s, field, "display", "stream"), None)
     window.refresh_stage()
-    start = time.time()
-    window.refresh_stage()
-    assert time.time() - start < 0.3  # stream lines are cached
+    field_object = window.editor.scene().object_by_id(field)
+    # integrating stream lines is slow, so the stage reuses the result
+    assert stream_lines(window.editor.scene(), field_object) is stream_lines(window.editor.scene(), field_object)
     assert "start_animation(warm_up=True" in generate_script(window.document.project)
     window.document.edit_scene("p", window.editor.scene_id, lambda s: ops.set_object_param(s, field, "y_expression", "x +"), None)
     assert "expression_invalid" in {issue.code for issue in validate_scene(window.editor.scene())}

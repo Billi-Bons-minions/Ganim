@@ -101,13 +101,50 @@ class AxesLayout:
         return self.to_local(origin_shift(self.x_min, self.x_max), origin_shift(self.y_min, self.y_max))
 
 
-#: Ink width and height of the characters of axis numbers in Pango's default (serif) font,
-#: ``Text(c, font_size=48)`` measured with Manim (Noto Serif; other serif fonts differ slightly).
-_GLYPHS_48 = {
-    "0": (0.3125, 0.48984), "1": (0.27422, 0.47812), "2": (0.28984, 0.48281), "3": (0.29531, 0.48984), "4": (0.35156, 0.47578),
-    "5": (0.2875, 0.48281), "6": (0.29766, 0.48984), "7": (0.30156, 0.47578), "8": (0.31172, 0.48984), "9": (0.29766, 0.48984),
-    "-": (0.17344, 0.05), ".": (0.08359, 0.09063), ",": (0.09, 0.15),
-}
+#: Ink width and height of the characters of axis numbers, ``Text(c, font_size=48)`` measured with Manim,
+#: for the serif fonts Pango usually picks as its default (Manim's ``Text`` without ``font=``).
+_GLYPH_TABLES = {
+    "Noto Serif": {
+        "0": (0.3125, 0.48984), "1": (0.27422, 0.47812), "2": (0.28984, 0.48281), "3": (0.29531, 0.48984), "4": (0.35156, 0.47578),
+        "5": (0.2875, 0.48281), "6": (0.29766, 0.48984), "7": (0.30156, 0.47578), "8": (0.31172, 0.48984), "9": (0.29766, 0.48984),
+        "-": (0.17344, 0.05), ".": (0.08359, 0.09063), ",": (0.10859, 0.18828),
+    },
+    "DejaVu Serif": {
+        "0": (0.33594, 0.50391), "1": (0.24844, 0.49453), "2": (0.31328, 0.49453), "3": (0.32344, 0.50391), "4": (0.37031, 0.49453),
+        "5": (0.31641, 0.49531), "6": (0.3375, 0.50391), "7": (0.31953, 0.48594), "8": (0.33438, 0.50391), "9": (0.33672, 0.50391),
+        "-": (0.16719, 0.05078), ".": (0.08672, 0.08672), ",": (0.12344, 0.16484),
+    },
+    "Liberation Serif": {
+        "0": (0.28281, 0.44922), "1": (0.23438, 0.43984), "2": (0.26719, 0.44141), "3": (0.275, 0.44766), "4": (0.30938, 0.43828),
+        "5": (0.26797, 0.44297), "6": (0.28438, 0.44766), "7": (0.27031, 0.43672), "8": (0.28281, 0.44922), "9": (0.28516, 0.44766),
+        "-": (0.17266, 0.05), ".": (0.07891, 0.07891), ",": (0.1, 0.17109),
+    },
+}  # fmt: skip
+_SERIF: list[str | None] = []
+
+
+def serif_family() -> str | None:
+    """The font fontconfig (and with it Pango) picks for "serif", e.g. "Noto Serif" (``None`` without fontconfig)."""
+    if not _SERIF:
+        import shutil
+        import subprocess
+
+        family = None
+        command = shutil.which("fc-match")
+        if command is not None:
+            try:
+                result = subprocess.run([command, "-f", "%{family[0]}", "serif"], capture_output=True, text=True, timeout=5)
+                family = result.stdout.strip() if result.returncode == 0 and result.stdout.strip() else None
+            except (OSError, subprocess.SubprocessError):
+                family = None
+        _SERIF.append(family)
+    return _SERIF[0]
+
+
+def _glyphs() -> dict[str, tuple[float, float]]:
+    return _GLYPH_TABLES.get(serif_family() or "", _GLYPH_TABLES["Noto Serif"])
+
+
 #: Font size of axis numbers in the script, and their distance from the axis (Manim's ``MED_SMALL_BUFF``).
 AXIS_NUMBER_SIZE = 24.0
 AXIS_NUMBER_BUFF = 0.25
@@ -130,7 +167,8 @@ def axis_number_text(value: float, step: float) -> str:
 def number_size(text: str, font_size: float = AXIS_NUMBER_SIZE) -> tuple[float, float, float]:
     """Width, height and width of the first character of a ``DecimalNumber`` made of ``Text`` characters."""
     scale = font_size / 48.0
-    glyphs = [_GLYPHS_48.get(char, (0.3, 0.48)) for char in text] or [(0.0, 0.0)]
+    table = _glyphs()
+    glyphs = [table.get(char, (0.3, 0.48)) for char in text] or [(0.0, 0.0)]
     width = sum(glyph[0] for glyph in glyphs) * scale + 0.001 * font_size * (len(glyphs) - 1)
     height = max(glyph[1] for glyph in glyphs) * scale
     return width, height, glyphs[0][0] * scale

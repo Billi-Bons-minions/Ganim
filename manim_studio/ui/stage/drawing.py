@@ -43,6 +43,7 @@ from manim_studio.model.geometry import (
     plane_line_values,
     plane_numbers,
     polar_grid,
+    serif_family,
     tick_values,
 )
 from manim_studio.model.latex import colored_parts, colorize
@@ -186,9 +187,12 @@ def manim_text_font() -> QFont:
     The interface font (sans serif) would make texts on the stage narrower than in the video.
     """
     if not _MANIM_FAMILY:
-        font = QFont("serif")
-        font.setStyleHint(QFont.StyleHint.Serif)
-        _MANIM_FAMILY.append(QFontInfo(font).family())
+        family = serif_family()
+        if family is None:
+            font = QFont("serif")
+            font.setStyleHint(QFont.StyleHint.Serif)
+            family = QFontInfo(font).family()
+        _MANIM_FAMILY.append(family)
     return QFont(_MANIM_FAMILY[0])
 
 

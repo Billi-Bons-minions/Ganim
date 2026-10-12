@@ -440,3 +440,8 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
 - **Bewegen/Drehen wie Manim:** Ein Körper ist `Anker + Orientierung · Punkt`. `Rotate` dreht um die Mitte des aktuellen Begrenzungsquaders, `move_to` setzt diese Mitte (samt Bézier-Griffen, wie Manims `get_center`). Test: Lage und Licht jeder Fläche nach Drehen, Bewegen, Drehen gleich wie in Manim (Würfel, Kegel, Tetraeder; 0.19 und 0.22).
 - **Grenzen:** Die Bühne sortiert ganze Körper nach Tiefe, Manim jede Fläche (bei sich durchdringenden Körpern sichtbar). *Skalieren* eines bewegten Körpers skaliert auf der Bühne um seinen Startpunkt.
 - **Nebenbei behoben (aus Punkt 5):** *Kamera dreht dauerhaft* war auch für andere Objekte wählbar und brach dann das Rendern ab; jetzt nur für die Kamera (die Tests „alle Animationen“ der anderen Objektarten haben es gefunden).
+
+## CI wieder grün machen (Schriftart auf dem CI-Rechner)
+- Die CI war seit dem Commit „Achsenbeschriftungen“ rot; ich habe das zu spät bemerkt (lokal war alles grün). Ursache: Auf dem CI-Rechner wählt Pango für Manims `Text` „DejaVu Serif“, Qt löst „serif“ dort aber zu einer anderen Schrift auf, und meine Zeichenbreiten für Achsenzahlen stammten von „Noto Serif“.
+- Lösung: Bühne und Modell fragen fontconfig (`fc-match serif`) wie Pango. Das Modell hat gemessene Zeichenbreiten für Noto Serif, DejaVu Serif und Liberation Serif; mit DejaVu Serif gegen Manim geprüft (Achsenmitte exakt). Ohne fontconfig (Windows/macOS) gilt Qts eigene Wahl.
+- Außerdem war *Kamera dreht dauerhaft* für andere Objekte wählbar (im Commit danach behoben).

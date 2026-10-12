@@ -88,6 +88,11 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
 
         if not is_3d(scene):
             add(ERROR, "camera_rotation_2d")
+    if obj.kind == ObjectKind.TRACE:
+        from manim_studio.model.traces import trace_target
+
+        if trace_target(scene, obj) is None:
+            add(ERROR, "trace_target_missing")
     if obj.kind == ObjectKind.ANGLE:
         from manim_studio.model.angles import angle_geometry, angle_lines
         from manim_studio.model.state import initial_state, refresh_attached_states

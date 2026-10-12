@@ -27,6 +27,7 @@ from manim_studio.codegen.objects_extra import (
     brace_code,
     group_code,
     highlight_code,
+    trace_code,
 )
 from manim_studio.codegen.objects_extra import text as extra_text
 from manim_studio.codegen.three_d_code import axes_3d_code, curve_3d_code, surface_code
@@ -37,6 +38,7 @@ from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.latex import colored_parts, colorize
 from manim_studio.model.schema import is_vector_image_path
 from manim_studio.model.three_d import THREE_D_KINDS, is_3d
+from manim_studio.model.traces import trace_target
 from manim_studio.model.types import GRAPH_TOOL_KINDS, INVISIBLE_KINDS, UNADDED_KINDS, UNGROUPABLE, ObjectKind
 
 Kwargs = list[tuple[str, str]]
@@ -246,6 +248,11 @@ def _special_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> tupl
         if target not in names or target == obj.id:
             raise CodegenError("highlight_target_missing", obj.name)
         return highlight_code(obj, variable, names[str(target)]), False
+    if obj.kind == ObjectKind.TRACE:
+        target = trace_target(scene, obj)
+        if target is None or target.id not in names:
+            raise CodegenError("trace_target_missing", obj.name)
+        return trace_code(obj, variable, names[target.id]), False
     if obj.kind == ObjectKind.ANGLE:
         lines = angle_lines(scene, obj)
         if lines is None or any(line.id not in names for line in lines):
@@ -363,7 +370,7 @@ def dependencies(scene: Scene, obj: SceneObject) -> list[str]:
         for key in ("x_parameter",):
             if obj.params.get(key):
                 result.append(str(obj.params.get(key)))
-    if obj.kind in (ObjectKind.BRACE, ObjectKind.HIGHLIGHT) and obj.params.get("target"):
+    if obj.kind in (ObjectKind.BRACE, ObjectKind.HIGHLIGHT, ObjectKind.TRACE) and obj.params.get("target"):
         result.append(str(obj.params.get("target")))
     if obj.kind == ObjectKind.ANGLE:
         result += [str(obj.params.get(key)) for key in ANGLE_LINE_KEYS if obj.params.get(key)]

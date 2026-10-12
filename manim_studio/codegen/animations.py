@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import textwrap
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,6 +16,7 @@ from manim_studio.model.entities import STEP_LAGGED, STEP_SEQUENCE, Animation, S
 from manim_studio.model.schema import ARROW_KINDS, animation_allowed
 from manim_studio.model.three_d import is_3d
 from manim_studio.model.types import (
+    ENTRANCE_ANIMATIONS,
     LINE_KINDS,
     MODIFIER_ANIMATIONS,
     RATE_FUNCTIONS,
@@ -452,10 +454,24 @@ def step_code(
     step: Step, number: int, scene: Scene, names: dict[str, str], helpers: set[str] | None = None, base_dir: str | Path | None = None
 ) -> list[str]:
     """Return the lines of one timeline step (comment + ``self.play``/``self.wait``)."""
-    lines = _step_lines(step, number, scene, names, helpers, base_dir)
+    starts = [anim for anim in step.animations if step.kind == StepKind.PLAY and anim.kind in ENTRANCE_ANIMATIONS and _is_trace(scene, anim.target_id)]
+    if not starts:
+        lines = _step_lines(step, number, scene, names, helpers, base_dir)
+    else:
+        # a TracedPath cannot fade in: it is added and records from this step on
+        rest = dataclasses.replace(step, animations=[anim for anim in step.animations if anim not in starts])
+        lines = _step_lines(rest, number, scene, names, helpers, base_dir)
+        lines[1:1] = [f"self.add({_variable(names, anim.target_id)})" for anim in starts]
+        if not rest.animations:
+            lines.append(f"self.wait({fmt_float(max(anim.delay + anim.run_time for anim in starts))})")
     if step.kind == StepKind.PLAY:
         lines += _arrow_fixes(step, scene, names, helpers)
     return lines
+
+
+def _is_trace(scene: Scene, object_id: str) -> bool:
+    obj = scene.object_by_id(object_id)
+    return obj is not None and obj.kind == ObjectKind.TRACE
 
 
 def _step_lines(

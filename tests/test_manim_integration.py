@@ -507,3 +507,24 @@ def test_angle_marks_follow_rotating_lines(tmp_path) -> None:
     )
     result = run_manim(tmp_path, generate_script(make_project(scene)), "Winkel", "--dry_run")
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+
+
+def test_traces_render(tmp_path) -> None:
+    circle = make_object(ObjectKind.CIRCLE, "Bahn", "c", 2.0, 0.0, radius=2.0)
+    dot = make_object(ObjectKind.DOT, "Punkt", "p", -5.0, 2.0)
+    always = make_object(ObjectKind.TRACE, "Spur", "s1", target="p")
+    later = make_object(ObjectKind.TRACE, "Schweif", "s2", target="p", dissipating_time=0.3)
+    scene = Scene(
+        id="s",
+        name="Spuren",
+        objects=[circle, dot, always, later],
+        steps=[
+            play(make_animation(AnimationKind.MOVE_ALONG_PATH, "p", path="c", run_time=0.5)),
+            play(make_animation(AnimationKind.FADE_IN, "s2", run_time=0.2)),
+            play(make_animation(AnimationKind.MOVE, "p", x=-3.0, y=-2.0, run_time=0.5), make_animation(AnimationKind.FADE_OUT, "s1", run_time=0.5)),
+        ],
+    )
+    script = generate_script(make_project(scene))
+    assert "self.add(schweif)" in script
+    result = run_manim(tmp_path, script, "Spuren", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]

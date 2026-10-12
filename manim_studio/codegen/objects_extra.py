@@ -298,6 +298,20 @@ def angle_code(obj: SceneObject, variable: str, first: str, second: str) -> list
     return [f"{variable} = always_redraw(lambda: {STUDIO_ANGLE}({', '.join(arguments)}))"]
 
 
+def trace_code(obj: SceneObject, variable: str, target_variable: str) -> list[str]:
+    """``TracedPath`` that records the center of its target from the moment it is added."""
+    arguments = [
+        f"{target_variable}.get_center",
+        f"stroke_color={py_color(obj.stroke_color)}",
+        f"stroke_width={fmt_float(obj.stroke_width)}",
+        f"stroke_opacity={fmt_float(obj.stroke_opacity)}",
+    ]
+    fading = _f(obj, "dissipating_time", 0.0)
+    if fading > 0:
+        arguments.append(f"dissipating_time={fmt_float(fading)}")
+    return [f"{variable} = TracedPath({', '.join(arguments)})"]
+
+
 def group_code(variable: str, member_variables: list[str]) -> list[str]:
     """``VGroup`` of existing objects."""
     return [f"{variable} = VGroup({', '.join(member_variables)})"]

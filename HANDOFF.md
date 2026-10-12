@@ -72,6 +72,10 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
   - Optional mit Symbol oder Gradzahl beschriftet.
   - Folgt den Linien (`always_redraw`), mit umgekehrten Linien und Außenwinkel.
   - Bühne und Manim stimmen überein.
+- Neue Objektart „Spur“ (TracedPath):
+  - Zeichnet den Weg eines Objekts auf, optional mit verblassendem Schweif.
+  - Beginnt am Start oder dort, wo sie eingeblendet wird. Der Codegen macht daraus `self.add`, weil FadeIn auf TracedPath in Manim abstürzt.
+  - Auf der Bühne wird die Spur aus der Zeitleiste abgetastet (`model/traces.py`, gecacht).
 
 ### Halbfertig
 - (nichts)

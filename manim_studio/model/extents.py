@@ -78,6 +78,8 @@ def base_size(scene: Scene, obj: SceneObject) -> tuple[float, float]:
     """Return the estimated width and height of an unrotated, unscaled object."""
     p = obj.params
     kind = obj.kind
+    if kind == ObjectKind.TRACE:
+        return 0.5, 0.5
     if kind == ObjectKind.ANGLE:
         radius = param_float(p, "radius", 0.6)
         return 2 * radius, 2 * radius

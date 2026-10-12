@@ -318,6 +318,15 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         _LINE_STYLE,
         (("stroke_color", "#F7D96F"),),
     ),
+    ObjectKind.TRACE: KindInfo(
+        ObjectKind.TRACE,
+        (
+            ParamSpec("target", ParamType.OBJECT_REF, None),
+            ParamSpec("dissipating_time", ParamType.FLOAT, 0.0, minimum=0.0, maximum=60.0, step=0.25),
+        ),
+        _LINE_STYLE,
+        (("stroke_color", "#F7D96F"), ("stroke_width", 3.0)),
+    ),
     ObjectKind.BRACE: KindInfo(
         ObjectKind.BRACE,
         (
@@ -725,6 +734,9 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
     """Return ``True`` if the animation can be applied to the object."""
     if obj_kind in (ObjectKind.HIGHLIGHT, ObjectKind.ANGLE) and anim_kind in _NOT_FOR_HIGHLIGHTS:
         return False
+    if obj_kind == ObjectKind.TRACE:
+        # a trace starts recording when it appears and can be faded out
+        return anim_kind in (AnimationKind.FADE_IN, AnimationKind.FADE_OUT)
     if obj_kind == ObjectKind.GROUP and anim_kind in (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM):
         return False
     if anim_kind == AnimationKind.SET_VALUE:

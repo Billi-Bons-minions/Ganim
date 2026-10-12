@@ -1182,4 +1182,9 @@ STRINGS: dict[str, str] = {
     "issue.angle_parallel": "Die beiden Linien sind parallel – es gibt keinen Winkel zu markieren.",
     "codegen.angle_lines_missing": "„{detail}“ braucht zwei Linien.",
     "status.angle_needs_lines": "Für einen Winkel braucht die Szene zwei Linien – wähle zwei aus und klicke dann „Winkel“.",
+    "kind.trace": "Spur",
+    "param.dissipating_time": "Verblassen nach (s, 0 = bleibt)",
+    "issue.trace_target_missing": "Die Spur braucht ein Objekt, dessen Weg sie zeichnet.",
+    "codegen.trace_target_missing": "„{detail}“ zeichnet den Weg keines Objekts.",
+    "status.trace_needs_target": "Wähle zuerst das Objekt aus, dessen Weg gezeichnet werden soll – dann „Spur“ anklicken. Die Spur beginnt am Start oder dort, wo du sie einblendest.",
 }

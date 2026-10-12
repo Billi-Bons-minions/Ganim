@@ -51,11 +51,12 @@ from manim_studio.model.arrange import (
 from manim_studio.model.assets import relative_asset_path, resolve_asset_path
 from manim_studio.model.frame import frame_box, frame_size
 from manim_studio.model.package import PACKAGE_SUFFIX, extract_package, save_package
-from manim_studio.model.playback import state_at_time, step_start_time
+from manim_studio.model.playback import state_at_time, step_spans, step_start_time
 from manim_studio.model.serialization import FILE_SUFFIX, ProjectFormatError
 from manim_studio.model.stage_edits import is_recording
 from manim_studio.model.state import START, parameter_values, states_after
 from manim_studio.model.three_d import is_3d, view_of
+from manim_studio.model.traces import with_traces
 from manim_studio.model.types import AnimationKind, ObjectKind, StepKind
 from manim_studio.plugins import PluginContext
 from manim_studio.templates import BUILTIN_TEMPLATES
@@ -602,6 +603,9 @@ class MainWindow(QMainWindow):
         self.resources.base_dir = self.document.base_dir
         playhead = self.editor.playhead
         states = state_at_time(scene, playhead) if playhead is not None else states_after(scene, cursor)
+        if any(obj.kind == ObjectKind.TRACE for obj in scene.objects):
+            now = playhead if playhead is not None else (step_spans(scene)[cursor][1] if cursor >= 0 and scene.steps else 0.0)
+            states = with_traces(scene, states, now)
         self.resources.values = parameter_values(scene, states)
         self.resources.frame_size = frame_size(self.document.project.aspect)
         self.resources.view3d = view_of(scene, states) if is_3d(scene) else None

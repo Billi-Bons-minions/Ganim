@@ -277,6 +277,17 @@ def highlight_primitives(scene: Scene, obj: SceneObject, state: ObjectState) -> 
     return [_shape_primitive(path, obj, state)]
 
 
+def trace_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
+    """The recorded positions of the traced object as a line."""
+    values = state.geometry
+    if len(values) < 4:
+        return []
+    path = QPainterPath(QPointF(values[0] * PX, -values[1] * PX))
+    for index in range(2, len(values) - 1, 2):
+        path.lineTo(values[index] * PX, -values[index + 1] * PX)
+    return [_stroke_primitive(path, obj, state)]
+
+
 def angle_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
     """Arc (or right-angle corner) around the intersection plus the optional label."""
     if len(state.geometry) < 2:
@@ -508,6 +519,8 @@ def extra_drawing(scene: Scene, obj: SceneObject, state: ObjectState, resources:
         return highlight_primitives(scene, obj, state), False
     if kind == ObjectKind.ANGLE:
         return angle_primitives(obj, state), False
+    if kind == ObjectKind.TRACE:
+        return trace_primitives(obj, state), False
     if kind == ObjectKind.GROUP:
         return [], False
     return None

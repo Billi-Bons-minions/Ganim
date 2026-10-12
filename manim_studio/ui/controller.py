@@ -139,12 +139,13 @@ class EditorController(QObject):
                 self.statusMessage.emit(tr("status.angle_needs_lines"))
                 return None
             params["first_line"], params["second_line"] = lines
-        if kind == ObjectKind.HIGHLIGHT and not params.get("target"):
+        if kind in (ObjectKind.HIGHLIGHT, ObjectKind.TRACE) and not params.get("target"):
             target = next((o for o in (scene.object_by_id(i) for i in self.editor.selected_objects) if o is not None and o.kind not in UNGROUPABLE and o.kind != kind), None)
             if target is None:
-                self.statusMessage.emit(tr("status.highlight_needs_target"))
+                self.statusMessage.emit(tr("status.highlight_needs_target" if kind == ObjectKind.HIGHLIGHT else "status.trace_needs_target"))
                 return None
             params["target"] = target.id
+            x, y = 0.0, 0.0
         if kind == ObjectKind.PARAMETER and "symbol" not in params:
             params["symbol"] = self._free_symbol()
         names = [obj.name for obj in scene.objects]

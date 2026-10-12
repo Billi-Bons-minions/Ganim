@@ -55,6 +55,7 @@ class ObjectKind(str, Enum):
     CURVE_3D = "curve_3d"
     HIGHLIGHT = "highlight"
     ANGLE = "angle"
+    TRACE = "trace"
 
 
 class AnimationKind(str, Enum):

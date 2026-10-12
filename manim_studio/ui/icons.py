@@ -121,6 +121,19 @@ def _angle(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QCol
     p.drawArc(QRectF(corner.x() - radius, corner.y() - radius, 2 * radius, 2 * radius), 0, 46 * 16)
 
 
+def _trace(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    path = QPainterPath(QPointF(m, s - m))
+    path.cubicTo(QPointF(s * 0.3, s * 0.2), QPointF(s * 0.6, s * 0.9), QPointF(s * 0.78, s * 0.3))
+    pen = QPen(QColor("#F7D96F"), w)
+    pen.setStyle(Qt.PenStyle.DashLine)
+    p.setPen(pen)
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawPath(path)
+    p.setPen(QPen(neutral, w))
+    p.setBrush(neutral)
+    p.drawEllipse(QPointF(s * 0.78, s * 0.3), s * 0.09, s * 0.09)
+
+
 def _polygon(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
     p.drawPolygon(QPolygonF([QPointF(m, s * 0.7), QPointF(s * 0.32, m), QPointF(s - m, s * 0.35), QPointF(s * 0.7, s - m)]))
 
@@ -382,6 +395,7 @@ _EXTRA_DRAWERS = {
     ObjectKind.BRACE: _brace,
     ObjectKind.HIGHLIGHT: _highlight,
     ObjectKind.ANGLE: _angle,
+    ObjectKind.TRACE: _trace,
     ObjectKind.POLYGON: _polygon,
     ObjectKind.REGULAR_POLYGON: _regular_polygon,
     ObjectKind.STAR: _star,

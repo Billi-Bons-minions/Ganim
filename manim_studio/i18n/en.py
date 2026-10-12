@@ -1182,4 +1182,9 @@ STRINGS: dict[str, str] = {
     "issue.angle_parallel": "The two lines are parallel – there is no angle to mark.",
     "codegen.angle_lines_missing": "“{detail}” needs two lines.",
     "status.angle_needs_lines": "An angle needs two lines in the scene – select two and click “Angle”.",
+    "kind.trace": "Trace",
+    "param.dissipating_time": "Fade after (s, 0 = stays)",
+    "issue.trace_target_missing": "The trace needs an object whose path it draws.",
+    "codegen.trace_target_missing": "“{detail}” does not trace any object.",
+    "status.trace_needs_target": "First select the object whose path should be drawn – then click “Trace”. The trace starts at the beginning or where you fade it in.",
 }

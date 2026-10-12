@@ -179,6 +179,8 @@ def _set_check(box: QCheckBox, value: Any) -> None:
 def _set_line(edit: DebouncedLineEdit, value: Any) -> None:
     if edit.text() != str(value):
         edit.setText(str(value))
+        if not edit.hasFocus():
+            edit.setCursorPosition(0)  # long names show their beginning, not their end
 
 
 def _compact_combo() -> QComboBox:

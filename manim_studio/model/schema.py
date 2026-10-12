@@ -705,6 +705,12 @@ ANIMATION_PARAMS: dict[AnimationKind, tuple[ParamSpec, ...]] = {
         ParamSpec("time_width", ParamType.FLOAT, 0.3, minimum=0.05, maximum=1.0, step=0.05),
     ),
     AnimationKind.BROADCAST: (ParamSpec("rings", ParamType.INT, 5, minimum=1, maximum=20, step=1),),
+    AnimationKind.APPLY_MATRIX: (
+        ParamSpec("m11", ParamType.FLOAT, 1.0, minimum=-20.0, maximum=20.0, step=0.25),
+        ParamSpec("m12", ParamType.FLOAT, 1.0, minimum=-20.0, maximum=20.0, step=0.25),
+        ParamSpec("m21", ParamType.FLOAT, 0.0, minimum=-20.0, maximum=20.0, step=0.25),
+        ParamSpec("m22", ParamType.FLOAT, 1.0, minimum=-20.0, maximum=20.0, step=0.25),
+    ),
     AnimationKind.NETWORK_PARTS: (
         ParamSpec("parts", ParamType.STRING, "A, A-B, B"),
         ParamSpec("effect", ParamType.CHOICE, "color", choices=NETWORK_PART_EFFECTS),
@@ -781,6 +787,33 @@ _VECTOR_ONLY = frozenset(
         AnimationKind.PASSING_FLASH,
     }
 )
+#: Objects a linear map (``ApplyMatrix``) can deform. Objects that Manim redraws in every
+#: frame (highlights, graph tools, angles ...) would lose the deformation, so they are left out.
+MATRIX_KINDS = frozenset(
+    {
+        ObjectKind.CIRCLE,
+        ObjectKind.SQUARE,
+        ObjectKind.RECTANGLE,
+        ObjectKind.TRIANGLE,
+        ObjectKind.ELLIPSE,
+        ObjectKind.LINE,
+        ObjectKind.ARROW,
+        ObjectKind.DOT,
+        ObjectKind.VECTOR,
+        ObjectKind.DOUBLE_ARROW,
+        ObjectKind.DASHED_LINE,
+        ObjectKind.POLYGON,
+        ObjectKind.REGULAR_POLYGON,
+        ObjectKind.STAR,
+        ObjectKind.ARC,
+        ObjectKind.SECTOR,
+        ObjectKind.ANNULUS,
+        ObjectKind.NUMBER_PLANE,
+        ObjectKind.TEXT,
+        ObjectKind.MATH_TEX,
+        ObjectKind.TEX,
+    }
+)
 #: Arrow kinds that ``GrowArrow`` supports.
 ARROW_KINDS = frozenset({ObjectKind.ARROW, ObjectKind.VECTOR, ObjectKind.DOUBLE_ARROW})
 
@@ -845,6 +878,8 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
         return obj_kind == ObjectKind.TEXT
     if anim_kind == AnimationKind.NETWORK_PARTS:
         return obj_kind == ObjectKind.NETWORK
+    if anim_kind == AnimationKind.APPLY_MATRIX:
+        return obj_kind in MATRIX_KINDS
     if anim_kind == AnimationKind.ONE_BY_ONE:
         return obj_kind in (ObjectKind.BULLET_LIST, ObjectKind.GROUP)
     if anim_kind == AnimationKind.GROW_ARROW:

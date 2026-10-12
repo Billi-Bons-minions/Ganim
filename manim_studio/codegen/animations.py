@@ -211,6 +211,10 @@ def simple_animation_code(anim: Animation, scene: Scene, names: dict[str, str], 
         return f"LaggedStart(*[FadeIn(item{shift}) for item in {variable}], {', '.join([f'lag_ratio={lag}'] + timing.args())})"
     if anim.kind == AnimationKind.NETWORK_PARTS:
         return network_parts_code(anim, scene, variable, timing)
+    if anim.kind == AnimationKind.APPLY_MATRIX:
+        # a linear map of the whole plane, around the origin (like 3Blue1Brown's grids)
+        m11, m12, m21, m22 = (fmt_float(float(anim.params.get(key, default))) for key, default in (("m11", 1.0), ("m12", 0.0), ("m21", 0.0), ("m22", 1.0)))
+        return f"ApplyMatrix({', '.join([f'[[{m11}, {m12}], [{m21}, {m22}]]', variable] + timing.args())})"
     if anim.kind == AnimationKind.TYPE_WITH_CURSOR:
         cursor = f"Rectangle(height={variable}.height * 1.1, width=0.06, fill_opacity=1, stroke_width=0, color={variable}.get_color()).move_to({variable}[0])"
         return f"TypeWithCursor({', '.join([variable, cursor, 'leave_cursor_on=False'] + timing.args())})"

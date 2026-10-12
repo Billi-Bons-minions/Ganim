@@ -13,7 +13,9 @@ from manim_studio.model.state import (
     START,
     ObjectState,
     apply_animation,
+    apply_matrix,
     apply_to_group,
+    matrix_of,
     network_animation_parts,
     part_color,
     refresh_group_states,
@@ -204,6 +206,8 @@ def apply_partial(states: dict[str, ObjectState], anim: Animation, progress: flo
         )
     elif kind in (AnimationKind.CIRCUMSCRIBE, AnimationKind.PASSING_FLASH, AnimationKind.BROADCAST):
         states[anim.target_id] = replace(state, outline=progress, outline_color=str(anim.params.get("color", "#F7D96F")))
+    elif kind == AnimationKind.APPLY_MATRIX:
+        states[anim.target_id] = apply_matrix(state, matrix_of(anim), progress)
     elif kind == AnimationKind.NETWORK_PARTS:
         # recoloring blends to the new color; lighting up and flashing go there and back
         color = str(anim.params.get("color", "#F7D96F"))

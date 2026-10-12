@@ -315,6 +315,24 @@ class AnimationPreview(QWidget):
                 painter.setPen(self._pen(color, 2.0))
                 painter.drawEllipse(QPointF(0, 0), unit * 1.8 * local, unit * 1.8 * local)
 
+    def _draw_apply_matrix(self, painter: QPainter, t: float, unit: float) -> None:
+        # a grid with two basis vectors, sheared by ( 1 1 | 0 1 )
+        shear = t
+
+        def mapped(x: float, y: float) -> QPointF:
+            return QPointF((x + shear * y) * unit * 0.7, -y * unit * 0.7)
+
+        grid = QColor(BLUE)
+        grid.setAlphaF(0.45)
+        painter.setPen(self._pen(grid, 1.0))
+        for k in range(-3, 4):
+            painter.drawLine(mapped(k, -2), mapped(k, 2))
+            if abs(k) <= 2:
+                painter.drawLine(mapped(-3, k), mapped(3, k))
+        for (x, y), color in (((1, 0), QColor("#83C167")), ((0, 1), RED)):
+            painter.setPen(self._pen(color, 3.0))
+            painter.drawLine(mapped(0, 0), mapped(x, y))
+
     def _draw_network_parts(self, painter: QPainter, t: float, unit: float) -> None:
         points = [QPointF(-unit * 1.6, unit * 0.9), QPointF(0, -unit * 1.0), QPointF(unit * 1.6, unit * 0.9)]
         highlighted = _mix(QColor("#FFFFFF"), RED, t)

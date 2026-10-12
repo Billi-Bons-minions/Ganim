@@ -496,6 +496,13 @@ class _SceneReader:
             return [self._timing(anim, kwargs, run_time)]
         if name == "TypeWithCursor" and node.args:
             return [self._timing(create_animation(AnimationKind.TYPE_WITH_CURSOR, self._target(node.args[0])), kwargs, run_time)]
+        if name == "ApplyMatrix" and len(node.args) >= 2:
+            rows = node.args[0]
+            if not (isinstance(rows, (ast.List, ast.Tuple)) and len(rows.elts) == 2 and all(isinstance(row, (ast.List, ast.Tuple)) and len(row.elts) == 2 for row in rows.elts)):
+                raise ImportProblem("matrix")
+            (m11, m12), (m21, m22) = ((_number(value) for value in row.elts) for row in rows.elts)
+            anim = create_animation(AnimationKind.APPLY_MATRIX, self._target(node.args[1]), m11=m11, m12=m12, m21=m21, m22=m22)
+            return [self._timing(anim, kwargs, run_time)]
         if name == "Rotate" and node.args:
             angle = math.degrees(_number(kwargs["angle"])) if "angle" in kwargs else 180.0
             anim = create_animation(AnimationKind.ROTATE, self._target(node.args[0]), angle=round(angle, 6))

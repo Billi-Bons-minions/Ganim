@@ -56,6 +56,8 @@ class ObjectState:
     theta: float = 0.0
     #: Extra geometry of attached objects (angle marks: start angle and sweep in degrees).
     geometry: tuple[float, ...] = ()
+    #: Linear map applied to the shape around its center (``(m11, m12, m21, m22)``, scene axes).
+    matrix: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 1.0)
     #: Colors of single vertices and edges of a network (``(part, color)`` pairs).
     part_colors: tuple[tuple[tuple[str, str, str], str], ...] = ()
 
@@ -249,6 +251,9 @@ def apply_animation(states: dict[str, ObjectState], anim: Animation, scene: Scen
         if partner is not None and not returns:
             states[anim.target_id] = replace(current, x=partner.x, y=partner.y, visible=True)
             states[partner.object_id] = replace(partner, x=current.x, y=current.y, visible=True)
+    elif kind == AnimationKind.APPLY_MATRIX:
+        if not returns:
+            states[anim.target_id] = apply_matrix(current, matrix_of(anim), 1.0)
     elif kind == AnimationKind.NETWORK_PARTS:
         if not returns and anim.params.get("effect", "color") == "color":
             colors = dict(current.part_colors)
@@ -265,6 +270,38 @@ def apply_animation(states: dict[str, ObjectState], anim: Animation, scene: Scen
         states[anim.target_id] = _apply_modifier(current, anim)
     else:
         states[anim.target_id] = replace(current, visible=True)
+
+
+Matrix = tuple[float, float, float, float]
+
+
+def matrix_of(anim: Animation) -> Matrix:
+    """The 2×2 matrix of a "linear map" animation."""
+    return tuple(float(anim.params.get(key, default)) for key, default in (("m11", 1.0), ("m12", 0.0), ("m21", 0.0), ("m22", 1.0)))  # type: ignore[return-value]
+
+
+def _multiply(first: Matrix, second: Matrix) -> Matrix:
+    a, b, c, d = first
+    e, f, g, h = second
+    return (a * e + b * g, a * f + b * h, c * e + d * g, c * f + d * h)
+
+
+def apply_matrix(state: ObjectState, matrix: Matrix, progress: float) -> ObjectState:
+    """Deform an object with a linear map around the scene's origin (like Manim's ``ApplyMatrix``).
+
+    Manim moves every point straight to its image, so after ``progress`` the map is
+    ``(1 - t)·I + t·M``. The object's center moves with it; the rest of the map is kept in
+    the object's own (rotated) frame so that later moves, turns and scalings still work.
+    """
+    t = progress
+    m11, m12, m21, m22 = matrix
+    current: Matrix = (1 - t + t * m11, t * m12, t * m21, 1 - t + t * m22)
+    x = current[0] * state.x + current[1] * state.y
+    y = current[2] * state.x + current[3] * state.y
+    radians = math.radians(state.rotation)
+    cos, sin = math.cos(radians), math.sin(radians)
+    local = _multiply(_multiply((cos, sin, -sin, cos), current), _multiply((cos, -sin, sin, cos), state.matrix))
+    return replace(state, x=x, y=y, matrix=tuple(round(value, 12) for value in local), visible=True)  # type: ignore[arg-type]
 
 
 def network_animation_parts(scene: Scene | None, anim: Animation) -> list[tuple[str, str, str]]:

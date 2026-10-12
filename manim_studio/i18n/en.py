@@ -1283,4 +1283,13 @@ STRINGS: dict[str, str] = {
     "template.slide.items": "An important idea\nAn example of it\nThe conclusion",
     "template.network.name": "Graph theory: a path",
     "template.network.title": "A path from A to F",
+    "anim.apply_matrix": "Linear map (matrix)",
+    "anim_short.apply_matrix": "Matrix",
+    "anim_help.apply_matrix": "Deforms the object with a 2×2 matrix around the origin, e.g. a coordinate grid with its vectors (shear, rotation, reflection, stretch). The matrix is ( a  b | c  d ).",
+    "aparam.m11": "a (top left)",
+    "aparam.m12": "b (top right)",
+    "aparam.m21": "c (bottom left)",
+    "aparam.m22": "d (bottom right)",
+    "template.linear_map.name": "Linear map (shear)",
+    "template.linear_map.title": "Shear: (x, y) ↦ (x + y, y)",
 }

@@ -8,7 +8,7 @@ from typing import Callable
 
 import shiboken6
 from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPen, QPixmap, QWheelEvent
+from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPen, QPixmap, QTransform, QWheelEvent
 from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QWidget
 
 from manim_studio.model import groups
@@ -41,6 +41,25 @@ DRAG_ENDPOINT = "endpoint"
 
 #: ``policy(action, object_ids) -> (allowed, message)``
 EditPolicy = Callable[[str, list[str]], tuple[bool, str]]
+
+
+def local_matrix(matrix: tuple[float, float, float, float], rotation: float) -> QTransform:
+    """The item transform for a linear map that the state keeps inside the object's rotation.
+
+    The state draws ``R · M · shape`` (``M`` in scene axes, y up), but Qt applies an item's
+    base transform after its rotation, so the map is turned into ``R · M · R⁻¹`` and its
+    y axis is flipped for the stage (y down).
+    """
+    if matrix == (1.0, 0.0, 0.0, 1.0):
+        return QTransform()
+    radians = math.radians(rotation)
+    cos, sin = math.cos(radians), math.sin(radians)
+    m11, m12, m21, m22 = matrix
+    # R · M
+    a, b, c, d = cos * m11 - sin * m21, cos * m12 - sin * m22, sin * m11 + cos * m21, sin * m12 + cos * m22
+    # (R · M) · R⁻¹
+    p, q, r, s = a * cos - b * sin, a * sin + b * cos, c * cos - d * sin, c * sin + d * cos
+    return QTransform(p, -r, -q, s, 0.0, 0.0)
 
 
 @dataclass
@@ -265,6 +284,7 @@ class StageView(QGraphicsView):
             item.setPos(pt(state.x, state.y))
             item.setRotation(-state.rotation)
             item.setScale(state.scale)
+            item.setTransform(local_matrix(state.matrix, state.rotation))
             item.setZValue(9_000_000 if obj.kind == ObjectKind.CAMERA else obj.z_index * 10_000 + index)
             item.content_hidden = self._exact_item is not None
         self._sync_groups(scene, known)

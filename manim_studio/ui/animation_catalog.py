@@ -30,6 +30,7 @@ ANIMATION_GROUPS: tuple[tuple[str, tuple[AnimationKind, ...]], ...] = (
             AnimationKind.CHANGE_COLOR,
             AnimationKind.MOVE_ALONG_PATH,
             AnimationKind.SWAP,
+            AnimationKind.APPLY_MATRIX,
             AnimationKind.SET_VALUE,
             AnimationKind.ORBIT,
         ),

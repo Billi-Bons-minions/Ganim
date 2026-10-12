@@ -1283,4 +1283,13 @@ STRINGS: dict[str, str] = {
     "template.slide.items": "Ein wichtiger Gedanke\nEin Beispiel dazu\nDas Fazit",
     "template.network.name": "Graphentheorie: ein Weg",
     "template.network.title": "Ein Weg von A nach F",
+    "anim.apply_matrix": "Lineare Abbildung (Matrix)",
+    "anim_short.apply_matrix": "Matrix",
+    "anim_help.apply_matrix": "Verformt das Objekt mit einer 2×2-Matrix um den Ursprung, z. B. ein Koordinatengitter samt Vektoren (Scherung, Drehung, Spiegelung, Streckung). Die Matrix ist ( a  b | c  d ).",
+    "aparam.m11": "a (oben links)",
+    "aparam.m12": "b (oben rechts)",
+    "aparam.m21": "c (unten links)",
+    "aparam.m22": "d (unten rechts)",
+    "template.linear_map.name": "Lineare Abbildung (Scherung)",
+    "template.linear_map.title": "Scherung: (x, y) ↦ (x + y, y)",
 }

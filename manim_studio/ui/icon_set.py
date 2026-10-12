@@ -763,6 +763,19 @@ def _a_broadcast(p: QPainter) -> None:
     p.restore()
 
 
+def _a_apply_matrix(p: QPainter) -> None:
+    # a square grid sheared into a parallelogram grid
+    p.save()
+    p.setOpacity(0.45)
+    _rect(p, 3, 7, 12, 12, 0)
+    p.restore()
+    for offset in (0.0, 6.0, 12.0):
+        _line(p, 3 + offset + 6, 7, 3 + offset, 19)
+    _line(p, 9, 7, 21, 7)
+    _line(p, 6, 13, 18, 13)
+    _line(p, 3, 19, 15, 19)
+
+
 def _a_network_parts(p: QPainter) -> None:
     points = ((5, 18), (12, 5), (19, 18))
     _line(p, *points[0], *points[2])
@@ -940,6 +953,7 @@ ICONS: dict[str, Drawer] = {
     "a_passing_flash": _a_passing_flash,
     "a_broadcast": _a_broadcast,
     "a_network_parts": _a_network_parts,
+    "a_apply_matrix": _a_apply_matrix,
     "a_one_by_one": _a_one_by_one,
     "a_add_letters": _a_add_letters,
     "a_grow_arrow": _a_grow_arrow,

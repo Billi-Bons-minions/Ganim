@@ -256,6 +256,31 @@ def shortest_path() -> Scene:
     return scene
 
 
+def linear_map() -> Scene:
+    scene = create_scene(tr("template.linear_map.name"))
+    # larger than the picture, so that the deformed grid still fills it
+    plane = _add(
+        scene,
+        create_object(ObjectKind.NUMBER_PLANE, tr("kind.number_plane") + " 1", 0.0, 0.0, x_min=-16.0, x_max=16.0, x_length=32.0, y_min=-10.0, y_max=10.0, y_length=20.0),
+    )
+    i_hat = _add(scene, create_object(ObjectKind.VECTOR, "i", 0.5, 0.0, length=1.0))
+    j_hat = _add(scene, create_object(ObjectKind.VECTOR, "j", 0.0, 0.5, length=1.0))
+    j_hat.rotation = 90.0
+    i_hat.stroke_color = i_hat.fill_color = "#83C167"
+    j_hat.stroke_color = j_hat.fill_color = "#FC6255"
+    # a text instead of a LaTeX matrix, so that the template also works without LaTeX
+    title = _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " 1", -3.4, 3.3, text=tr("template.linear_map.title"), font_size=34.0))
+    title.z_index = 1  # in front of the grid, so that its background (one layer lower) covers the grid lines
+    backdrop = _add(scene, create_object(ObjectKind.HIGHLIGHT, tr("kind.highlight") + " 1", target=title.id, style="background", opacity=0.85))
+    shear = {"m11": 1.0, "m12": 1.0, "m21": 0.0, "m22": 1.0}
+    _play(scene, create_animation(AnimationKind.CREATE, plane.id, run_time=1.5))
+    _play(scene, create_animation(AnimationKind.GROW_ARROW, i_hat.id), create_animation(AnimationKind.GROW_ARROW, j_hat.id))
+    _play(scene, create_animation(AnimationKind.FADE_IN, backdrop.id), create_animation(AnimationKind.WRITE, title.id))
+    _play(scene, *(create_animation(AnimationKind.APPLY_MATRIX, target.id, run_time=2.5, **shear) for target in (plane, i_hat, j_hat)))
+    scene.steps.append(create_wait_step(1.5))
+    return scene
+
+
 BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("title", "text", title_and_subtitle),
     BuiltinTemplate("analysis", "graph", analyze_function),
@@ -269,4 +294,5 @@ BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("conics", "a_set_value", conic_sections),
     BuiltinTemplate("slide", "a_one_by_one", presentation_slide),
     BuiltinTemplate("network", "a_network_parts", shortest_path),
+    BuiltinTemplate("linear_map", "a_apply_matrix", linear_map),
 )

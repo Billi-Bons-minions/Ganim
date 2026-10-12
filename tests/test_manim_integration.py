@@ -670,3 +670,20 @@ def test_highlighting_vertices_and_edges_renders(tmp_path) -> None:
     )
     result = run_manim(tmp_path, generate_script(make_project(scene)), "Netze")
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_linear_map_renders(tmp_path) -> None:
+    plane = make_object(ObjectKind.NUMBER_PLANE, "Ebene", "e")
+    vector = make_object(ObjectKind.VECTOR, "i", "i", 0.5, 0.0, length=1.0)
+    text = make_object(ObjectKind.TEXT, "Text", "t", -3.0, 2.0, text="Scherung")
+    scene = Scene(
+        id="s",
+        name="Abbildung",
+        objects=[plane, vector, text],
+        steps=[
+            play(*(make_animation(AnimationKind.APPLY_MATRIX, target, m11=1.0, m12=1.0, m21=0.0, m22=1.0) for target in ("e", "i", "t"))),
+            play(make_animation(AnimationKind.ROTATE, "t", angle=45.0)),
+        ],
+    )
+    result = run_manim(tmp_path, generate_script(make_project(scene)), "Abbildung")
+    assert result.returncode == 0, result.stdout + result.stderr

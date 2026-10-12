@@ -102,6 +102,7 @@ class AnimationKind(str, Enum):
     BROADCAST = "broadcast"
     ONE_BY_ONE = "one_by_one"
     NETWORK_PARTS = "network_parts"
+    APPLY_MATRIX = "apply_matrix"
 
 
 class StepKind(str, Enum):

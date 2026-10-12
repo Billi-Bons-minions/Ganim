@@ -103,6 +103,9 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
 - Menü „Zeitleiste“:
   - „Kamera auf Auswahl zoomen“ legt einen Schritt mit Kamerafahrt und Zoom auf die markierten Objekte an, bei Bedarf samt Kamera.
   - „Kamera zurück auf das ganze Bild“.
+- Fuzzing Runde 4:
+  - Duplizieren und Kopieren einer Gruppe übernahm die Mitglieder nicht und erzeugte leere Gruppen. Behoben.
+  - Objekte, die nach Schrumpfen, Entstehen rückwärts, Wegschreiben oder Ersetzen später wieder verwendet werden, werden im Skript per `save_state`/`restore` gesichert. Vorher gab es NaN-Abstürze bzw. falsche Formen.
 
 ### Halbfertig
 - (nichts)

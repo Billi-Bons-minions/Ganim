@@ -242,3 +242,24 @@ def test_camera_zooms_onto_the_selection(window) -> None:
     end = states_after(scene, len(scene.steps) - 1)[camera.id]
     assert (end.x, end.y, end.scale) == pytest.approx((0.0, 0.0, 1.0), abs=1e-3)
     assert "self.camera.frame.animate(" in generate_script(window.document.project)
+
+
+def test_duplicating_and_copying_a_group_copies_its_members(window) -> None:
+    controller = window.controller
+    a = controller.add_object(ObjectKind.CIRCLE, -2.0, 0.0)
+    b = controller.add_object(ObjectKind.SQUARE, 0.0, 0.0)
+    window.editor.select_objects([a, b])
+    controller.group_selection()
+    group = window.editor.selected_objects[0]
+    controller.duplicate_objects()
+    scene = window.editor.scene()
+    copy = scene.object_by_id(window.editor.selected_objects[0])
+    assert copy.kind == ObjectKind.GROUP and copy.id != group and len(copy.params["members"]) == 2
+    assert len(scene.objects) == 6
+    window.editor.select_objects([group])
+    controller.copy_objects()
+    controller.add_scene()
+    controller.paste_objects()
+    pasted = window.editor.scene()
+    assert sorted(obj.kind.value for obj in pasted.objects) == ["circle", "group", "square"]
+    assert not has_errors(validate_scene(pasted))

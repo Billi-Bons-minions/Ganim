@@ -264,11 +264,24 @@ class EditorController(QObject):
             self.statusMessage.emit(tr("status.dependents_deleted", names=names))
         self.editor.select_objects([])
 
+    def _with_members(self, ids: list[str]) -> list:
+        """The objects plus all members of selected groups (a group copy needs its members)."""
+        scene = self.scene()
+        wanted: set[str] = set()
+        for object_id in ids:
+            wanted.add(object_id)
+            pending = [object_id]
+            while pending:
+                obj = scene.object_by_id(pending.pop())
+                if obj is not None and groups.is_group(obj):
+                    members = [m for m in obj.params.get("members", []) if m not in wanted]
+                    wanted.update(members)
+                    pending += members
+        return [obj for obj in scene.objects if obj.id in wanted]
+
     def duplicate_objects(self) -> None:
         """Copy the selected objects next to the originals."""
-        scene = self.scene()
-        originals = [scene.object_by_id(i) for i in self.editor.selected_objects]
-        objects = [obj for obj in originals if obj is not None]
+        objects = self._with_members(list(self.editor.selected_objects))
         if not objects:
             return
         new_ids = self._edit(
@@ -280,7 +293,7 @@ class EditorController(QObject):
     def copy_objects(self) -> None:
         """Put the selected objects on the clipboard (as marked JSON text)."""
         scene = self.scene()
-        objects = [obj for obj in (scene.object_by_id(i) for i in self.editor.selected_objects) if obj is not None]
+        objects = self._with_members(list(self.editor.selected_objects))
         if not objects:
             return
         # the hosts (axes, graph, marked object ...) travel along in case the target scene lacks them

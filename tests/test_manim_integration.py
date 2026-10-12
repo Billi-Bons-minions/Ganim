@@ -619,3 +619,21 @@ def test_rotation_around_a_point_renders(tmp_path) -> None:
     ]
     result = run_manim(tmp_path, generate_script(make_project(Scene(id="s", name="Uhr", objects=[hand, dot], steps=steps))), "Uhr", "--dry_run")
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+
+
+def test_objects_used_again_after_destroying_exits(tmp_path) -> None:
+    line = make_object(ObjectKind.DASHED_LINE, "Strich", "d", 0.0, 0.0)
+    circle = make_object(ObjectKind.CIRCLE, "Kreis", "c", -3.0, 0.0)
+    square = make_object(ObjectKind.SQUARE, "Quadrat", "q", 3.0, 0.0)
+    steps = [
+        play(make_animation(AnimationKind.SHRINK_TO_CENTER, "d", run_time=0.2)),
+        play(make_animation(AnimationKind.APPLY_WAVE, "d", run_time=0.2)),
+        play(make_animation(AnimationKind.REPLACEMENT_TRANSFORM, "c", target="q", run_time=0.2)),
+        play(make_animation(AnimationKind.FADE_IN, "c", run_time=0.2)),
+        play(make_animation(AnimationKind.UNCREATE, "q", run_time=0.2)),
+    ]
+    script = generate_script(make_project(Scene(id="s", name="Wieder", objects=[line, circle, square], steps=steps)))
+    assert "strich.save_state()" in script and "strich.restore()" in script and "kreis.restore()" in script
+    assert "quadrat.save_state()" not in script  # not used again afterwards
+    result = run_manim(tmp_path, script, "Wieder", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]

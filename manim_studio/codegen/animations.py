@@ -21,6 +21,7 @@ from manim_studio.model.types import (
     MODIFIER_ANIMATIONS,
     RATE_FUNCTIONS,
     REFERENCE_PARAMS,
+    REPLACING_TRANSFORMS,
     TRANSFORM_ANIMATIONS,
     AnimationKind,
     ObjectKind,
@@ -487,7 +488,26 @@ def step_code(
             lines.append(f"self.wait({fmt_float(max(anim.delay + anim.run_time for anim in starts))})")
     if step.kind == StepKind.PLAY:
         lines += _arrow_fixes(step, scene, names, helpers)
+        lines = _keep_reused_objects(step, number, scene, names, lines)
     return lines
+
+
+#: Exits that leave the object empty or changed (unlike FadeOut, which restores it).
+_DESTROYING = frozenset({AnimationKind.SHRINK_TO_CENTER, AnimationKind.UNCREATE, AnimationKind.UNWRITE}) | REPLACING_TRANSFORMS
+
+
+def _keep_reused_objects(step: Step, number: int, scene: Scene, names: dict[str, str], lines: list[str]) -> list[str]:
+    """Save objects before such an exit and restore them afterwards if a later step uses them again."""
+    later: set[str] = set()
+    for future in scene.steps[number:]:
+        for anim in future.animations:
+            later.add(anim.target_id)
+            later.update(str(anim.params[key]) for key in ("target", "path", "partner") if anim.params.get(key))
+    keep = [anim.target_id for anim in step.animations if anim.kind in _DESTROYING and anim.target_id in later and anim.target_id in names]
+    if not keep:
+        return lines
+    variables = list(dict.fromkeys(names[object_id] for object_id in keep))
+    return lines[:1] + [f"{variable}.save_state()" for variable in variables] + lines[1:] + [f"{variable}.restore()" for variable in variables]
 
 
 def _is_trace(scene: Scene, object_id: str) -> bool:

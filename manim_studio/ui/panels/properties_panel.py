@@ -110,6 +110,7 @@ FUNCTION_GRAPH_REFS = ("graph_id", "other_graph_id", "derive_from")
 #: Quick actions on a function graph: (key, kind or special action, extra params).
 GRAPH_ACTIONS: tuple[tuple[str, str, dict], ...] = (
     ("derivative", "derivative", {}),
+    ("antiderivative", "antiderivative", {}),
     ("second_derivative", "second_derivative", {}),
     ("zeros", ObjectKind.GRAPH_MARKERS.value, {"feature": "zeros"}),
     ("extrema", ObjectKind.GRAPH_MARKERS.value, {"feature": "extrema"}),
@@ -647,6 +648,8 @@ class PropertiesPanel(QScrollArea):
             if action in ("derivative", "second_derivative"):
                 order = 1 if action == "derivative" else 2
                 button.clicked.connect(lambda _checked=False, order=order: self.controller.add_derivative(object_id, order))
+            elif action == "antiderivative":
+                button.clicked.connect(lambda _checked=False: self.controller.add_antiderivative(object_id))
             elif action == "value_table":
                 button.clicked.connect(lambda _checked=False: self.controller.add_value_table(object_id))
             else:

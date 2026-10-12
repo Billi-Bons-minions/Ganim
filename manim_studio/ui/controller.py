@@ -253,6 +253,22 @@ class EditorController(QObject):
         }
         return self.add_object(ObjectKind.FUNCTION_GRAPH, 0.0, 0.0, name=name, attributes={"stroke_color": color}, **params)
 
+    def add_antiderivative(self, graph_id: str) -> str | None:
+        """Add the integral function F(x) = ∫ f(t) dt from 0 to x of a function graph."""
+        graph = self.scene().object_by_id(graph_id)
+        if graph is None:
+            return None
+        count = sum(1 for o in self.scene().objects if o.params.get("curve") in ("derivative", "antiderivative"))
+        params = {
+            "curve": "antiderivative",
+            "derive_from": graph_id,
+            "axes_id": graph.params.get("axes_id"),
+            "x_min": graph.params.get("x_min", -5.0),
+            "x_max": graph.params.get("x_max", 5.0),
+        }
+        name = tr("graph.antiderivative_name", name=graph.name)
+        return self.add_object(ObjectKind.FUNCTION_GRAPH, 0.0, 0.0, name=name, attributes={"stroke_color": DERIVATIVE_COLORS[count % len(DERIVATIVE_COLORS)]}, **params)
+
     def add_value_table(self, graph_id: str) -> str | None:
         """Add a table of values (x and f(x)) of a function graph below the picture."""
         graph = self.scene().object_by_id(graph_id)

@@ -39,6 +39,7 @@ from manim_studio.model.geometry import (
     param_float,
 )
 from manim_studio.model.types import (
+    CURVE_ANTIDERIVATIVE,
     CURVE_DERIVATIVE,
     CURVE_FUNCTION,
     CURVE_IMPLICIT,
@@ -184,6 +185,48 @@ def graph_function(scene: Scene, graph: SceneObject, values: Values | None = Non
     return lambda x: evaluate_pieces(pieces, x, values)
 
 
+#: Simpson steps of one integral in the script (``studio_integral``); the stage uses a fine table instead.
+INTEGRAL_STEPS = 200
+#: Table steps of the stage's integral function (trapezoids; differs from Simpson by far less than a pixel).
+INTEGRAL_TABLE_STEPS = 4000
+
+
+def antiderivative_function(scene: Scene, graph: SceneObject, values: Values | None = None) -> Callable[[float], float] | None:
+    """``F(x) = C + ∫ f(t) dt`` from ``a`` to ``x`` of an integral-function graph (``nan`` where f is undefined)."""
+    source = scene.object_by_id(graph.params.get("derive_from"))
+    pieces = function_pieces(scene, source) if source is not None and source.id != graph.id else None
+    if pieces is None:
+        return None
+    values = scene_values(scene, values)
+    start = param_float(graph.params, "integral_from", 0.0)
+    constant = param_float(graph.params, "integral_constant", 0.0)
+    low, high = x_range(graph)
+    left, right = min(low, start), max(high, start)
+    step = (right - left) / INTEGRAL_TABLE_STEPS or 1.0
+    # running sums outward from the start, so an undefined spot only cuts off what lies beyond it
+    table: dict[int, float] = {0: constant}
+    for direction in (1, -1):
+        total, previous = constant, evaluate_pieces(pieces, start, values)
+        for index in range(1, INTEGRAL_TABLE_STEPS + 1):
+            x = start + direction * index * step
+            if x < left - step or x > right + step:
+                break
+            current = evaluate_pieces(pieces, x, values)
+            total += direction * step * (previous + current) / 2
+            table[direction * index] = total
+            previous = current
+
+    def integral(x: float) -> float:
+        position = (x - start) / step
+        index = math.floor(position)
+        if index not in table or index + 1 not in table:
+            return table.get(round(position), math.nan)
+        fraction = position - index
+        return table[index] * (1 - fraction) + table[index + 1] * fraction
+
+    return integral
+
+
 def is_function_curve(graph: SceneObject | None) -> bool:
     """Return ``True`` for graphs of the form ``y = f(x)``."""
     return graph is not None and graph.kind == ObjectKind.FUNCTION_GRAPH and graph.params.get("curve", CURVE_FUNCTION) in FUNCTION_CURVES
@@ -289,6 +332,10 @@ def curve_points(scene: Scene, graph: SceneObject, values: Values | None = None)
         return segments
     if curve == CURVE_IMPLICIT:
         return implicit_segments(scene, graph, values)
+    if curve == CURVE_ANTIDERIVATIVE:
+        integral = antiderivative_function(scene, graph, values)
+        low, high = x_range(graph)
+        return sample_curve(integral, low, high, y_limits(scene, graph)) if integral is not None else []
     t_min, t_max = param_float(graph.params, "t_min", 0.0), param_float(graph.params, "t_max", math.tau)
     if curve == CURVE_PARAMETRIC:
         fx = parse(scene, str(graph.params.get("x_expression", "")), "t")

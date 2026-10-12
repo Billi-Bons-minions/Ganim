@@ -16,6 +16,7 @@ from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.geometry import bound_axes, param_float
 from manim_studio.model.graphs import Piece
 from manim_studio.model.types import (
+    CURVE_ANTIDERIVATIVE,
     CURVE_FUNCTION,
     CURVE_IMPLICIT,
     CURVE_PARAMETRIC,
@@ -31,6 +32,7 @@ STUDIO_PLOT = "studio_plot"
 STUDIO_DASHED = "studio_dashed_line"
 STUDIO_LINES = "studio_lines_to_point"
 STUDIO_TERM = "studio_term"
+STUDIO_INTEGRAL = "studio_integral"
 STUDIO_BESIDE = "studio_beside"
 POINT_LABEL_SIZE = 24.0
 AXIS_LABEL_SIZE = 28.0
@@ -74,6 +76,8 @@ def _graph_uses_parameters(scene: Scene, graph: SceneObject | None) -> bool:
     if curve in FUNCTION_CURVES:
         pieces = graphs.function_pieces(scene, graph) or []
         return any(piece.expression.used_parameters() for piece in pieces)
+    if curve == CURVE_ANTIDERIVATIVE:
+        return _graph_uses_parameters(scene, scene.object_by_id(graph.params.get("derive_from")))
     if curve == CURVE_IMPLICIT:
         expression = graphs.implicit_expression(scene, graph)
         # y is the second variable of f(x, y) = 0, not a parameter
@@ -186,6 +190,22 @@ def graph_constructor(scene: Scene, graph: SceneObject, names: dict[str, str], h
                 options.append(("breaks", "[" + ", ".join(fmt_number(value) for value in breaks) + "]"))
             return call(STUDIO_PLOT, [axes_variable, function, py_range(low, high)], options + style, 2)
         return call(f"{axes_variable}.plot", [function], [("x_range", py_range(low, high))] + style, 2)
+    if curve == CURVE_ANTIDERIVATIVE:
+        source = scene.object_by_id(graph.params.get("derive_from"))
+        if source is None or source.id == graph.id:
+            raise CodegenError("expression_invalid", graph.name)
+        helpers.add(STUDIO_INTEGRAL)
+        start = fmt_float(param_float(graph.params, "integral_from", 0.0))
+        constant = fmt_float(param_float(graph.params, "integral_constant", 0.0))
+        integrand = f"lambda x: {pieces_code(_function_pieces(scene, source), rename)}"
+        function = f"lambda x: {constant} + {STUDIO_INTEGRAL}({integrand}, {start}, x)"
+        low, high = graphs.x_range(graph)
+        if axes_variable is None:
+            return call("FunctionGraph", [function], [("x_range", py_range(low, high))] + style, 2)
+        helpers.add(STUDIO_PLOT)
+        limits = graphs.y_limits(scene, graph)
+        options = [("y_range", py_range(*limits) if limits else "None")]
+        return call(STUDIO_PLOT, [axes_variable, function, py_range(low, high)], options + style, 2)
     if curve == CURVE_IMPLICIT:
         expression = graphs.implicit_expression(scene, graph)
         if expression is None:
@@ -605,6 +625,20 @@ STUDIO_DASHED_SOURCE = '''def studio_dashed_line(start, end, **kwargs):
 STUDIO_LINES_SOURCE = '''def studio_lines_to_point(axes, point, **kwargs):
     """Like axes.get_lines_to_point, but also for points on an axis."""
     return VGroup(*(studio_dashed_line(axis.get_projection(point), point, **kwargs) for axis in (axes.y_axis, axes.x_axis)))'''
+
+#: Integral of a function (Simpson's rule) for integral-function graphs.
+STUDIO_INTEGRAL_SOURCE = f'''def studio_integral(function, start, end, steps={graphs.INTEGRAL_STEPS}):
+    """Integral of function from start to end (Simpson's rule); nan where function is undefined."""
+    if end == start:
+        return 0.0
+    xs = np.linspace(start, end, 2 * steps + 1)
+    with np.errstate(all="ignore"):
+        try:
+            ys = np.broadcast_to(np.asarray(function(xs), dtype=float), xs.shape)
+        except (TypeError, ValueError, ArithmeticError):  # piecewise terms work on single numbers only
+            ys = np.array([function(x) for x in xs], dtype=float)
+    h = (end - start) / (2 * steps)
+    return float(h / 3 * (ys[0] + ys[-1] + 4 * ys[1:-1:2].sum() + 2 * ys[2:-1:2].sum()))'''
 
 #: Text of a tangent's or secant's label; ``graphs.line_term`` (stage) does the same.
 STUDIO_TERM_SOURCE = '''def studio_term(name, slope, intercept, decimals, style):

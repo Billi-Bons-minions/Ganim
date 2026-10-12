@@ -335,3 +335,8 @@ Jede Funktion ist mit einem Vergleich Bühne ↔ Manim-Bild und mit echten Manim
 - Getestet mit einem echten Manim-Lauf unter 0.19 und 0.22: a läuft auf 3, die Zahl zeigt 4.5.
 - Offen: Funktionswerte eines Graphen wie `f(a)` gehen in der Formel noch nicht; dafür müsste der Formel-Parser Graphen als Funktionen kennen.
 
+### 2. Integralfunktion
+- Neuer Kurventyp **Integralfunktion F(x) = C + ∫ f(t) dt** von a bis x, mit dem Knopf „∫ Integralfunktion“ am Graphen. Untere Grenze a und Konstante C sind einstellbar; hängt f von Parametern ab, wird F live mitgerechnet.
+- Entscheidung: numerische statt symbolische Integration, wie Manims `plot_antiderivative_graph`. Im Skript rechnet der Helfer `studio_integral` (Simpson-Regel, 200 Schritte), auf der Bühne eine feine Tabelle. Beides weicht um weniger als 10⁻⁴ ab; ein Manim-Test vergleicht die gezeichnete Kurve mit der Bühne.
+- Grenze: Auf einer Integralfunktion gibt es keine Graph-Werkzeuge (Tangente, Nullstellen …), weil diese einen Funktionsterm brauchen. Die Knöpfe sind dort ausgegraut. Ist f irgendwo nicht definiert, endet F dort.
+

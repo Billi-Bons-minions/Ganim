@@ -16,6 +16,7 @@ from manim_studio.model.expression import check_expression, is_valid_name
 from manim_studio.model.paths import local_outline
 from manim_studio.model.schema import animation_allowed
 from manim_studio.model.types import (
+    CURVE_ANTIDERIVATIVE,
     CURVE_DERIVATIVE,
     CURVE_FUNCTION,
     CURVE_IMPLICIT,
@@ -251,6 +252,12 @@ def _graph_issues(scene: Scene, obj: SceneObject, add) -> None:
         for row in rows:
             if _expression_issue(scene, str(row[0]), "x", add):
                 break
+    elif curve == CURVE_ANTIDERIVATIVE:
+        source = scene.object_by_id(params.get("derive_from"))
+        if source is None or source.id == obj.id:
+            add(ERROR, "derive_source_missing")
+        elif graphs.function_pieces(scene, source) is None:
+            add(ERROR, "derive_source_invalid", source.name)
     elif curve == CURVE_DERIVATIVE:
         source = scene.object_by_id(params.get("derive_from"))
         if source is None:

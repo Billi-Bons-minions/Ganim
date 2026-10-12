@@ -24,6 +24,7 @@ HELPER_FUNCTIONS = frozenset(
         "studio_dashed_line",
         "studio_lines_to_point",
         "studio_term",
+        "studio_integral",
         "studio_beside",
         "studio_shape",
         "studio_camera_frame",

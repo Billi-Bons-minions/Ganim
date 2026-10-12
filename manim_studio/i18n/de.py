@@ -1367,4 +1367,10 @@ STRINGS: dict[str, str] = {
     "template.tangent.name": "Tangente wandert am Graphen",
     "param.formula": "Formel (statt des Werts)",
     "issue.number_formula_only_parameters": "Die Formel einer Zahl darf nur Zahlen und Parameter enthalten (kein x).",
+    "choice.curve.antiderivative": "Integralfunktion F(x) = ∫ f(t) dt",
+    "param.integral_from": "Integrieren ab a =",
+    "param.integral_constant": "Konstante C",
+    "graph_action.antiderivative": "∫ Integralfunktion",
+    "graph_action.antiderivative_tip": "Zeichnet F(x) = ∫ f(t) dt von 0 bis x als eigenen Graphen (numerisch berechnet, wie Manims plot_antiderivative_graph).",
+    "graph.antiderivative_name": "Integralfunktion von {name}",
 }

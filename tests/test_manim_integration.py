@@ -438,7 +438,7 @@ def test_new_animations_render_and_import(tmp_path) -> None:
     ]
     project = make_project(Scene(id="s", name="Neu", objects=objects, steps=steps))
     script = generate_script(project)
-    for snippet in ("GrowFromEdge(balken, DOWN", "TypeWithCursor(gruss, Rectangle(", "scale=0.5", "TransformFromCopy(links, ziel",
+    for snippet in ("GrowFromEdge(balken, DOWN", "TypeWithCursor(gruss, Rectangle(", "scale=0.5", "ReplacementTransform(links.copy(), ziel",
                     "ShowPassingFlash(stern.copy().set_fill(opacity=0).set_stroke(", "Broadcast(ziel.copy(), focal_point=ziel.get_center(), n_mobs=3", "Unwrite(gruss"):
         assert snippet in script, snippet
     result = run_manim(tmp_path, script, "Neu", "--dry_run")
@@ -527,4 +527,17 @@ def test_traces_render(tmp_path) -> None:
     script = generate_script(make_project(scene))
     assert "self.add(schweif)" in script
     result = run_manim(tmp_path, script, "Spuren", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+
+
+def test_copy_transform_into_an_arrow_keeps_it_usable(tmp_path) -> None:
+    formula = make_object(ObjectKind.TEXT, "Formel", "f", -3.0, 0.0, text="a+b")
+    arrow = make_object(ObjectKind.ARROW, "Pfeil", "p", 3.0, 0.0)
+    scene = Scene(
+        id="s",
+        name="Kopie",
+        objects=[formula, arrow],
+        steps=[play(make_animation(AnimationKind.TRANSFORM_FROM_COPY, "f", target="p", run_time=0.3)), play(make_animation(AnimationKind.FADE_OUT, "p", scale=0.5, run_time=0.3))],
+    )
+    result = run_manim(tmp_path, generate_script(make_project(scene)), "Kopie", "--dry_run")
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]

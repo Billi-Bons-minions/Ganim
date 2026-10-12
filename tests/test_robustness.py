@@ -181,3 +181,21 @@ def test_nested_groups_disappear_with_their_last_member(window) -> None:
     controller.delete_objects([a, b, c])
     assert window.editor.scene().objects == []
     assert not has_errors(validate_scene(window.editor.scene()))
+
+
+def test_paste_into_another_scene_brings_the_hosts(window) -> None:
+    controller = window.controller
+    tangent = controller.add_object(ObjectKind.TANGENT)
+    text = controller.add_object(ObjectKind.TEXT, 3.0, 2.0)
+    window.editor.select_objects([text])
+    mark = controller.add_object(ObjectKind.HIGHLIGHT)
+    window.editor.select_objects([tangent, mark])
+    controller.copy_objects()
+    # same scene: only the copies themselves
+    controller.paste_objects()
+    assert len(window.editor.scene().objects) == 5 + 2
+    controller.add_scene()
+    controller.paste_objects()
+    scene = window.editor.scene()
+    assert sorted(obj.kind.value for obj in scene.objects) == sorted(["axes", "function_graph", "tangent", "text", "highlight"])
+    assert not has_errors(validate_scene(scene))

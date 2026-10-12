@@ -190,6 +190,11 @@ def simple_animation_code(anim: Animation, scene: Scene, names: dict[str, str], 
     if anim.kind == AnimationKind.BROADCAST:
         # rings (copies of the object) spread out from its center; the object itself stays
         variable = f"{variable}.copy()"
+    if anim.kind == AnimationKind.TRANSFORM_FROM_COPY:
+        # same picture as TransformFromCopy, but the target object itself is not reshaped
+        # (TransformFromCopy breaks arrows that are the target)
+        target = _extra_arguments(anim, scene, names)[0]
+        return f"ReplacementTransform({', '.join([f'{variable}.copy()', target] + timing.args())})"
     if anim.kind == AnimationKind.TYPE_WITH_CURSOR:
         cursor = f"Rectangle(height={variable}.height * 1.1, width=0.06, fill_opacity=1, stroke_width=0, color={variable}.get_color()).move_to({variable}[0])"
         return f"TypeWithCursor({', '.join([variable, cursor, 'leave_cursor_on=False'] + timing.args())})"

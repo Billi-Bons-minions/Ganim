@@ -9,6 +9,7 @@ from typing import Callable
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog, QWidget
 
+from manim_studio.codegen.objects import dependencies
 from manim_studio.i18n import tr
 from manim_studio.model import graphs, groups
 from manim_studio.model import operations as ops
@@ -277,12 +278,22 @@ class EditorController(QObject):
     def copy_objects(self) -> None:
         """Put the selected objects on the clipboard (as marked JSON text)."""
         scene = self.scene()
-        objects = [scene.object_by_id(i) for i in self.editor.selected_objects]
-        data = [object_to_dict(obj) for obj in objects if obj is not None]
-        if not data:
+        objects = [obj for obj in (scene.object_by_id(i) for i in self.editor.selected_objects) if obj is not None]
+        if not objects:
             return
+        # the hosts (axes, graph, marked object ...) travel along in case the target scene lacks them
+        selected = {obj.id for obj in objects}
+        hosts: list = []
+        pending = [dep for obj in objects for dep in dependencies(scene, obj)]
+        while pending:
+            host = scene.object_by_id(pending.pop(0))
+            if host is None or host.id in selected or host in hosts:
+                continue
+            hosts.append(host)
+            pending += dependencies(scene, host)
+        data = {"objects": [object_to_dict(obj) for obj in objects], "hosts": [object_to_dict(obj) for obj in hosts]}
         QApplication.clipboard().setText(CLIPBOARD_PREFIX + json.dumps(data, ensure_ascii=False))
-        self.statusMessage.emit(tr("status.copied", count=len(data)))
+        self.statusMessage.emit(tr("status.copied", count=len(objects)))
 
     def cut_objects(self) -> None:
         """Copy and then delete the selected objects."""
@@ -299,9 +310,18 @@ class EditorController(QObject):
             return
         raw = QApplication.clipboard().text()[len(CLIPBOARD_PREFIX):]
         try:
-            objects = [object_from_dict(item) for item in json.loads(raw)]
-        except (ValueError, KeyError, TypeError):
+            data = json.loads(raw)
+            if isinstance(data, list):  # clipboard of older versions
+                data = {"objects": data, "hosts": []}
+            objects = [object_from_dict(item) for item in data["objects"]]
+            hosts = [object_from_dict(item) for item in data.get("hosts", [])]
+        except (ValueError, KeyError, TypeError, AttributeError):
             return
+        existing = {obj.id for obj in self.scene().objects}
+        missing = [host for host in hosts if host.id not in existing]
+        if missing:
+            # pasted into a scene without the hosts: bring them along (before their dependents)
+            objects = missing + objects
         new_ids = self._edit(
             tr("undo.paste_objects", count=len(objects)),
             lambda s: ops.paste_objects(s, objects, PASTE_OFFSET, -PASTE_OFFSET),

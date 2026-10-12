@@ -481,6 +481,9 @@ class _SceneReader:
             return [self._timing(anim, kwargs, run_time)]
         if name in TWO_OBJECT_ANIMATIONS and len(node.args) >= 2:
             kind, key = TWO_OBJECT_ANIMATIONS[name]
+            source = node.args[0]
+            if name == "ReplacementTransform" and isinstance(source, ast.Call) and isinstance(source.func, ast.Attribute) and source.func.attr == "copy":
+                kind = AnimationKind.TRANSFORM_FROM_COPY  # a copy turns into the target, the original stays
             anim = create_animation(kind, self._target(node.args[0]), **{key: self._target(node.args[1])})
             return [self._timing(anim, kwargs, run_time)]
         if name == "ShowPassingFlash" and node.args:

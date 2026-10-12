@@ -76,6 +76,9 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
   - Zeichnet den Weg eines Objekts auf, optional mit verblassendem Schweif.
   - Beginnt am Start oder dort, wo sie eingeblendet wird. Der Codegen macht daraus `self.add`, weil FadeIn auf TracedPath in Manim abstürzt.
   - Auf der Bühne wird die Spur aus der Zeitleiste abgetastet (`model/traces.py`, gecacht).
+- Fuzzing Runde 3:
+  - „Kopie verwandeln“ wird jetzt als `ReplacementTransform(quelle.copy(), ziel)` erzeugt (gleiches Bild, Ziel bleibt intakt).
+  - Kopieren und Einfügen in eine andere Szene bringt fehlende Hosts (Achsen, Graph, Ziel) mit.
 
 ### Halbfertig
 - (nichts)

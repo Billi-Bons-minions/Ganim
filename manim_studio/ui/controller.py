@@ -182,7 +182,7 @@ class EditorController(QObject):
             hosts.append(host)
             return host
 
-        if obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D) and not obj.params.get("axes_id"):
+        if obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID) and not obj.params.get("axes_id"):
             obj.params["axes_id"] = new(ObjectKind.AXES_3D).id
         elif obj.kind == ObjectKind.DATA_PLOT and not obj.params.get("axes_id"):
             obj.params["axes_id"] = new(ObjectKind.AXES, show_numbers=True).id
@@ -206,7 +206,7 @@ class EditorController(QObject):
             axes = [o for o in scene.objects if o.kind in (ObjectKind.AXES, ObjectKind.NUMBER_PLANE)]
             if axes:
                 obj.params["axes_id"] = axes[-1].id
-        if obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D) and not obj.params.get("axes_id"):
+        if obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID) and not obj.params.get("axes_id"):
             axes = [o for o in scene.objects if o.kind == ObjectKind.AXES_3D]
             if axes:
                 obj.params["axes_id"] = axes[-1].id

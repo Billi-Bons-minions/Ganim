@@ -575,7 +575,7 @@ def is_bound(scene: Scene, obj: SceneObject) -> bool:
         return bound_axes(scene, obj) is not None
     if obj.kind == ObjectKind.DATA_PLOT:
         return data_axes(scene, obj) is not None
-    if obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D):
+    if obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID):
         from manim_studio.model.three_d import axes_of
 
         return axes_of(scene, obj) is not None
@@ -615,11 +615,13 @@ def bound_anchor(scene: Scene, obj: SceneObject, values: Values | None = None) -
         if center is not None:
             return center
         return (axes.x, axes.y) if axes is not None else (obj.x, obj.y)
-    if obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D):
+    if obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID):
         from manim_studio.model import three_d
 
         view = three_d.view_of(scene)
-        if obj.kind == ObjectKind.SURFACE:
+        if obj.kind == ObjectKind.SOLID:
+            points3 = [point for quad in three_d.solid_quads(scene, obj) for point in quad]
+        elif obj.kind == ObjectKind.SURFACE:
             points3 = [point for line in three_d.surface_grid(scene, obj) for point in line]
         else:
             points3 = three_d.curve_points(scene, obj)

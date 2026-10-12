@@ -147,6 +147,20 @@ def _vector_field(p: QPainter, s: float, m: float, w: float, stroke: QColor, fil
             p.drawLine(QPointF(cx, cy), QPointF(ex, ey))
 
 
+def _solid(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    color = QColor("#58C4DD")
+    p.setPen(QPen(color, w))
+    shade = QColor(color)
+    shade.setAlphaF(0.35)
+    p.setBrush(shade)
+    front = QRectF(m, s * 0.38, s * 0.5, s * 0.5)
+    p.drawRect(front)
+    top = QPolygonF([QPointF(m, s * 0.38), QPointF(m + s * 0.2, s * 0.18), QPointF(m + s * 0.7, s * 0.18), QPointF(m + s * 0.5, s * 0.38)])
+    side = QPolygonF([QPointF(m + s * 0.5, s * 0.38), QPointF(m + s * 0.7, s * 0.18), QPointF(m + s * 0.7, s * 0.68), QPointF(m + s * 0.5, s * 0.88)])
+    p.drawPolygon(top)
+    p.drawPolygon(side)
+
+
 def _polygon(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
     p.drawPolygon(QPolygonF([QPointF(m, s * 0.7), QPointF(s * 0.32, m), QPointF(s - m, s * 0.35), QPointF(s * 0.7, s - m)]))
 
@@ -410,6 +424,7 @@ _EXTRA_DRAWERS = {
     ObjectKind.ANGLE: _angle,
     ObjectKind.TRACE: _trace,
     ObjectKind.VECTOR_FIELD: _vector_field,
+    ObjectKind.SOLID: _solid,
     ObjectKind.POLYGON: _polygon,
     ObjectKind.REGULAR_POLYGON: _regular_polygon,
     ObjectKind.STAR: _star,

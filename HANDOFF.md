@@ -85,6 +85,10 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
   - Die Bühne bildet Manim exakt nach (gleiches Gitter, gleicher Zufalls-Seed). Stromlinien sind gecacht.
 - 3D-Flächen und 3D-Kurven mit Parametern werden jetzt mitanimiert. Vorher erkannte `parameter_users` nur Funktionsgraphen.
 - Warnung bei Ausblenden oder Verwandeln von Objekten, die gerade unsichtbar sind (Manim ließe sie aufblitzen).
+- Neue Objektart „3D-Körper“ (Kugel, Würfel, Quader, Kegel, Zylinder, Torus):
+  - Platziert in Koordinaten der 3D-Achsen, die bei Bedarf automatisch angelegt werden.
+  - Skalieren und Farbe animierbar.
+- Bühne: 3D-Flächen und -Körper werden jetzt korrekt gefüllt. Vorher löschten sich Vorder- und Rückseiten gegenseitig aus.
 
 ### Halbfertig
 - (nichts)

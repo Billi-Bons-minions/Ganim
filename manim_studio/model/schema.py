@@ -318,6 +318,25 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         _LINE_STYLE,
         (("stroke_color", "#F7D96F"),),
     ),
+    ObjectKind.SOLID: KindInfo(
+        ObjectKind.SOLID,
+        (
+            ParamSpec("axes_id", ParamType.OBJECT_REF, None),
+            ParamSpec("shape", ParamType.CHOICE, "sphere", choices=("sphere", "cube", "prism", "cone", "cylinder", "torus")),
+            ParamSpec("center_x", ParamType.FLOAT, 0.0, minimum=-1000.0, maximum=1000.0, step=0.5),
+            ParamSpec("center_y", ParamType.FLOAT, 0.0, minimum=-1000.0, maximum=1000.0, step=0.5),
+            ParamSpec("center_z", ParamType.FLOAT, 0.0, minimum=-1000.0, maximum=1000.0, step=0.5),
+            ParamSpec("radius", ParamType.FLOAT, 1.0, minimum=0.05, maximum=50.0, step=0.1, visible_when=("shape", ("sphere", "cone", "cylinder", "torus"))),
+            ParamSpec("minor_radius", ParamType.FLOAT, 0.3, minimum=0.01, maximum=50.0, step=0.05, visible_when=("shape", ("torus",))),
+            ParamSpec("side", ParamType.FLOAT, 2.0, minimum=0.05, maximum=50.0, step=0.1, visible_when=("shape", ("cube",))),
+            ParamSpec("width", ParamType.FLOAT, 3.0, minimum=0.05, maximum=50.0, step=0.1, visible_when=("shape", ("prism",))),
+            ParamSpec("depth", ParamType.FLOAT, 2.0, minimum=0.05, maximum=50.0, step=0.1, visible_when=("shape", ("prism",))),
+            ParamSpec("height", ParamType.FLOAT, 2.0, minimum=0.05, maximum=50.0, step=0.1, visible_when=("shape", ("prism", "cone", "cylinder"))),
+            ParamSpec("resolution", ParamType.INT, 16, minimum=4, maximum=48, visible_when=("shape", ("sphere", "cone", "cylinder", "torus"))),
+        ),
+        _SHAPE_STYLE,
+        (("stroke_color", "#29ABCA"), ("fill_color", "#58C4DD"), ("fill_opacity", 0.75), ("stroke_width", 0.5)),
+    ),
     ObjectKind.VECTOR_FIELD: KindInfo(
         ObjectKind.VECTOR_FIELD,
         (
@@ -754,6 +773,10 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
     """Return ``True`` if the animation can be applied to the object."""
     if obj_kind in (ObjectKind.HIGHLIGHT, ObjectKind.ANGLE, ObjectKind.VECTOR_FIELD) and anim_kind in _NOT_FOR_HIGHLIGHTS:
         return False
+    if obj_kind == ObjectKind.SOLID and anim_kind in (
+        {AnimationKind.MOVE, AnimationKind.ROTATE, AnimationKind.SET_VALUE, AnimationKind.ORBIT} | TRANSFORM_ANIMATIONS | MOTION_ANIMATIONS
+    ):
+        return False  # solids are placed by their 3D axes
     if obj_kind == ObjectKind.TRACE:
         # a trace starts recording when it appears and can be faded out
         return anim_kind in (AnimationKind.FADE_IN, AnimationKind.FADE_OUT)

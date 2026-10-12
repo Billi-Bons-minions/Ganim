@@ -11,7 +11,7 @@ from manim_studio.model.entities import Scene
 from manim_studio.model.playback import state_at_time
 from manim_studio.model.three_d import View, curve_points, is_3d, project, surface_grid, to_space, view_of
 from manim_studio.model.types import AnimationKind, ObjectKind
-from manim_studio.model.validation import validate_scene
+from manim_studio.model.validation import has_errors, validate_scene
 from tests.helpers import make_animation, make_object, make_project, play
 
 
@@ -64,3 +64,24 @@ def test_three_d_checks() -> None:
     flat = Scene(id="f", name="F", objects=[make_object(ObjectKind.CAMERA, "K", "c")], steps=[play(make_animation(AnimationKind.ORBIT, "c"), make_animation(AnimationKind.ROTATE, "c", "r"))])
     assert {"orbit_needs_3d", "camera_rotation_2d"} <= {issue.code for issue in validate_scene(flat)}
     assert math.isfinite(project([(0.0, 0.0, 100.0)], View())[0][0])
+
+
+def test_solids() -> None:
+    from manim_studio.codegen import generate_script
+    from manim_studio.model.schema import animation_allowed
+    from manim_studio.model.three_d import solid_quads
+
+    axes = make_object(ObjectKind.AXES_3D, "Achsen", "ax", x_min=-4.0, x_max=4.0, x_length=8.0, y_min=-4.0, y_max=4.0, y_length=8.0)
+    shapes = ["sphere", "cube", "prism", "cone", "cylinder", "torus"]
+    solids = [make_object(ObjectKind.SOLID, f"K{i}", f"k{i}", axes_id="ax", shape=shape, center_x=1.0, center_z=0.5) for i, shape in enumerate(shapes)]
+    scene = Scene(id="s", name="Koerper", objects=[axes, *solids], steps=[play(make_animation(AnimationKind.SCALE, "k0", factor=1.5))])
+    sphere = [point for quad in solid_quads(scene, solids[0]) for point in quad]
+    assert min(p[0] for p in sphere) == pytest.approx(0.0) and max(p[0] for p in sphere) == pytest.approx(2.0)
+    cone = [point for quad in solid_quads(scene, solids[3]) for point in quad]
+    center_z = to_space(axes, 1.0, 0.0, 0.5)[2]  # the z axis is scaled by its length
+    assert max(p[2] for p in cone) == pytest.approx(center_z + 1.0) and min(p[2] for p in cone) == pytest.approx(center_z - 1.0)
+    assert len(solid_quads(scene, solids[1])) == 6
+    assert not has_errors(validate_scene(scene))
+    code = generate_script(make_project(scene))
+    assert "k0 = Sphere(" in code and ".move_to(achsen.c2p(1.0, 0.0, 0.5))" in code and "Cone(" in code and "show_base=True" in code
+    assert not animation_allowed(AnimationKind.MOVE, ObjectKind.SOLID, {}) and animation_allowed(AnimationKind.SCALE, ObjectKind.SOLID, {})

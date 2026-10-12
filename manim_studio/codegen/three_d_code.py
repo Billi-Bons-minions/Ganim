@@ -88,3 +88,38 @@ def orbit_call(anim: Animation, timing_args: list[str], added: list[str]) -> str
     if added:
         arguments.append(f"added_anims=[{', '.join(added)}]")
     return f"self.move_camera({', '.join(arguments)})"
+
+
+_SURFACE_SOLIDS = {"sphere": "Sphere", "cone": "Cone", "cylinder": "Cylinder", "torus": "Torus"}
+
+
+def solid_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> list[str]:
+    """Sphere, cube, prism, cone, cylinder or torus placed at a point of its 3D axes."""
+    axes = _axes_variable(scene, obj, names)
+    p = obj.params
+    shape = p.get("shape", "sphere")
+    point = f"{axes}.c2p({', '.join(fmt_float(param_float(p, key, 0.0)) for key in ('center_x', 'center_y', 'center_z'))})"
+    style = [
+        ("fill_color", py_color(obj.fill_color)),
+        ("fill_opacity", fmt_float(obj.fill_opacity)),
+        ("stroke_color", py_color(obj.stroke_color)),
+        ("stroke_width", fmt_float(obj.stroke_width)),
+    ]
+    n = max(4, min(48, int(p.get("resolution", 16))))
+    if shape == "cube":
+        return _placed(call("Cube", [], [("side_length", fmt_float(param_float(p, "side", 2.0)))] + style, 2), point)
+    if shape == "prism":
+        dimensions = f"[{', '.join(fmt_float(param_float(p, key, default)) for key, default in (('width', 3.0), ('depth', 2.0), ('height', 1.0)))}]"
+        return _placed(call("Prism", [], [("dimensions", dimensions)] + style, 2), point)
+    size = {
+        "sphere": [("radius", fmt_float(param_float(p, "radius", 1.0))), ("resolution", f"({2 * n}, {n})")],
+        "cone": [("base_radius", fmt_float(param_float(p, "radius", 1.0))), ("height", fmt_float(param_float(p, "height", 2.0))), ("show_base", "True"), ("resolution", f"({n}, {2 * n})")],
+        "cylinder": [("radius", fmt_float(param_float(p, "radius", 1.0))), ("height", fmt_float(param_float(p, "height", 2.0))), ("resolution", f"(2, {2 * n})")],
+        "torus": [("major_radius", fmt_float(param_float(p, "radius", 1.0))), ("minor_radius", fmt_float(param_float(p, "minor_radius", 0.3))), ("resolution", f"({2 * n}, {n})")],
+    }[shape if shape in _SURFACE_SOLIDS else "sphere"]
+    return _placed(call(_SURFACE_SOLIDS.get(shape, "Sphere"), [], size + [("checkerboard_colors", "False")] + style, 2), point)
+
+
+def _placed(lines: list[str], point: str) -> list[str]:
+    """Append ``.move_to(point)`` to a (possibly wrapped) constructor call."""
+    return lines[:-1] + [f"{lines[-1]}.move_to({point})"]

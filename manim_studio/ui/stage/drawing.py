@@ -504,7 +504,7 @@ def _shape_drawing(obj: SceneObject, state: ObjectState, scene: Scene, resources
         return camera_primitives(obj, resources.frame_size), True
     if kind == ObjectKind.DATA_PLOT:
         return data_primitives(scene, obj, state)
-    if kind in (ObjectKind.AXES_3D, ObjectKind.SURFACE, ObjectKind.CURVE_3D):
+    if kind in (ObjectKind.AXES_3D, ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID):
         return three_d_primitives(scene, obj, state, resources)
     if kind == ObjectKind.BAR_CHART:
         return bar_chart_primitives(obj, state)

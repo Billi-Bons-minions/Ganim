@@ -15,7 +15,9 @@ from manim_studio.model.expression import Expression, ExpressionError, parse_exp
 from manim_studio.model.geometry import param_float
 from manim_studio.model.types import ObjectKind
 
-THREE_D_KINDS = frozenset({ObjectKind.AXES_3D, ObjectKind.SURFACE, ObjectKind.CURVE_3D})
+THREE_D_KINDS = frozenset({ObjectKind.AXES_3D, ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID})
+#: Shapes of a 3D solid.
+SOLID_SHAPES = ("sphere", "cube", "prism", "cone", "cylinder", "torus")
 DEFAULT_PHI = 70.0
 DEFAULT_THETA = -45.0
 FOCAL_DISTANCE = 20.0
@@ -221,3 +223,79 @@ def view_of(scene: Scene, states: dict | None = None) -> View:
     if state is not None:
         return View(state.phi, state.theta, 1.0)
     return View(param_float(camera.params, "phi", DEFAULT_PHI), param_float(camera.params, "theta", DEFAULT_THETA), 1.0)
+
+
+# --- solids --------------------------------------------------------------------------------------
+
+Quad = list[Point3]
+
+
+def solid_center(scene: Scene, obj: SceneObject) -> Point3 | None:
+    """Center of a solid in scene coordinates (its position is given in axes coordinates)."""
+    axes = axes_of(scene, obj)
+    if axes is None:
+        return None
+    return to_space(axes, *(param_float(obj.params, key, 0.0) for key in ("center_x", "center_y", "center_z")))
+
+
+def _grid_quads(function, u_range: tuple[float, float], v_range: tuple[float, float], nu: int, nv: int) -> list[Quad]:
+    us = [u_range[0] + (u_range[1] - u_range[0]) * i / nu for i in range(nu + 1)]
+    vs = [v_range[0] + (v_range[1] - v_range[0]) * j / nv for j in range(nv + 1)]
+    quads = []
+    for i in range(nu):
+        for j in range(nv):
+            quads.append([function(us[i], vs[j]), function(us[i + 1], vs[j]), function(us[i + 1], vs[j + 1]), function(us[i], vs[j + 1])])
+    return quads
+
+
+def _box(width: float, depth: float, height: float) -> list[Quad]:
+    x, y, z = width / 2, depth / 2, height / 2
+    corners = {(sx, sy, sz): (sx * x, sy * y, sz * z) for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)}
+    faces = [
+        [(-1, -1, -1), (1, -1, -1), (1, 1, -1), (-1, 1, -1)],
+        [(-1, -1, 1), (1, -1, 1), (1, 1, 1), (-1, 1, 1)],
+        [(-1, -1, -1), (1, -1, -1), (1, -1, 1), (-1, -1, 1)],
+        [(-1, 1, -1), (1, 1, -1), (1, 1, 1), (-1, 1, 1)],
+        [(-1, -1, -1), (-1, 1, -1), (-1, 1, 1), (-1, -1, 1)],
+        [(1, -1, -1), (1, 1, -1), (1, 1, 1), (1, -1, 1)],
+    ]
+    return [[corners[key] for key in face] for face in faces]
+
+
+def solid_quads(scene: Scene, obj: SceneObject, scale: float = 1.0) -> list[Quad]:
+    """The faces of a solid in scene coordinates (like the Manim mobject after ``move_to``)."""
+    center = solid_center(scene, obj)
+    if center is None:
+        return []
+    p = obj.params
+    shape = p.get("shape", "sphere")
+    n = max(4, min(48, int(p.get("resolution", 16))))
+    radius = param_float(p, "radius", 1.0)
+    height = param_float(p, "height", 2.0)
+    tau = 2 * math.pi
+    if shape == "cube":
+        side = param_float(p, "side", 2.0)
+        quads = _box(side, side, side)
+    elif shape == "prism":
+        quads = _box(param_float(p, "width", 3.0), param_float(p, "depth", 2.0), param_float(p, "height", 1.0))
+    elif shape == "cylinder":
+        quads = _grid_quads(lambda u, v: (radius * math.cos(v), radius * math.sin(v), u), (-height / 2, height / 2), (0.0, tau), 2, 2 * n)
+        for z in (-height / 2, height / 2):
+            quads += _grid_quads(lambda u, v, z=z: (u * math.cos(v), u * math.sin(v), z), (0.0, radius), (0.0, tau), 1, 2 * n)
+    elif shape == "cone":
+        # apex on top, base at the bottom; centered like move_to() does with the bounding box
+        quads = _grid_quads(lambda u, v: (u * radius * math.cos(v), u * radius * math.sin(v), height / 2 - u * height), (0.0, 1.0), (0.0, tau), n, 2 * n)
+        quads += _grid_quads(lambda u, v: (u * math.cos(v), u * math.sin(v), -height / 2), (0.0, radius), (0.0, tau), 1, 2 * n)
+    elif shape == "torus":
+        minor = param_float(p, "minor_radius", 0.3)
+        quads = _grid_quads(
+            lambda u, v: ((radius - minor * math.cos(v)) * math.cos(u), (radius - minor * math.cos(v)) * math.sin(u), -minor * math.sin(v)),
+            (0.0, tau),
+            (0.0, tau),
+            2 * n,
+            n,
+        )
+    else:
+        quads = _grid_quads(lambda u, v: (radius * math.cos(u) * math.sin(v), radius * math.sin(u) * math.sin(v), -radius * math.cos(v)), (0.0, tau), (0.0, math.pi), 2 * n, n)
+    cx, cy, cz = center
+    return [[(cx + scale * x, cy + scale * y, cz + scale * z) for x, y, z in quad] for quad in quads]

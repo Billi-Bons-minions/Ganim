@@ -562,3 +562,17 @@ def test_vector_fields_and_parameter_surfaces_render(tmp_path) -> None:
     for name in ("Felder", "Welle"):
         result = run_manim(tmp_path, script, name, "--dry_run")
         assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+
+
+def test_solids_render(tmp_path) -> None:
+    axes = make_object(ObjectKind.AXES_3D, "Achsen", "ax")
+    shapes = ["sphere", "cube", "prism", "cone", "cylinder", "torus"]
+    solids = [make_object(ObjectKind.SOLID, f"K{i}", f"k{i}", axes_id="ax", shape=shape, center_x=-3.0 + 1.5 * i, resolution=6) for i, shape in enumerate(shapes)]
+    steps = [
+        play(*(make_animation(AnimationKind.CREATE, solid.id, run_time=0.2) for solid in solids)),
+        play(make_animation(AnimationKind.SCALE, "k0", factor=1.5, run_time=0.2), make_animation(AnimationKind.CHANGE_COLOR, "k1", color="#FF0000", run_time=0.2)),
+        play(make_animation(AnimationKind.FADE_OUT, "k5", run_time=0.2)),
+    ]
+    scene = Scene(id="s", name="Koerper", objects=[axes, *solids], steps=steps)
+    result = run_manim(tmp_path, generate_script(make_project(scene)), "Koerper", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]

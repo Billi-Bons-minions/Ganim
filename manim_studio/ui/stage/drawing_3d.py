@@ -10,7 +10,7 @@ from PySide6.QtGui import QBrush, QPainterPath
 from manim_studio.model import graphs
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.state import ObjectState
-from manim_studio.model.three_d import View, _matrix, axes_lines, axes_of, axis_tips, curve_points, project, surface_grid
+from manim_studio.model.three_d import View, _matrix, axes_lines, axes_of, axis_tips, curve_points, project, solid_quads, surface_grid
 from manim_studio.model.types import ObjectKind
 from manim_studio.ui.stage.drawing import Primitive, StageResources, _color, _pen, pt
 
@@ -53,20 +53,28 @@ def three_d_primitives(scene: Scene, obj: SceneObject, state: ObjectState, resou
     if obj.kind == ObjectKind.CURVE_3D:
         line = project(curve_points(scene, obj, values), view)
         return [Primitive(path=_path([line], offset), pen=_pen(state.stroke_color, obj.stroke_width, obj.stroke_opacity, state.scale))], False
-    grid = surface_grid(scene, obj, values)
-    if not grid:
-        return [], False
-    rows = grid[: len(grid) // 2]
-    quads = []
-    for i in range(len(rows) - 1):
-        for j in range(min(len(rows[i]), len(rows[i + 1])) - 1):
-            corners = [rows[i][j], rows[i][j + 1], rows[i + 1][j + 1], rows[i + 1][j]]
-            depth = sum(_depth(view, corner) for corner in corners) / 4
-            quads.append((depth, corners))
+    if obj.kind == ObjectKind.SOLID:
+        # the item is scaled by the stage, so the faces are computed unscaled around the anchor
+        quads = [(sum(_depth(view, corner) for corner in quad) / 4, quad) for quad in solid_quads(scene, obj)]
+    else:
+        grid = surface_grid(scene, obj, values)
+        if not grid:
+            return [], False
+        rows = grid[: len(grid) // 2]
+        quads = []
+        for i in range(len(rows) - 1):
+            for j in range(min(len(rows[i]), len(rows[i + 1])) - 1):
+                corners = [rows[i][j], rows[i][j + 1], rows[i + 1][j + 1], rows[i + 1][j]]
+                depth = sum(_depth(view, corner) for corner in corners) / 4
+                quads.append((depth, corners))
     quads.sort(key=lambda item: item[0])
     path = QPainterPath()
     for _depth_value, corners in quads:
         flat = project(corners, view)
+        # same winding for all faces, otherwise front and back faces cancel out when filled
+        area = sum(flat[i][0] * flat[(i + 1) % len(flat)][1] - flat[(i + 1) % len(flat)][0] * flat[i][1] for i in range(len(flat)))
+        if area < 0:
+            flat = flat[::-1]
         path.moveTo(pt(flat[0][0] - offset[0], flat[0][1] - offset[1]))
         for x, y in flat[1:]:
             path.lineTo(pt(x - offset[0], y - offset[1]))

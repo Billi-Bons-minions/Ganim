@@ -31,7 +31,7 @@ from manim_studio.codegen.objects_extra import (
     vector_field_code,
 )
 from manim_studio.codegen.objects_extra import text as extra_text
-from manim_studio.codegen.three_d_code import axes_3d_code, curve_3d_code, surface_code
+from manim_studio.codegen.three_d_code import axes_3d_code, curve_3d_code, solid_code, surface_code
 from manim_studio.model import graphs
 from manim_studio.model.angles import ANGLE_LINE_KEYS, angle_lines
 from manim_studio.model.assets import resolve_asset_path
@@ -326,6 +326,8 @@ def object_code(
             lines, place = special
         elif obj.kind == ObjectKind.AXES_3D:
             lines, place = assign(variable, axes_3d_code(obj)), True
+        elif obj.kind == ObjectKind.SOLID:
+            lines, place = assign(variable, solid_code(scene, obj, names)), False
         elif obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D):
             rename = renames(scene, names)
             build = surface_code if obj.kind == ObjectKind.SURFACE else curve_3d_code
@@ -373,7 +375,7 @@ def object_code(
 def dependencies(scene: Scene, obj: SceneObject) -> list[str]:
     """Return ids of objects that must be created before ``obj``."""
     result: list[str] = []
-    if obj.kind in (ObjectKind.FUNCTION_GRAPH, ObjectKind.DATA_PLOT, ObjectKind.SURFACE, ObjectKind.CURVE_3D) and obj.params.get("axes_id"):
+    if obj.kind in (ObjectKind.FUNCTION_GRAPH, ObjectKind.DATA_PLOT, ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID) and obj.params.get("axes_id"):
         result.append(str(obj.params.get("axes_id")))
     if obj.kind in GRAPH_TOOL_KINDS:
         for key in ("x_parameter",):

@@ -25,10 +25,9 @@ from manim_studio.codegen.naming import class_names
 from manim_studio.i18n import tr
 from manim_studio.model.entities import Project, RenderSettings
 from manim_studio.model.frame import pixel_size
-from manim_studio.render.command import CUSTOM_QUALITY, OUTPUT_FORMATS, QUALITY_PRESETS
+from manim_studio.render.command import CUSTOM_QUALITY, OUTPUT_FORMATS, QUALITY_PRESETS, RenderJob
 from manim_studio.ui.widgets import ColorButton
 
-_EXTENSIONS = {"mp4": "mp4", "gif": "gif", "png": "png"}
 EXPORT_SCENES = ("current", "all_separate", "all_joined")
 
 
@@ -197,9 +196,8 @@ class ExportDialog(QDialog):
         if self.scenes_combo.currentData() == "all_separate":
             return folder
         name = self.name_edit.text().strip() or "scene"
-        extension = _EXTENSIONS[self.format_combo.currentData()]
-        if extension == "mp4" and self.transparent_box.isChecked() and self.transparent_box.isEnabled():
-            extension = "mov"
+        transparent = self.transparent_box.isChecked() and self.transparent_box.isEnabled()
+        extension = RenderJob(Path(), "", Path(), "", format=self.format_combo.currentData(), transparent=transparent).extension()
         return folder / f"{name}.{extension}"
 
     def _update_target(self) -> None:

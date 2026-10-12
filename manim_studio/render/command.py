@@ -15,7 +15,8 @@ QUALITY_PRESETS: dict[str, tuple[int, int, int]] = {
     "k": (3840, 2160, 60),
 }
 CUSTOM_QUALITY = "custom"
-OUTPUT_FORMATS = ("mp4", "gif", "png")
+#: Formats offered for export; WebM and MOV keep transparency.
+OUTPUT_FORMATS = ("mp4", "webm", "mov", "gif", "png")
 
 
 @dataclass(frozen=True)
@@ -36,13 +37,17 @@ class RenderJob:
     transparent: bool = False
     save_sections: bool = False
 
-    def extension(self) -> str:
-        """File extension Manim writes (transparent videos become ``.mov``)."""
-        if self.format == "png":
-            return "png"
+    def manim_format(self) -> str:
+        """Value for Manim's ``--format`` (MP4 has no alpha channel, so transparent MP4 becomes MOV)."""
+        if self.format not in OUTPUT_FORMATS:
+            return "mp4"
         if self.transparent and self.format == "mp4":
             return "mov"
-        return self.format if self.format in OUTPUT_FORMATS else "mp4"
+        return self.format
+
+    def extension(self) -> str:
+        """File extension Manim writes."""
+        return self.manim_format()
 
 
 def build_arguments(job: RenderJob) -> list[str]:
@@ -58,7 +63,7 @@ def build_arguments(job: RenderJob) -> list[str]:
         "-o",
         job.output_name,
         "--format",
-        job.format if job.format in OUTPUT_FORMATS else "mp4",
+        job.manim_format(),
     ]
     if job.quality in QUALITY_PRESETS:
         arguments += ["-q", job.quality]

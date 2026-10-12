@@ -373,3 +373,23 @@ def test_three_d_scene_renders(tmp_path) -> None:
     script = generate_script(make_project(space_scene()))
     result = run_manim(tmp_path, script, "Raum", "--format", "png")
     assert result.returncode == 0, result.stdout + result.stderr + script
+
+
+@pytest.mark.parametrize(("output_format", "transparent", "extension"), [("mp4", True, "mov"), ("webm", True, "webm"), ("mov", False, "mov")])
+def test_video_formats_and_transparency(tmp_path, output_format, transparent, extension) -> None:
+    from manim_studio.render.command import RenderJob, build_arguments, find_output, render_environment
+
+    script = tmp_path / "szene.py"
+    script.write_text(generate_script(make_project(acceptance_scene())), encoding="utf-8")
+    job = RenderJob(script, "Szene1", tmp_path / "media", "clip", format=output_format, quality="l", transparent=transparent)
+    result = subprocess.run([sys.executable, *build_arguments(job)], capture_output=True, text=True, timeout=300, cwd=tmp_path, env=render_environment())
+    assert result.returncode == 0, result.stdout + result.stderr
+    output = find_output(job.media_dir, "clip", job.extension())
+    assert output is not None and output.suffix == f".{extension}"
+    import av
+
+    with av.open(str(output)) as container:
+        stream = container.streams.video[0]
+        # VP9 keeps alpha in a side channel that is announced by the alpha_mode tag
+        has_alpha = "a" in stream.codec_context.pix_fmt.replace("yuv", "") or stream.metadata.get("alpha_mode") == "1"
+    assert has_alpha == transparent

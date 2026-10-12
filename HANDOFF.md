@@ -43,6 +43,9 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
 - Vorlagen, Stile, Bausteine, Projektpakete, Autosave, Skript-Import
 - Erweiterungen, Manim-Installation per pip
 
+### Änderungen der Nacht vom 12.10. (neueste unten)
+- Export: Transparenz funktionierte mit Manim 0.22 nicht (MP4 hat keinen Alphakanal). Jetzt wird automatisch MOV erzeugt. Neue Formate: WebM und MOV, beide mit Transparenz.
+
 ### Halbfertig
 - (nichts)
 

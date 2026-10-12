@@ -73,3 +73,19 @@ def test_render_flags() -> None:
     assert job.extension() == "mov"
     assert RenderJob(Path("s.py"), "S", Path("m"), "out", format="png", transparent=True).extension() == "png"
     assert RenderSettings().scenes == "current"
+
+
+def test_transparent_formats(qapp) -> None:
+    from manim_studio.model.entities import Project, Scene
+    from manim_studio.ui.dialogs.export_dialog import ExportDialog
+
+    arguments = build_arguments(RenderJob(Path("s.py"), "S", Path("m"), "out", format="mp4", transparent=True))
+    assert arguments[arguments.index("--format") + 1] == "mov"
+    assert RenderJob(Path("s.py"), "S", Path("m"), "out", format="webm", transparent=True).extension() == "webm"
+    assert RenderJob(Path("s.py"), "S", Path("m"), "out", format="flv").manim_format() == "mp4"
+    dialog = ExportDialog(Project(scenes=[Scene(id="a", name="A")]), "a", "/tmp")
+    dialog.format_combo.setCurrentIndex(dialog.format_combo.findData("webm"))
+    dialog.transparent_box.setChecked(True)
+    assert dialog.target_path().suffix == ".webm" and dialog.request().settings.transparent
+    dialog.format_combo.setCurrentIndex(dialog.format_combo.findData("gif"))
+    assert not dialog.transparent_box.isEnabled() and dialog.target_path().suffix == ".gif"

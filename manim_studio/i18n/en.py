@@ -983,7 +983,7 @@ STRINGS: dict[str, str] = {
     "export.transition": "Transition",
     "export.transition.cut": "hard cut",
     "export.transition.fade": "fade out everything",
-    "export.transparent": "Transparent background (video as .mov)",
+    "export.transparent": "Transparent background (MP4 is then saved as .mov)",
     "export.which_scenes": "What",
     "export.scenes.current": "one scene",
     "export.scenes.all_separate": "all scenes, one file each",
@@ -1120,4 +1120,6 @@ STRINGS: dict[str, str] = {
     "install.running": "Installing Manim into {python} …",
     "install.done": "Manim was installed. The check runs again.",
     "install.failed": "The installation failed (code {code}). See the log for details.",
+    "export.format.webm": "Video (WebM, small, supports transparency)",
+    "export.format.mov": "Video (MOV, supports transparency)",
 }

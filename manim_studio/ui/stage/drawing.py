@@ -32,8 +32,11 @@ from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.geometry import (
     AXES_TICK_SIZE,
     AXES_TIP_LENGTH,
+    AXIS_NUMBER_BUFF,
+    AXIS_NUMBER_SIZE,
     AxesLayout,
     axes_layout,
+    axis_number_text,
     origin_shift,
     param_float,
     polar_grid,
@@ -364,28 +367,57 @@ def _axis_tips(layout: AxesLayout) -> QPainterPath:
     return path
 
 
-def _label_text(value: float) -> str:
-    return str(int(round(value))) if abs(value - round(value)) < 1e-9 else f"{value:g}"
+def decimal_number_path(text: str, font_size: float = AXIS_NUMBER_SIZE) -> tuple[QPainterPath, float]:
+    """A number set like Manim's ``DecimalNumber`` of ``Text`` characters, and the width of its first character.
+
+    Each character is a separate glyph with a gap of 0.001 · font size, aligned at the bottom;
+    a minus sign moves up to the middle of the next digit.
+    """
+    font = text_font(SceneObject(id="", kind=ObjectKind.TEXT, name=""), font_size)
+    gap = 0.001 * font_size * PX
+    glyphs: list[QPainterPath] = []
+    cursor = 0.0
+    for char in text:
+        glyph = QPainterPath()
+        glyph.addText(QPointF(0, 0), font, char)
+        rect = glyph.boundingRect()
+        glyph.translate(cursor - rect.left(), -rect.bottom())
+        cursor += rect.width() + gap
+        glyphs.append(glyph)
+    for index, char in enumerate(text):
+        rect = glyphs[index].boundingRect()
+        if char == "-" and index + 1 < len(glyphs):
+            following = glyphs[index + 1].boundingRect()
+            glyphs[index].translate(0, following.top() + following.height() / 2 - rect.top())
+        elif char == ",":
+            glyphs[index].translate(0, rect.height() / 2)
+    path = QPainterPath()
+    for glyph in glyphs:
+        path.addPath(glyph)
+    return path, (glyphs[0].boundingRect().width() if glyphs else 0.0)
 
 
 def _axis_labels(layout: AxesLayout, x_step: float, y_step: float, tips: bool) -> QPainterPath:
-    font = manim_text_font()
-    font.setPixelSize(max(1, round(TEXT_CAP_HEIGHT_PER_POINT * AXIS_LABEL_SIZE * PX / 0.7)))
-    metrics = QFontMetricsF(font)
+    """The numbers of the axes where Manim puts them (see ``geometry.axis_number_boxes``)."""
     path = QPainterPath()
     ox, oy = origin_shift(layout.x_min, layout.x_max), origin_shift(layout.y_min, layout.y_max)
     for xv in tick_values(layout.x_min, layout.x_max, x_step, tips):
         if abs(xv) < 1e-9:
             continue
+        number, first = decimal_number_path(axis_number_text(xv, x_step))
+        bounds = number.boundingRect()
         anchor = _local_pt(layout, xv, oy)
-        text = _label_text(xv)
-        path.addText(QPointF(anchor.x() - metrics.horizontalAdvance(text) / 2, anchor.y() + 0.25 * PX + metrics.capHeight()), font, text)
+        center = anchor.x() - (first / 2 if xv < 0 else 0.0)
+        number.translate(center - bounds.center().x(), anchor.y() + AXIS_NUMBER_BUFF * PX - bounds.top())
+        path.addPath(number)
     for yv in tick_values(layout.y_min, layout.y_max, y_step, tips):
         if abs(yv) < 1e-9:
             continue
+        number, _first = decimal_number_path(axis_number_text(yv, y_step))
+        bounds = number.boundingRect()
         anchor = _local_pt(layout, ox, yv)
-        text = _label_text(yv)
-        path.addText(QPointF(anchor.x() - 0.25 * PX - metrics.horizontalAdvance(text), anchor.y() + metrics.capHeight() / 2), font, text)
+        number.translate(anchor.x() - AXIS_NUMBER_BUFF * PX - bounds.right(), anchor.y() - bounds.center().y())
+        path.addPath(number)
     return path
 
 

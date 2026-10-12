@@ -86,11 +86,72 @@ class AxesLayout:
         return self.to_local(origin_shift(self.x_min, self.x_max), origin_shift(self.y_min, self.y_max))
 
 
+#: Ink width and height of the characters of axis numbers in Pango's default (serif) font,
+#: ``Text(c, font_size=48)`` measured with Manim (Noto Serif; other serif fonts differ slightly).
+_GLYPHS_48 = {
+    "0": (0.3125, 0.48984), "1": (0.27422, 0.47812), "2": (0.28984, 0.48281), "3": (0.29531, 0.48984), "4": (0.35156, 0.47578),
+    "5": (0.2875, 0.48281), "6": (0.29766, 0.48984), "7": (0.30156, 0.47578), "8": (0.31172, 0.48984), "9": (0.29766, 0.48984),
+    "-": (0.17344, 0.05), ".": (0.08359, 0.09063), ",": (0.09, 0.15),
+}
+#: Font size of axis numbers in the script, and their distance from the axis (Manim's ``MED_SMALL_BUFF``).
+AXIS_NUMBER_SIZE = 24.0
+AXIS_NUMBER_BUFF = 0.25
+
+
+def decimals_from_step(step: float) -> int:
+    """Manim's ``_decimal_places_from_step`` for the step as the script writes it (``1`` or ``0.25``)."""
+    rounded = round(float(step), 6)
+    if rounded == int(rounded):
+        return 0
+    return len(repr(rounded).split(".")[-1])
+
+
+def axis_number_text(value: float, step: float) -> str:
+    """How ``DecimalNumber`` writes an axis number: as many decimals as the step, digits grouped with commas."""
+    text = f"{value:,.{decimals_from_step(step)}f}"
+    return text[1:] if text.startswith("-") and float(text.replace(",", "")) == 0 else text
+
+
+def number_size(text: str, font_size: float = AXIS_NUMBER_SIZE) -> tuple[float, float, float]:
+    """Width, height and width of the first character of a ``DecimalNumber`` made of ``Text`` characters."""
+    scale = font_size / 48.0
+    glyphs = [_GLYPHS_48.get(char, (0.3, 0.48)) for char in text] or [(0.0, 0.0)]
+    width = sum(glyph[0] for glyph in glyphs) * scale + 0.001 * font_size * (len(glyphs) - 1)
+    height = max(glyph[1] for glyph in glyphs) * scale
+    return width, height, glyphs[0][0] * scale
+
+
+def axis_number_boxes(layout: AxesLayout, x_step: float, y_step: float, tips: bool) -> list[tuple[float, float, float, float]]:
+    """``(left, bottom, right, top)`` of every axis number in local coordinates, placed like Manim.
+
+    x numbers hang below the axis (``next_to(point, DOWN, buff)``, negative ones moved left by half
+    their minus sign so the digits are centered); y numbers sit left of the axis.
+    """
+    boxes = []
+    ox, oy = origin_shift(layout.x_min, layout.x_max), origin_shift(layout.y_min, layout.y_max)
+    for value in tick_values(layout.x_min, layout.x_max, x_step, tips):
+        if abs(value) < 1e-9:
+            continue
+        width, height, first = number_size(axis_number_text(value, x_step))
+        x, y = layout.to_local(value, oy)
+        center = x - (first / 2 if value < 0 else 0.0)
+        top = y - AXIS_NUMBER_BUFF
+        boxes.append((center - width / 2, top - height, center + width / 2, top))
+    for value in tick_values(layout.y_min, layout.y_max, y_step, tips):
+        if abs(value) < 1e-9:
+            continue
+        width, height, _first = number_size(axis_number_text(value, y_step))
+        x, y = layout.to_local(ox, value)
+        right = x - AXIS_NUMBER_BUFF
+        boxes.append((right - width, y - height / 2, right, y + height / 2))
+    return boxes
+
+
 def axes_layout(obj: SceneObject) -> AxesLayout:
     """Compute the layout of a coordinate system object.
 
     Manim centers the plot area and then ``move_to`` uses the bounding box,
-    which is enlarged by the arrow tips (or ticks) on the axis lines.
+    which is enlarged by the arrow tips (or ticks) on the axis lines and by the numbers.
     """
     params = obj.params
     x_min, x_max = float(params.get("x_min", -5.0)), float(params.get("x_max", 5.0))
@@ -105,6 +166,10 @@ def axes_layout(obj: SceneObject) -> AxesLayout:
     right = max(x_length / 2, axis_x + half)
     bottom = min(-y_length / 2, axis_y - half)
     top = max(y_length / 2, axis_y + half)
+    if params.get("show_numbers"):
+        x_step, y_step = float(params.get("x_step", 1.0)), float(params.get("y_step", 1.0))
+        for box_left, box_bottom, box_right, box_top in axis_number_boxes(plain, x_step, y_step, bool(params.get("tips", True))):
+            left, bottom, right, top = min(left, box_left), min(bottom, box_bottom), max(right, box_right), max(top, box_top)
     offset = ((left + right) / 2, (bottom + top) / 2)
     return AxesLayout(x_min, x_max, y_min, y_max, x_length, y_length, offset)
 

@@ -70,3 +70,28 @@ def test_axis_labels_like_manim(tmp_path, qapp, x: float, y: float, y_max: float
     stage_centers = [(x + p.path.boundingRect().center().x() / PX, y - p.path.boundingRect().center().y() / PX) for p in drawing.primitives[-2:]]
     for ours, theirs in zip(stage_centers, manim_centers):
         assert ours == pytest.approx(theirs, abs=0.03)
+
+
+@pytest.mark.manim
+@pytest.mark.skipif(not HAS_MANIM, reason="Manim is not installed")
+@pytest.mark.parametrize("numbers", [False, True])
+@pytest.mark.parametrize("x_min, x_max, y_min, y_max, x_step", [(-5, 5, -3, 3, 1), (-1, 4, -1, 5, 1), (0, 10, 0, 5, 2.5), (-2, 2, -1, 1, 0.5)])
+def test_axes_are_centered_with_their_numbers(numbers: bool, x_min: float, x_max: float, y_min: float, y_max: float, x_step: float) -> None:
+    """``move_to`` centers the axes' bounding box, numbers included, like the stage's layout."""
+    from manim import Axes, Text
+
+    from manim_studio.codegen.literals import fmt_number
+    from manim_studio.model.geometry import axes_layout, axis_number_text
+    from manim_studio.model.types import ObjectKind
+    from tests.helpers import make_object
+
+    config = {"include_numbers": True, "label_constructor": Text, "font_size": 24} if numbers else {}
+    step = float(fmt_number(x_step)) if "." in fmt_number(x_step) else int(fmt_number(x_step))  # as the script writes it
+    axes = Axes(x_range=[x_min, x_max, step], y_range=[y_min, y_max, step], x_length=8, y_length=5, axis_config=config)
+    plot_center = (axes.c2p(x_min, y_min) + axes.c2p(x_max, y_max)) / 2 - axes.get_center()
+    obj = make_object(ObjectKind.AXES, "A", "a", x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, x_step=x_step, y_step=x_step, x_length=8.0, y_length=5.0, show_numbers=numbers)
+    layout = axes_layout(obj)
+    assert (-layout.offset[0], -layout.offset[1]) == pytest.approx((plot_center[0], plot_center[1]), abs=0.005)
+    if numbers:
+        shown = [label.get_value() for label in axes.x_axis.numbers]
+        assert [axis_number_text(value, x_step) for value in shown] == ["".join(part.text for part in label) for label in axes.x_axis.numbers]

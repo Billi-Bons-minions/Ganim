@@ -1,9 +1,51 @@
+# Python
 .venv/
+venv/
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+.eggs/
 .pytest_cache/
 .ruff_cache/
-media/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Build output (PyInstaller etc.)
 build/
 dist/
 *.spec.bak
+
+# Manim / render output
+media/
+partial_movie_files/
+*.mp4
+*.mov
+*.webm
+*.gif
+*.wav
+*.mp3
+renders/
+
+# Logs and local scratch files
+*.log
+scratch/
+tmp/
+
+# Secrets and local configuration
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials*.json
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

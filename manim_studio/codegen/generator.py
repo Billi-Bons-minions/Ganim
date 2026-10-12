@@ -14,6 +14,7 @@ from manim_studio.codegen.literals import LiteralError, fmt_float, py_color
 from manim_studio.codegen.naming import class_names, variable_names
 from manim_studio.codegen.objects import COLOR_TEX, COLOR_TEX_SOURCE, creation_order, object_code
 from manim_studio.codegen.three_d_code import camera_setup
+from manim_studio.model.arrange import drawing_order
 from manim_studio.model.entities import Project, Scene
 from manim_studio.model.frame import ASPECTS, DEFAULT_ASPECT, frame_size
 from manim_studio.model.state import visible_at_start
@@ -75,7 +76,9 @@ def _object_lines(
 
 
 def _initial_add_line(scene: Scene, names: dict[str, str]) -> list[str]:
-    shown = [names[obj.id] for obj in creation_order(scene) if obj.kind not in UNADDED_KINDS and visible_at_start(scene, obj)]
+    # added from back to front, so the layers match the stage
+    objects = [scene.object_by_id(object_id) for object_id in drawing_order(scene)]
+    shown = [names[obj.id] for obj in objects if obj is not None and obj.kind not in UNADDED_KINDS and visible_at_start(scene, obj)]
     return [f"self.add({', '.join(shown)})"] if shown else []
 
 

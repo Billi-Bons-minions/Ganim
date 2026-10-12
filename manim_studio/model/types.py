@@ -53,6 +53,7 @@ class ObjectKind(str, Enum):
     AXES_3D = "axes_3d"
     SURFACE = "surface"
     CURVE_3D = "curve_3d"
+    HIGHLIGHT = "highlight"
 
 
 class AnimationKind(str, Enum):
@@ -273,6 +274,9 @@ GRAPH_TOOL_KINDS = frozenset(
 
 #: Kinds that are not drawn and never added to the Manim scene.
 INVISIBLE_KINDS = frozenset({ObjectKind.GROUP, ObjectKind.PARAMETER})
+#: Looks of a highlight: frame, background, underline or cross over its target.
+HIGHLIGHT_STYLES = ("frame", "background", "underline", "cross")
+
 #: Kinds that are no mobjects and therefore cannot be members of a group.
 UNGROUPABLE = frozenset({ObjectKind.PARAMETER, ObjectKind.CAMERA})
 #: Kinds that are not added to the Manim scene (the camera is shown on the stage only).

@@ -99,6 +99,7 @@ def dependent_objects(scene: Scene, object_ids: Iterable[str]) -> set[str]:
             params = obj.params
             needs = (
                 (obj.kind in GRAPH_TOOL_KINDS and params.get("graph_id"))
+                or (obj.kind == ObjectKind.HIGHLIGHT and params.get("target"))
                 or (obj.kind in (ObjectKind.DATA_PLOT, ObjectKind.SURFACE, ObjectKind.CURVE_3D) and params.get("axes_id"))
                 or (obj.kind == ObjectKind.FUNCTION_GRAPH and params.get("curve") == CURVE_DERIVATIVE and params.get("derive_from"))
             )
@@ -145,6 +146,26 @@ def set_object_param(scene: Scene, object_id: str, key: str, value: Any) -> None
     if kind_info(obj.kind).param(key) is None:
         raise ModelError(f"unknown parameter {key} for {obj.kind.value}")
     obj.params[key] = value
+    if obj.kind == ObjectKind.HIGHLIGHT and key in ("style", "target"):
+        place_highlight(scene, obj.id)
+
+
+def place_highlight(scene: Scene, object_id: str) -> None:
+    """A background highlight lies directly behind its target, the other styles in front of it."""
+    from manim_studio.model.arrange import drawing_order, move_layer
+
+    obj = scene.object_by_id(object_id)
+    target = scene.object_by_id(obj.params.get("target")) if obj is not None else None
+    if obj is None or target is None or target.id == obj.id:
+        return
+    order = drawing_order(scene)
+    if obj.id not in order or target.id not in order:
+        return
+    behind = obj.params.get("style") == "background"
+    if behind and order.index(obj.id) > order.index(target.id):
+        move_layer(scene, obj.id, None, target.id)
+    elif not behind and order.index(obj.id) < order.index(target.id):
+        move_layer(scene, obj.id, target.id, None)
 
 
 def _movable_leaves(scene: Scene, object_ids: Iterable[str]) -> list[str]:

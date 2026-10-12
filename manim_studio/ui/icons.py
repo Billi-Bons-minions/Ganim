@@ -101,6 +101,15 @@ def _brace(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QCol
     p.drawPath(path)
 
 
+def _highlight(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.setPen(QPen(neutral, w))
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawText(QRectF(m, m, s - 2 * m, s - 2 * m), Qt.AlignmentFlag.AlignCenter, "x²")
+    pen = QPen(QColor("#F7D96F"), w)
+    p.setPen(pen)
+    p.drawRoundedRect(QRectF(m * 0.6, s * 0.22, s - 1.2 * m, s * 0.56), s * 0.08, s * 0.08)
+
+
 def _polygon(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
     p.drawPolygon(QPolygonF([QPointF(m, s * 0.7), QPointF(s * 0.32, m), QPointF(s - m, s * 0.35), QPointF(s * 0.7, s - m)]))
 
@@ -360,6 +369,7 @@ _EXTRA_DRAWERS = {
     ObjectKind.DOUBLE_ARROW: _double_arrow,
     ObjectKind.DASHED_LINE: _dashed_line,
     ObjectKind.BRACE: _brace,
+    ObjectKind.HIGHLIGHT: _highlight,
     ObjectKind.POLYGON: _polygon,
     ObjectKind.REGULAR_POLYGON: _regular_polygon,
     ObjectKind.STAR: _star,

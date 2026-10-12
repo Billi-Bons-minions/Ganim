@@ -149,3 +149,16 @@ def test_groups_skip_parameters(window) -> None:
     window.editor.select_objects([parameter, circle])
     controller.group_selection()
     assert all(obj.kind != ObjectKind.GROUP for obj in window.editor.scene().objects)
+
+
+def test_toolbars_fold_on_small_screens(window, qapp) -> None:
+    window.resize(1280, 800)
+    qapp.processEvents()
+    assert window.arrange_tools.is_compact() and window.timeline.step_buttons.is_compact()
+    assert window.main_split.sizes()[0] >= 150, window.main_split.sizes()
+    menu = window.arrange_tools.compact.menu()
+    assert window.act_group in menu.actions() and len([a for a in menu.actions() if not a.isSeparator()]) >= 10
+    assert window.timeline.visible_add_step_button() is window.timeline.compact_add_step_button
+    window.resize(2200, 1000)
+    qapp.processEvents()
+    assert not window.arrange_tools.is_compact() and window.timeline.visible_add_step_button() is window.timeline.add_step_button

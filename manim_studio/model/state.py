@@ -312,12 +312,23 @@ def refresh_group_states(scene: Scene, states: dict[str, ObjectState]) -> dict[s
         gx, gy = groups.group_center(scene, obj.id, states)
         visible = any(states[leaf].visible for leaf in leaf_ids)
         states[obj.id] = replace(states[obj.id], x=gx, y=gy, visible=visible)
+    return refresh_attached_states(scene, states)
+
+
+def refresh_attached_states(scene: Scene, states: dict[str, ObjectState]) -> dict[str, ObjectState]:
+    """Highlights follow their target: same place, turn and size (Manim redraws them every frame)."""
+    for obj in scene.objects:
+        if obj.kind != ObjectKind.HIGHLIGHT or obj.id not in states:
+            continue
+        target = states.get(str(obj.params.get("target")))
+        if target is not None and target.object_id != obj.id:
+            states[obj.id] = replace(states[obj.id], x=target.x, y=target.y, rotation=target.rotation, scale=target.scale)
     return states
 
 
 def states_after(scene: Scene, step_index: int) -> dict[str, ObjectState]:
     """Return the state of every object after ``step_index`` (``START`` = before step 1)."""
-    states = {obj.id: initial_state(scene, obj) for obj in scene.objects}
+    states = refresh_attached_states(scene, {obj.id: initial_state(scene, obj) for obj in scene.objects})
     last = min(step_index, len(scene.steps) - 1)
     for step in scene.steps[: last + 1]:
         if step.kind != StepKind.PLAY:

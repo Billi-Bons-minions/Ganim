@@ -240,6 +240,25 @@ def brace_code(obj: SceneObject, variable: str, target_variable: str | None) -> 
     return lines
 
 
+def highlight_code(obj: SceneObject, variable: str, target_variable: str) -> list[str]:
+    """Frame, background, underline or cross that is redrawn around its target in every frame."""
+    style = obj.params.get("style", "frame")
+    buff = fmt_float(_f(obj, "buff", 0.15))
+    stroke = f"stroke_width={fmt_float(obj.stroke_width)}, stroke_opacity={fmt_float(obj.stroke_opacity)}"
+    if style == "background":
+        shape = f"BackgroundRectangle({target_variable}, color={py_color(obj.fill_color)}, fill_opacity={fmt_float(_f(obj, 'opacity', 0.75))}, buff={buff})"
+    elif style == "underline":
+        shape = f"Underline({target_variable}, buff={buff}, color={py_color(obj.stroke_color)}, {stroke})"
+    elif style == "cross":
+        shape = f"Cross({target_variable}, stroke_color={py_color(obj.stroke_color)}, {stroke})"
+    else:
+        shape = (
+            f"SurroundingRectangle({target_variable}, buff={buff}, corner_radius={fmt_float(_f(obj, 'corner_radius', 0.0))}, "
+            f"color={py_color(obj.stroke_color)}, {stroke}, fill_color={py_color(obj.fill_color)}, fill_opacity={fmt_float(obj.fill_opacity)})"
+        )
+    return [f"{variable} = always_redraw(lambda: {shape})"]
+
+
 def group_code(variable: str, member_variables: list[str]) -> list[str]:
     """``VGroup`` of existing objects."""
     return [f"{variable} = VGroup({', '.join(member_variables)})"]

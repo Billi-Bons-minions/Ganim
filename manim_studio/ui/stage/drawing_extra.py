@@ -21,7 +21,7 @@ from PySide6.QtGui import (
 )
 
 from manim_studio.model.entities import Scene, SceneObject
-from manim_studio.model.extents import base_size, rotated_extent
+from manim_studio.model.extents import base_size, highlight_box, rotated_extent
 from manim_studio.model.geometry import param_float
 from manim_studio.model.groups import bounds_of, is_group, leaves
 from manim_studio.model.state import ObjectState, initial_state
@@ -248,6 +248,35 @@ def brace_primitives(scene: Scene, obj: SceneObject, state: ObjectState) -> tupl
     return primitives, not attached
 
 
+def highlight_primitives(scene: Scene, obj: SceneObject, state: ObjectState) -> list[Primitive]:
+    """Frame, background, underline or cross around the target (drawn around the target's center)."""
+    box = highlight_box(scene, obj)
+    if box is None:
+        return []
+    width, height = box
+    buff = param_float(obj.params, "buff", 0.15)
+    style = obj.params.get("style", "frame")
+    w, h = (width + 2 * buff) * PX, (height + 2 * buff) * PX
+    path = QPainterPath()
+    if style == "underline":
+        y = (height / 2 + buff) * PX
+        path.moveTo(-width * PX / 2, y)
+        path.lineTo(width * PX / 2, y)
+        return [_stroke_primitive(path, obj, state)]
+    if style == "cross":
+        path.moveTo(-width * PX / 2, -height * PX / 2)
+        path.lineTo(width * PX / 2, height * PX / 2)
+        path.moveTo(-width * PX / 2, height * PX / 2)
+        path.lineTo(width * PX / 2, -height * PX / 2)
+        return [_stroke_primitive(path, obj, state)]
+    if style == "background":
+        path.addRect(QRectF(-w / 2, -h / 2, w, h))
+        return [Primitive(path=path, brush=QBrush(_color(state.fill_color, param_float(obj.params, "opacity", 0.75))))]
+    radius = min(param_float(obj.params, "corner_radius", 0.0) * PX, w / 2, h / 2)
+    path.addRoundedRect(QRectF(-w / 2, -h / 2, w, h), radius, radius)
+    return [_shape_primitive(path, obj, state)]
+
+
 # --- text-like -------------------------------------------------------------------------------
 
 
@@ -441,6 +470,8 @@ def extra_drawing(scene: Scene, obj: SceneObject, state: ObjectState, resources:
         return tex_primitives(obj, state, resources), True
     if kind == ObjectKind.BRACE:
         return brace_primitives(scene, obj, state)
+    if kind == ObjectKind.HIGHLIGHT:
+        return highlight_primitives(scene, obj, state), False
     if kind == ObjectKind.GROUP:
         return [], False
     return None

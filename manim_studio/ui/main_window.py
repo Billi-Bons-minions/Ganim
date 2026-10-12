@@ -59,7 +59,7 @@ from manim_studio.model.three_d import is_3d, view_of
 from manim_studio.model.types import AnimationKind, ObjectKind, StepKind
 from manim_studio.plugins import PluginContext
 from manim_studio.templates import BUILTIN_TEMPLATES
-from manim_studio.ui.chrome import PanelFrame, SegmentedControl, StageBanner, Toast, action_button, separator, tool_button
+from manim_studio.ui.chrome import Collapsible, PanelFrame, SegmentedControl, StageBanner, Toast, action_button, separator, tool_button
 from manim_studio.ui.context import AppContext, cache_dir
 from manim_studio.ui.dialogs.environment_dialog import EnvironmentDialog
 from manim_studio.ui.dialogs.export_dialog import ExportDialog
@@ -378,8 +378,8 @@ class MainWindow(QMainWindow):
         toolbar.setSpacing(px(2))
         toolbar.addWidget(self.mode_switch)
         toolbar.addSpacing(px(10))
-        self.arrange_tools = QWidget()
-        arrange = QHBoxLayout(self.arrange_tools)
+        arrange_row = QWidget()
+        arrange = QHBoxLayout(arrange_row)
         arrange.setContentsMargins(0, 0, 0, 0)
         arrange.setSpacing(px(1))
         for action in (self.act_group, self.act_ungroup):
@@ -387,6 +387,15 @@ class MainWindow(QMainWindow):
         arrange.addWidget(separator(vertical=True))
         for mode, _icon, _shortcut in ARRANGE_ACTIONS:
             arrange.addWidget(action_button(self.arrange_actions[mode]))
+        # on small screens the arrange buttons fold into one menu button
+        arrange_menu = QMenu(self)
+        arrange_menu.addActions([self.act_group, self.act_ungroup])
+        arrange_menu.addSeparator()
+        arrange_menu.addActions([self.arrange_actions[mode] for mode, _icon, _shortcut in ARRANGE_ACTIONS])
+        arrange_button = tool_button("layers", tr("menu.arrange"), text=tr("menu.arrange"))
+        arrange_button.setMenu(arrange_menu)
+        arrange_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.arrange_tools = Collapsible(arrange_row, arrange_button)
         toolbar.addWidget(self.arrange_tools)
         toolbar.addStretch(1)
         self.stage_tools = QWidget()
@@ -1400,7 +1409,7 @@ class MainWindow(QMainWindow):
             TourStep("animate", lambda: self.properties.animation_buttons.get(AnimationKind.CREATE),
                      lambda: has_animation(AnimationKind.CREATE)),
             TourStep("timeline", lambda: self.bottom_tabs),
-            TourStep("new_step", lambda: self.timeline.add_step_button, lambda: len(scene().steps) >= 2),
+            TourStep("new_step", lambda: self.timeline.visible_add_step_button(), lambda: len(scene().steps) >= 2),
             TourStep("drag", lambda: self.stage, lambda: has_animation(AnimationKind.MOVE)),
             TourStep("preview", lambda: self.preview_button, lambda: self._preview_seen),
             TourStep("done"),

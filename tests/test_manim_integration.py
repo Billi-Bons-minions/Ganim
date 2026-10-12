@@ -450,3 +450,22 @@ def test_new_animations_render_and_import(tmp_path) -> None:
     params = {anim.kind: anim.params for step in imported.steps for anim in step.animations}
     assert params[AnimationKind.GROW_FROM_EDGE]["edge"] == "down" and params[AnimationKind.BROADCAST]["rings"] == 3
     assert params[AnimationKind.PASSING_FLASH]["time_width"] == 0.4 and params[AnimationKind.PASSING_FLASH]["color"] == "#FFFF00"
+
+
+def test_highlights_follow_their_target_in_manim(tmp_path) -> None:
+    text = make_object(ObjectKind.TEXT, "Satz", "t", -3.0, 1.0, text="Wichtig")
+    square = make_object(ObjectKind.SQUARE, "Quadrat", "q", 3.0, -1.0)
+    styles = [("frame", "t"), ("background", "t"), ("underline", "q"), ("cross", "q")]
+    highlights = [make_object(ObjectKind.HIGHLIGHT, f"M{index}", f"h{index}", target=target, style=style) for index, (style, target) in enumerate(styles)]
+    scene = Scene(
+        id="s",
+        name="Markieren",
+        objects=[text, square, *highlights],
+        steps=[
+            play(*(make_animation(AnimationKind.CREATE, h.id, run_time=0.3) for h in highlights)),
+            play(make_animation(AnimationKind.MOVE, "t", x=1.0, y=2.0, run_time=0.3), make_animation(AnimationKind.ROTATE, "q", angle=45.0, run_time=0.3)),
+            play(make_animation(AnimationKind.FADE_OUT, "h0", run_time=0.3), make_animation(AnimationKind.INDICATE, "h2", run_time=0.3)),
+        ],
+    )
+    result = run_manim(tmp_path, generate_script(make_project(scene)), "Markieren", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]

@@ -131,6 +131,12 @@ class EditorController(QObject):
             return existing_camera.id
         if kind == ObjectKind.CAMERA:
             x, y = 0.0, 0.0
+        if kind == ObjectKind.HIGHLIGHT and not params.get("target"):
+            target = next((o for o in (scene.object_by_id(i) for i in self.editor.selected_objects) if o is not None and o.kind not in UNGROUPABLE and o.kind != kind), None)
+            if target is None:
+                self.statusMessage.emit(tr("status.highlight_needs_target"))
+                return None
+            params["target"] = target.id
         if kind == ObjectKind.PARAMETER and "symbol" not in params:
             params["symbol"] = self._free_symbol()
         names = [obj.name for obj in scene.objects]
@@ -148,6 +154,8 @@ class EditorController(QObject):
             for host in hosts:
                 ops.add_object(s, host)
             ops.add_object(s, obj)
+            if obj.kind == ObjectKind.HIGHLIGHT:
+                ops.place_highlight(s, obj.id)
 
         self._edit(tr("undo.add_object", name=name), mutate)
         if hosts:

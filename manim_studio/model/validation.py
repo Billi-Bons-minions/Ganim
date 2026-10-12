@@ -83,6 +83,10 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
             add(ERROR, "radii_invalid")
     if obj.kind in (ObjectKind.TABLE, ObjectKind.MATRIX) and not any(params.get("rows", [])):
         add(ERROR, "table_empty")
+    if obj.kind == ObjectKind.HIGHLIGHT:
+        target = scene.object_by_id(obj.params.get("target"))
+        if target is None or target.id == obj.id or target.kind in UNGROUPABLE or target.kind == ObjectKind.HIGHLIGHT:
+            add(ERROR, "highlight_target_missing")
     if obj.kind == ObjectKind.GROUP:
         drawable = [m for m in groups.members(scene, obj.id) if (member := scene.object_by_id(m)) is not None and member.kind not in UNGROUPABLE]
         if not drawable:

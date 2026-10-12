@@ -50,10 +50,42 @@ def _table_size(rows: list, font_size: float, h_buff: float, v_buff: float) -> t
     return sum(widths) + columns * h_buff, height
 
 
+def target_size(scene: Scene, target: SceneObject) -> tuple[float, float]:
+    """Size of an object another one is attached to (groups: the box around their members)."""
+    from manim_studio.model import groups
+
+    if groups.is_group(target):
+        from manim_studio.model.state import initial_state
+
+        leaf_ids = groups.leaves(scene, target.id)
+        states = {leaf: initial_state(scene, scene.object_by_id(leaf)) for leaf in leaf_ids}
+        left, bottom, right, top = groups.bounds_of(scene, leaf_ids, states)
+        if not all(math.isfinite(value) for value in (left, bottom, right, top)):
+            return 1.0, 1.0
+        return right - left, top - bottom
+    return base_size(scene, target)
+
+
+def highlight_box(scene: Scene, obj: SceneObject) -> tuple[float, float] | None:
+    """Width and height of the target of a highlight (``None`` without target)."""
+    target = scene.object_by_id(obj.params.get("target"))
+    if target is None or target.id == obj.id or target.kind == ObjectKind.HIGHLIGHT:
+        return None
+    return target_size(scene, target)
+
+
 def base_size(scene: Scene, obj: SceneObject) -> tuple[float, float]:
     """Return the estimated width and height of an unrotated, unscaled object."""
     p = obj.params
     kind = obj.kind
+    if kind == ObjectKind.HIGHLIGHT:
+        box = highlight_box(scene, obj)
+        if box is None:
+            return 1.0, 1.0
+        buff = param_float(p, "buff", 0.15)
+        if p.get("style") == "underline":
+            return box[0], box[1] / 2 + buff
+        return box[0] + 2 * buff, box[1] + 2 * buff
     if kind in (ObjectKind.CIRCLE, ObjectKind.DOT, ObjectKind.REGULAR_POLYGON):
         radius = param_float(p, "radius", 1.0)
         return 2 * radius, 2 * radius

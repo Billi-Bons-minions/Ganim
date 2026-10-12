@@ -21,7 +21,7 @@ from manim_studio.model.playback import total_duration
 from manim_studio.model.state import START
 from manim_studio.model.types import StepKind
 from manim_studio.ui.animation_catalog import ANIMATION_GROUPS, ONLY_WHEN_ALLOWED
-from manim_studio.ui.chrome import separator
+from manim_studio.ui.chrome import Collapsible, separator
 from manim_studio.ui.controller import EditorController
 from manim_studio.ui.document import ProjectDocument
 from manim_studio.ui.editor_state import INSPECT_ANIMATION, EditorState
@@ -117,10 +117,22 @@ class TimelinePanel(QWidget):
         bar.addWidget(separator(vertical=True))
         menu = QMenu(self)
         menu.aboutToShow.connect(lambda: build_animation_menu(menu, self.controller, False))
-        bar.addWidget(self._button("sparkle", tr("timeline.add_animation_tip"), text=tr("timeline.add_animation"), menu=menu))
-        self.add_step_button = self._button("plus", tr("timeline.add_step_tip"), lambda: self.controller.add_step(StepKind.PLAY), tr("timeline.add_step"))
-        bar.addWidget(self.add_step_button)
-        bar.addWidget(self._button("clock", tr("timeline.add_wait_tip"), lambda: self.controller.add_step(StepKind.WAIT), tr("timeline.add_wait")))
+        # with little room the buttons lose their texts (the tooltips stay)
+        rows = []
+        for with_text in (True, False):
+            row = QWidget()
+            row_layout = QHBoxLayout(row)
+            row_layout.setContentsMargins(0, 0, 0, 0)
+            row_layout.setSpacing(px(2))
+            row_layout.addWidget(self._button("sparkle", tr("timeline.add_animation_tip"), text=tr("timeline.add_animation") if with_text else "", menu=menu))
+            add_step = self._button("plus", tr("timeline.add_step_tip"), lambda: self.controller.add_step(StepKind.PLAY), tr("timeline.add_step") if with_text else "")
+            row_layout.addWidget(add_step)
+            row_layout.addWidget(self._button("clock", tr("timeline.add_wait_tip"), lambda: self.controller.add_step(StepKind.WAIT), tr("timeline.add_wait") if with_text else ""))
+            rows.append((row, add_step))
+        self.add_step_button = rows[0][1]
+        self.compact_add_step_button = rows[1][1]
+        self.step_buttons = Collapsible(rows[0][0], rows[1][0])
+        bar.addWidget(self.step_buttons)
         bar.addWidget(self._button("duplicate", tr("timeline.duplicate_tip"), self.controller.duplicate_step))
         bar.addWidget(self._button("trash", tr("timeline.delete_tip"), self.controller.delete_in_timeline))
         bar.addStretch(1)
@@ -137,13 +149,17 @@ class TimelinePanel(QWidget):
         self.lag_spin.setKeyboardTracking(False)
         self.lag_spin.setToolTip(tr("timeline.lag_tip"))
         self.lag_spin.valueChanged.connect(self._on_lag_changed)
-        bar.addWidget(self.mode_label)
+        bar.addWidget(Collapsible(self.mode_label, QWidget()))
         bar.addWidget(self.mode_combo)
         bar.addWidget(self.lag_spin)
         bar.addWidget(separator(vertical=True))
         bar.addWidget(self._button("zoom_out", tr("timeline.zoom_out_tip"), lambda: self.canvas.set_zoom(self.canvas.pps / 1.3)))
         bar.addWidget(self._button("zoom_in", tr("timeline.zoom_in_tip"), lambda: self.canvas.set_zoom(self.canvas.pps * 1.3)))
         self.toolbar = bar
+
+    def visible_add_step_button(self):
+        """The "+ step" button that is shown right now (the tour points at it)."""
+        return self.compact_add_step_button if self.step_buttons.is_compact() else self.add_step_button
 
     def _connect(self) -> None:
         self.document.changed.connect(self.refresh)

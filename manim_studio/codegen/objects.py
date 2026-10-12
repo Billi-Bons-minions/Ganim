@@ -24,6 +24,7 @@ from manim_studio.codegen.objects_extra import (
     EXTRA_CONSTRUCTORS,
     brace_code,
     group_code,
+    highlight_code,
 )
 from manim_studio.codegen.objects_extra import text as extra_text
 from manim_studio.codegen.three_d_code import axes_3d_code, curve_3d_code, surface_code
@@ -237,6 +238,11 @@ def _special_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> tupl
         target = obj.params.get("target")
         attached = target in names and target != obj.id
         return brace_code(obj, variable, names[target] if attached else None), not attached
+    if obj.kind == ObjectKind.HIGHLIGHT:
+        target = obj.params.get("target")
+        if target not in names or target == obj.id:
+            raise CodegenError("highlight_target_missing", obj.name)
+        return highlight_code(obj, variable, names[str(target)]), False
     return None
 
 
@@ -302,7 +308,11 @@ def object_code(
         raise CodegenError("value_invalid", f"{obj.name}: {error}") from None
     if is_3d(scene) and obj.kind not in UNADDED_KINDS and obj.kind not in THREE_D_KINDS:
         lines.append(f"self.renderer.camera.add_fixed_in_frame_mobjects({variable})")
-    if obj.z_index and obj.kind not in INVISIBLE_KINDS:
+    if obj.kind == ObjectKind.HIGHLIGHT and obj.params.get("style") == "background":
+        # stays behind its target even when it appears later (new mobjects are drawn on top)
+        target = scene.object_by_id(obj.params.get("target"))
+        lines.append(f"{variable}.set_z_index({fmt_int((target.z_index if target is not None else obj.z_index) - 1)})")
+    elif obj.z_index and obj.kind not in INVISIBLE_KINDS:
         lines.append(f"{variable}.set_z_index({fmt_int(obj.z_index)})")
     return lines
 
@@ -316,7 +326,7 @@ def dependencies(scene: Scene, obj: SceneObject) -> list[str]:
         for key in ("x_parameter",):
             if obj.params.get(key):
                 result.append(str(obj.params.get(key)))
-    if obj.kind == ObjectKind.BRACE and obj.params.get("target"):
+    if obj.kind in (ObjectKind.BRACE, ObjectKind.HIGHLIGHT) and obj.params.get("target"):
         result.append(str(obj.params.get("target")))
     if obj.kind == ObjectKind.GROUP:
         result += [str(member) for member in obj.params.get("members", [])]

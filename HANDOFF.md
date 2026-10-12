@@ -59,6 +59,12 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
   - Ausbreiten (Broadcast)
   - Ein- und Ausblenden haben jetzt einen Zoom-Parameter.
   - Alle sechs sind in der Bühnen-Wiedergabe, der Hover-Vorschau, im Codegen und im Skript-Import enthalten und mit Manim getestet.
+- Neue Objektart „Markierung“ (Rahmen, Hintergrund, Unterstreichen, Durchstreichen):
+  - Hängt an einem Objekt und folgt ihm (`always_redraw`).
+  - Ein Hintergrund liegt automatisch hinter seinem Ziel.
+  - Wird mit dem Ziel gelöscht.
+- Kleine Bildschirme: Anordnen-Buttons und Zeitleisten-Texte klappen ein, sodass das Fenster ab etwa 1280 px Breite vollständig nutzbar ist.
+- `self.add(...)` im Skript folgt jetzt der Ebenenreihenfolge.
 
 ### Halbfertig
 - (nichts)

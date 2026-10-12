@@ -20,6 +20,9 @@ from manim_studio.model.types import (
     CURVE_POLAR,
     CURVES,
     FUNCTION_CURVES,
+    HIGHLIGHT_STYLES,
+    MOTION_ANIMATIONS,
+    TRANSFORM_ANIMATIONS,
     AnimationKind,
     ObjectKind,
 )
@@ -284,6 +287,18 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         ),
         _LINE_STYLE,
         (("stroke_color", _WHITE),),
+    ),
+    ObjectKind.HIGHLIGHT: KindInfo(
+        ObjectKind.HIGHLIGHT,
+        (
+            ParamSpec("target", ParamType.OBJECT_REF, None),
+            ParamSpec("style", ParamType.CHOICE, "frame", choices=HIGHLIGHT_STYLES),
+            ParamSpec("buff", ParamType.FLOAT, 0.15, minimum=0.0, maximum=3.0, step=0.05),
+            ParamSpec("corner_radius", ParamType.FLOAT, 0.1, minimum=0.0, maximum=2.0, step=0.05, visible_when=("style", ("frame",))),
+            ParamSpec("opacity", ParamType.FLOAT, 0.75, minimum=0.0, maximum=1.0, step=0.05, visible_when=("style", ("background",))),
+        ),
+        _SHAPE_STYLE,
+        (("stroke_color", "#F7D96F"), ("fill_color", "#000000"), ("fill_opacity", 0.0), ("stroke_width", 4.0)),
     ),
     ObjectKind.BRACE: KindInfo(
         ObjectKind.BRACE,
@@ -680,8 +695,18 @@ def is_vector_object(kind: ObjectKind, params: dict[str, Any]) -> bool:
     return is_vector_image_path(str(params.get("path", "")))
 
 
+#: Animations a highlight cannot have: it is redrawn around its target in every frame.
+_NOT_FOR_HIGHLIGHTS = (
+    frozenset({AnimationKind.MOVE, AnimationKind.SCALE, AnimationKind.ROTATE, AnimationKind.CHANGE_COLOR, AnimationKind.SET_VALUE, AnimationKind.ORBIT})
+    | TRANSFORM_ANIMATIONS
+    | MOTION_ANIMATIONS
+)
+
+
 def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: dict[str, Any]) -> bool:
     """Return ``True`` if the animation can be applied to the object."""
+    if obj_kind == ObjectKind.HIGHLIGHT and anim_kind in _NOT_FOR_HIGHLIGHTS:
+        return False
     if obj_kind == ObjectKind.GROUP and anim_kind in (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM):
         return False
     if anim_kind == AnimationKind.SET_VALUE:

@@ -19,6 +19,45 @@ from manim_studio.ui.icon_set import icon
 from manim_studio.ui.theme import current_palette, px
 
 
+class Collapsible(QWidget):
+    """Shows ``full`` when there is room for it, otherwise the smaller ``compact`` version.
+
+    Used for tool bars so that the window still fits on small screens.
+    """
+
+    def __init__(self, full: QWidget, compact: QWidget, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.full = full
+        self.compact = compact
+        for widget in (full, compact):
+            widget.setParent(self)
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        self._apply(True)
+
+    def sizeHint(self) -> QSize:  # noqa: N802 - Qt API
+        full, compact = self.full.sizeHint(), self.compact.sizeHint()
+        return QSize(full.width(), max(full.height(), compact.height()))
+
+    def minimumSizeHint(self) -> QSize:  # noqa: N802 - Qt API
+        full, compact = self.full.sizeHint(), self.compact.sizeHint()
+        return QSize(compact.width(), max(full.height(), compact.height()))
+
+    def is_compact(self) -> bool:
+        """Return ``True`` while the compact version is shown."""
+        return self.compact.isVisibleTo(self)
+
+    def _apply(self, use_full: bool) -> None:
+        self.full.setVisible(use_full)
+        self.compact.setVisible(not use_full)
+        shown = self.full if use_full else self.compact
+        width = self.width() if use_full else shown.sizeHint().width()
+        shown.setGeometry(0, max(0, (self.height() - shown.sizeHint().height()) // 2), width, shown.sizeHint().height())
+
+    def resizeEvent(self, event) -> None:  # noqa: N802 - Qt API
+        super().resizeEvent(event)
+        self._apply(self.width() >= self.full.sizeHint().width())
+
+
 def tool_button(icon_name: str, tooltip: str, slot=None, text: str = "", checkable: bool = False) -> QToolButton:
     """Return a flat icon button (optionally with text)."""
     button = QToolButton()

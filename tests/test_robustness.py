@@ -199,3 +199,23 @@ def test_paste_into_another_scene_brings_the_hosts(window) -> None:
     scene = window.editor.scene()
     assert sorted(obj.kind.value for obj in scene.objects) == sorted(["axes", "function_graph", "tangent", "text", "highlight"])
     assert not has_errors(validate_scene(scene))
+
+
+def test_exits_of_hidden_objects_are_reported() -> None:
+    from manim_studio.model.entities import Scene
+    from tests.helpers import make_animation, make_object, play
+
+    circle = make_object(ObjectKind.CIRCLE, "Kreis", "c")
+    square = make_object(ObjectKind.SQUARE, "Quadrat", "q")
+    scene = Scene(
+        id="s",
+        name="S",
+        objects=[circle, square],
+        steps=[
+            play(make_animation(AnimationKind.FADE_OUT, "c", "a1")),
+            play(make_animation(AnimationKind.FADE_OUT, "c", "a2")),
+            play(make_animation(AnimationKind.TRANSFORM, "c", "a3", target="q")),
+        ],
+    )
+    issues = [issue for issue in validate_scene(scene) if issue.code == "animated_while_hidden"]
+    assert [issue.animation_id for issue in issues] == ["a2", "a3"] and not has_errors(issues)

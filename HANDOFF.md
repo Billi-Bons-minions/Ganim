@@ -84,6 +84,7 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
   - Farbskala nach Stärke, Parameter möglich (Pfeile mit `always_redraw`).
   - Die Bühne bildet Manim exakt nach (gleiches Gitter, gleicher Zufalls-Seed). Stromlinien sind gecacht.
 - 3D-Flächen und 3D-Kurven mit Parametern werden jetzt mitanimiert. Vorher erkannte `parameter_users` nur Funktionsgraphen.
+- Warnung bei Ausblenden oder Verwandeln von Objekten, die gerade unsichtbar sind (Manim ließe sie aufblitzen).
 
 ### Halbfertig
 - (nichts)

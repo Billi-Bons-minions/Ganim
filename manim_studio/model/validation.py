@@ -20,12 +20,14 @@ from manim_studio.model.types import (
     CURVE_PARAMETRIC,
     CURVE_PIECEWISE,
     CURVE_POLAR,
+    EXIT_ANIMATIONS,
     FUNCTION_CURVES,
     GRAPH_TOOL_KINDS,
     LATEX_KINDS,
     RATE_FUNCTIONS,
     REFERENCE_PARAMS,
     TRANSFORM_ANIMATIONS,
+    UNADDED_KINDS,
     UNGROUPABLE,
     AnimationKind,
     ObjectKind,
@@ -329,7 +331,31 @@ def validate_scene(scene: Scene, latex_available: bool = True, base_dir: str | P
         issues.extend(_object_issues(scene, obj, latex_available, base_dir))
     for index, step in enumerate(scene.steps):
         issues.extend(_step_issues(scene, index, step))
+    issues.extend(_hidden_object_issues(scene))
     return sorted(issues, key=lambda issue: issue.severity != ERROR)
+
+
+def _hidden_object_issues(scene: Scene) -> list[Issue]:
+    """Exits and transforms of objects that are not on screen make them flash up in Manim."""
+    from manim_studio.model import groups
+    from manim_studio.model.state import apply_animation, initial_state, refresh_attached_states, refresh_group_states
+
+    issues: list[Issue] = []
+    states = refresh_attached_states(scene, {obj.id: initial_state(scene, obj) for obj in scene.objects})
+    for index, step in enumerate(scene.steps):
+        if step.kind != StepKind.PLAY:
+            continue
+        for anim in step.animations:
+            obj = scene.object_by_id(anim.target_id)
+            state = states.get(anim.target_id)
+            if obj is None or state is None or groups.is_group(obj) or obj.kind in UNADDED_KINDS:
+                continue
+            if not state.visible and (anim.kind in EXIT_ANIMATIONS or (anim.kind in TRANSFORM_ANIMATIONS and anim.kind != AnimationKind.TRANSFORM_FROM_COPY)):
+                issues.append(Issue(WARNING, "animated_while_hidden", scene.id, obj.id, index, anim.id, obj.name))
+        for anim in step.animations:
+            apply_animation(states, anim, scene)
+        refresh_group_states(scene, states)
+    return issues
 
 
 def has_errors(issues: list[Issue]) -> bool:

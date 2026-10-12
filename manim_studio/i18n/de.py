@@ -1196,4 +1196,5 @@ STRINGS: dict[str, str] = {
     "param.flow_speed": "Fließgeschwindigkeit",
     "choice.display.arrows": "Pfeile",
     "choice.display.stream": "Stromlinien",
+    "issue.animated_while_hidden": "„{name}“ ist hier gar nicht sichtbar – Manim würde es für diese Animation kurz aufblitzen lassen. Lösche die Animation oder lass das Objekt vorher erscheinen.",
 }

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from manim_studio.codegen.errors import CodegenError
 from manim_studio.codegen.formatting import call
-from manim_studio.codegen.literals import fmt_float, py_color, py_range
+from manim_studio.codegen.literals import fmt_float, py_color, py_range, py_str
 from manim_studio.model import graphs
 from manim_studio.model.entities import Animation, Scene, SceneObject
 from manim_studio.model.geometry import param_float
-from manim_studio.model.three_d import DEFAULT_PHI, DEFAULT_THETA, axes_of, surface_expression
+from manim_studio.model.three_d import DEFAULT_PHI, DEFAULT_THETA, POLYHEDRA, POLYHEDRON_VERTEX_RADIUS, axes_of, surface_expression
 from manim_studio.model.types import ObjectKind
 
 
@@ -106,6 +106,15 @@ def solid_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> list[st
         ("stroke_width", fmt_float(obj.stroke_width)),
     ]
     n = max(4, min(48, int(p.get("resolution", 16))))
+    if shape in POLYHEDRA:
+        faces = "{" + ", ".join(f"{py_str(key)}: {value}" for key, value in style) + "}"
+        # Manim draws the corners as small spheres; without them they are made invisible
+        if p.get("show_vertices", False):
+            vertices = f'{{"vertex_config": {{"radius": {fmt_float(POLYHEDRON_VERTEX_RADIUS)}, "color": {py_color(obj.stroke_color)}}}}}'
+        else:
+            vertices = '{"vertex_config": {"fill_opacity": 0, "stroke_width": 0}}'
+        size = [("edge_length", fmt_float(param_float(p, "side", 2.0))), ("faces_config", faces), ("graph_config", vertices)]
+        return _placed(call(shape.capitalize(), [], size, 2), point)
     if shape == "cube":
         return _placed(call("Cube", [], [("side_length", fmt_float(param_float(p, "side", 2.0)))] + style, 2), point)
     if shape == "prism":

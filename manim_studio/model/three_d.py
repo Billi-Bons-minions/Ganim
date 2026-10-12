@@ -17,7 +17,11 @@ from manim_studio.model.types import ObjectKind
 
 THREE_D_KINDS = frozenset({ObjectKind.AXES_3D, ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID, ObjectKind.VECTOR_3D})
 #: Shapes of a 3D solid.
-SOLID_SHAPES = ("sphere", "cube", "prism", "cone", "cylinder", "torus")
+SOLID_SHAPES = ("sphere", "cube", "prism", "cone", "cylinder", "torus", "tetrahedron", "octahedron", "icosahedron", "dodecahedron")
+#: The Platonic solids among them (Manim's polyhedra, sized by their edge length).
+POLYHEDRA = ("tetrahedron", "octahedron", "icosahedron", "dodecahedron")
+#: Radius of their corner spheres (Manim's ``Dot3D`` default).
+POLYHEDRON_VERTEX_RADIUS = 0.08
 DEFAULT_PHI = 70.0
 DEFAULT_THETA = -45.0
 FOCAL_DISTANCE = 20.0
@@ -274,8 +278,47 @@ def _box(width: float, depth: float, height: float) -> list[Quad]:
     return [[corners[key] for key in face] for face in faces]
 
 
+def _polyhedron(shape: str, edge: float) -> tuple[list[Point3], list[list[int]]]:
+    """Vertices and faces exactly as in ``manim.mobject.three_d.polyhedra``."""
+    if shape == "tetrahedron":
+        u = edge * math.sqrt(2) / 4
+        return [(u, u, u), (u, -u, -u), (-u, u, -u), (-u, -u, u)], [[0, 1, 2], [3, 0, 2], [0, 1, 3], [3, 1, 2]]
+    if shape == "octahedron":
+        u = edge * math.sqrt(2) / 2
+        vertices = [(u, 0.0, 0.0), (-u, 0.0, 0.0), (0.0, u, 0.0), (0.0, -u, 0.0), (0.0, 0.0, u), (0.0, 0.0, -u)]
+        return vertices, [[2, 4, 1], [0, 4, 2], [4, 3, 0], [1, 3, 4], [3, 5, 0], [1, 5, 3], [2, 5, 1], [0, 5, 2]]
+    a = edge * (1 + math.sqrt(5)) / 4
+    if shape == "icosahedron":
+        b = edge / 2
+        vertices = [(0.0, b, a), (0.0, -b, a), (0.0, b, -a), (0.0, -b, -a), (b, a, 0.0), (b, -a, 0.0), (-b, a, 0.0), (-b, -a, 0.0), (a, 0.0, b), (a, 0.0, -b), (-a, 0.0, b), (-a, 0.0, -b)]
+        faces = [[1, 8, 0], [1, 5, 7], [8, 5, 1], [7, 3, 5], [5, 9, 3], [8, 9, 5], [3, 2, 9], [9, 4, 2], [8, 4, 9], [0, 4, 8], [6, 4, 0], [6, 2, 4]]
+        faces += [[11, 2, 6], [3, 11, 2], [0, 6, 10], [10, 1, 0], [10, 7, 1], [11, 7, 3], [10, 11, 7], [10, 11, 6]]
+        return vertices, faces
+    b, c = edge * (3 + math.sqrt(5)) / 4, edge / 2
+    vertices = [(sx * a, sy * a, sz * a) for sx in (1, -1) for sy in (1, -1) for sz in (1, -1)]
+    vertices += [(0.0, c, b), (0.0, c, -b), (0.0, -c, -b), (0.0, -c, b), (c, b, 0.0), (-c, b, 0.0), (c, -b, 0.0), (-c, -b, 0.0)]
+    vertices += [(b, 0.0, c), (-b, 0.0, c), (b, 0.0, -c), (-b, 0.0, -c)]
+    faces = [[18, 16, 0, 12, 1], [3, 18, 16, 2, 14], [3, 10, 9, 1, 18], [1, 9, 5, 13, 12], [0, 8, 4, 13, 12], [2, 16, 0, 8, 11]]
+    faces += [[4, 17, 6, 11, 8], [17, 19, 5, 13, 4], [19, 7, 15, 6, 17], [6, 15, 14, 2, 11], [19, 5, 9, 10, 7], [7, 10, 3, 14, 15]]
+    return vertices, faces
+
+
+def solid_vertices(scene: Scene, obj: SceneObject) -> list[Point3]:
+    """The corners of a Platonic solid in scene coordinates (empty for other shapes)."""
+    center = solid_center(scene, obj)
+    shape = obj.params.get("shape", "sphere")
+    if center is None or shape not in POLYHEDRA:
+        return []
+    vertices, _faces = _polyhedron(shape, param_float(obj.params, "side", 2.0))
+    cx, cy, cz = center
+    return [(cx + x, cy + y, cz + z) for x, y, z in vertices]
+
+
 def solid_quads(scene: Scene, obj: SceneObject, scale: float = 1.0) -> list[Quad]:
-    """The faces of a solid in scene coordinates (like the Manim mobject after ``move_to``)."""
+    """The faces of a solid in scene coordinates (like the Manim mobject after ``move_to``).
+
+    A "quad" may also be a triangle or pentagon (faces of Platonic solids).
+    """
     center = solid_center(scene, obj)
     if center is None:
         return []
@@ -285,7 +328,10 @@ def solid_quads(scene: Scene, obj: SceneObject, scale: float = 1.0) -> list[Quad
     radius = param_float(p, "radius", 1.0)
     height = param_float(p, "height", 2.0)
     tau = 2 * math.pi
-    if shape == "cube":
+    if shape in POLYHEDRA:
+        vertices, faces = _polyhedron(shape, param_float(p, "side", 2.0))
+        quads = [[vertices[index] for index in face] for face in faces]
+    elif shape == "cube":
         side = param_float(p, "side", 2.0)
         quads = _box(side, side, side)
     elif shape == "prism":

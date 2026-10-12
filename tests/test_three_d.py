@@ -87,6 +87,37 @@ def test_solids() -> None:
     assert not animation_allowed(AnimationKind.MOVE, ObjectKind.SOLID, {}) and animation_allowed(AnimationKind.SCALE, ObjectKind.SOLID, {})
 
 
+@pytest.mark.parametrize(
+    ("shape", "faces", "corners", "circumradius"),
+    [
+        ("tetrahedron", 4, 4, math.sqrt(6) / 4),
+        ("octahedron", 8, 6, 1 / math.sqrt(2)),
+        ("icosahedron", 20, 12, math.sin(2 * math.pi / 5)),
+        ("dodecahedron", 12, 20, math.sqrt(3) * (1 + math.sqrt(5)) / 4),
+    ],
+)
+def test_platonic_solids(shape, faces, corners, circumradius) -> None:
+    from manim_studio.model.three_d import solid_quads, solid_vertices
+
+    axes = make_object(ObjectKind.AXES_3D, "Raum", "r")
+    solid = make_object(ObjectKind.SOLID, "Körper", "k", axes_id="r", shape=shape, side=2.0, center_x=1.0)
+    scene = Scene(id="s", name="S", objects=[axes, solid])
+    center = to_space(axes, 1.0, 0.0, 0.0)
+    vertices = solid_vertices(scene, solid)
+    assert len(solid_quads(scene, solid)) == faces and len(vertices) == corners
+    assert all(math.dist(vertex, center) == pytest.approx(2.0 * circumradius) for vertex in vertices)
+    # all edges of a face are edges of the solid (length 2)
+    for face in solid_quads(scene, solid):
+        assert all(math.dist(face[i], face[(i + 1) % len(face)]) == pytest.approx(2.0) for i in range(len(face)))
+    code = generate_script(make_project(scene))
+    name = shape.capitalize()
+    assert f"{name}(" in code and "edge_length=2.0" in code and '"fill_opacity": 0.75' in code
+    assert '"vertex_config": {"fill_opacity": 0, "stroke_width": 0}' in code  # corners hidden
+    solid.params["show_vertices"] = True
+    assert '"vertex_config": {"radius": 0.08, "color": "#29ABCA"}' in generate_script(make_project(scene))
+    assert not has_errors(validate_scene(scene))
+
+
 def test_vectors_lines_and_points_in_space() -> None:
     from manim_studio.model import operations as ops
     from manim_studio.model.graphs import is_bound

@@ -1346,4 +1346,9 @@ STRINGS: dict[str, str] = {
     "codegen.secant_undefined": "Die Sekante „{detail}“ ist hier nicht definiert.",
     "template.secant.name": "Von der Sekante zur Tangente",
     "template.secant.title": "h → 0: Aus der Sekante wird die Tangente",
+    "choice.shape.tetrahedron": "Tetraeder",
+    "choice.shape.octahedron": "Oktaeder",
+    "choice.shape.icosahedron": "Ikosaeder",
+    "choice.shape.dodecahedron": "Dodekaeder",
+    "param.show_vertices": "Ecken zeigen",
 }

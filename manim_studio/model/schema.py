@@ -362,17 +362,25 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         ObjectKind.SOLID,
         (
             ParamSpec("axes_id", ParamType.OBJECT_REF, None),
-            ParamSpec("shape", ParamType.CHOICE, "sphere", choices=("sphere", "cube", "prism", "cone", "cylinder", "torus")),
+            ParamSpec(
+                "shape",
+                ParamType.CHOICE,
+                "sphere",
+                choices=("sphere", "cube", "prism", "cone", "cylinder", "torus", "tetrahedron", "octahedron", "icosahedron", "dodecahedron"),
+            ),
             ParamSpec("center_x", ParamType.FLOAT, 0.0, minimum=-1000.0, maximum=1000.0, step=0.5),
             ParamSpec("center_y", ParamType.FLOAT, 0.0, minimum=-1000.0, maximum=1000.0, step=0.5),
             ParamSpec("center_z", ParamType.FLOAT, 0.0, minimum=-1000.0, maximum=1000.0, step=0.5),
             ParamSpec("radius", ParamType.FLOAT, 1.0, minimum=0.05, maximum=50.0, step=0.1, visible_when=("shape", ("sphere", "cone", "cylinder", "torus"))),
             ParamSpec("minor_radius", ParamType.FLOAT, 0.3, minimum=0.01, maximum=50.0, step=0.05, visible_when=("shape", ("torus",))),
-            ParamSpec("side", ParamType.FLOAT, 2.0, minimum=0.05, maximum=50.0, step=0.1, visible_when=("shape", ("cube",))),
+            ParamSpec(
+                "side", ParamType.FLOAT, 2.0, minimum=0.05, maximum=50.0, step=0.1, visible_when=("shape", ("cube", "tetrahedron", "octahedron", "icosahedron", "dodecahedron"))
+            ),
             ParamSpec("width", ParamType.FLOAT, 3.0, minimum=0.05, maximum=50.0, step=0.1, visible_when=("shape", ("prism",))),
             ParamSpec("depth", ParamType.FLOAT, 2.0, minimum=0.05, maximum=50.0, step=0.1, visible_when=("shape", ("prism",))),
             ParamSpec("height", ParamType.FLOAT, 2.0, minimum=0.05, maximum=50.0, step=0.1, visible_when=("shape", ("prism", "cone", "cylinder"))),
             ParamSpec("resolution", ParamType.INT, 16, minimum=4, maximum=48, visible_when=("shape", ("sphere", "cone", "cylinder", "torus"))),
+            ParamSpec("show_vertices", ParamType.BOOL, False, visible_when=("shape", ("tetrahedron", "octahedron", "icosahedron", "dodecahedron"))),
         ),
         _SHAPE_STYLE,
         (("stroke_color", "#29ABCA"), ("fill_color", "#58C4DD"), ("fill_opacity", 0.75), ("stroke_width", 0.5)),

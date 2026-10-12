@@ -1203,7 +1203,7 @@ STRINGS: dict[str, str] = {
     "param.center_y": "Center y",
     "param.center_z": "Center z",
     "param.minor_radius": "Tube radius",
-    "param.side": "Side length",
+    "param.side": "Edge length",
     "param.depth": "Depth",
     "choice.shape.sphere": "Sphere",
     "choice.shape.cube": "Cube",
@@ -1346,4 +1346,9 @@ STRINGS: dict[str, str] = {
     "codegen.secant_undefined": "The secant “{detail}” is not defined here.",
     "template.secant.name": "From secant to tangent",
     "template.secant.title": "h → 0: the secant becomes the tangent",
+    "choice.shape.tetrahedron": "Tetrahedron",
+    "choice.shape.octahedron": "Octahedron",
+    "choice.shape.icosahedron": "Icosahedron",
+    "choice.shape.dodecahedron": "Dodecahedron",
+    "param.show_vertices": "Show corners",
 }

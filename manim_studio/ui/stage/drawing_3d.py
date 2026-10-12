@@ -11,7 +11,21 @@ from manim_studio.model import graphs
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.geometry import param_float
 from manim_studio.model.state import ObjectState
-from manim_studio.model.three_d import View, _matrix, axes_lines, axes_of, axis_tips, curve_points, project, solid_quads, surface_grid, vector_points
+from manim_studio.model.three_d import (
+    POLYHEDRA,
+    POLYHEDRON_VERTEX_RADIUS,
+    View,
+    _matrix,
+    axes_lines,
+    axes_of,
+    axis_tips,
+    curve_points,
+    project,
+    solid_quads,
+    solid_vertices,
+    surface_grid,
+    vector_points,
+)
 from manim_studio.model.types import ObjectKind
 from manim_studio.ui.stage.drawing import PX, Primitive, StageResources, _color, _pen, pt
 
@@ -71,6 +85,8 @@ def three_d_primitives(scene: Scene, obj: SceneObject, state: ObjectState, resou
                 depth = sum(_depth(view, corner) for corner in corners) / 4
                 quads.append((depth, corners))
     quads.sort(key=lambda item: item[0])
+    if obj.kind == ObjectKind.SOLID and obj.params.get("shape") in POLYHEDRA:
+        return _polyhedron_primitives(scene, obj, state, view, quads, offset), False
     path = QPainterPath()
     for _depth_value, corners in quads:
         flat = project(corners, view)
@@ -86,6 +102,30 @@ def three_d_primitives(scene: Scene, obj: SceneObject, state: ObjectState, resou
     brush = QBrush(_color(state.fill_color, obj.fill_opacity * 0.85)) if obj.fill_opacity > 0 else None
     pen = _pen(state.stroke_color, obj.stroke_width, obj.stroke_opacity, state.scale) if obj.stroke_width > 0 else None
     return [Primitive(path=path, brush=brush, pen=pen)], False
+
+
+def _polyhedron_primitives(scene: Scene, obj: SceneObject, state: ObjectState, view: View, faces: list, offset: tuple[float, float]) -> list[Primitive]:
+    """Faces and corners one by one from back to front, so front faces cover the back like in Manim."""
+    brush = QBrush(_color(state.fill_color, obj.fill_opacity)) if obj.fill_opacity > 0 else None
+    pen = _pen(state.stroke_color, obj.stroke_width, obj.stroke_opacity, state.scale) if obj.stroke_width > 0 else None
+    items = []
+    for depth, corners in faces:
+        flat = project(corners, view)
+        path = QPainterPath()
+        path.moveTo(pt(flat[0][0] - offset[0], flat[0][1] - offset[1]))
+        for x, y in flat[1:]:
+            path.lineTo(pt(x - offset[0], y - offset[1]))
+        path.closeSubpath()
+        items.append((depth, Primitive(path=path, brush=brush, pen=pen)))
+    if obj.params.get("show_vertices", False):
+        dot = QBrush(_color(state.stroke_color))
+        vertices = solid_vertices(scene, obj)
+        for vertex, (x, y) in zip(vertices, project(vertices, view)):
+            path = QPainterPath()
+            path.addEllipse(pt(x - offset[0], y - offset[1]), POLYHEDRON_VERTEX_RADIUS * PX, POLYHEDRON_VERTEX_RADIUS * PX)
+            items.append((_depth(view, vertex), Primitive(path=path, brush=dot)))
+    items.sort(key=lambda item: item[0])
+    return [primitive for _depth_value, primitive in items]
 
 
 def _vector_primitives(obj: SceneObject, state: ObjectState, flat: list[tuple[float, float]], offset: tuple[float, float]) -> list[Primitive]:

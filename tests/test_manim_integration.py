@@ -781,3 +781,31 @@ def test_dashed_helper_lines_of_length_zero_render(tmp_path) -> None:
     script = generate_script(make_project(Scene(id="s", name="Nulllinien", objects=objects, steps=steps)))
     result = run_manim(tmp_path, script, "Nulllinien")
     assert result.returncode == 0, result.stdout + result.stderr + script
+
+
+def test_platonic_solids_with_every_allowed_animation(tmp_path) -> None:
+    """Manim's polyhedra keep their faces in sync with an updater; every animation must cope with it."""
+    from manim_studio.model.schema import animation_allowed
+    from manim_studio.model.types import ENTRANCE_ANIMATIONS, EXIT_ANIMATIONS
+
+    axes = make_object(ObjectKind.AXES_3D, "Raum", "ax")
+    shapes = ("tetrahedron", "octahedron", "icosahedron", "dodecahedron")
+    solids = [make_object(ObjectKind.SOLID, shape, shape, axes_id="ax", shape=shape, side=1.2, center_x=-3.0 + 2.0 * i, show_vertices=i % 2 == 0) for i, shape in enumerate(shapes)]
+    allowed = [kind for kind in AnimationKind if animation_allowed(kind, ObjectKind.SOLID, {})]
+    entrances = [kind for kind in allowed if kind in ENTRANCE_ANIMATIONS]
+    exits = [kind for kind in allowed if kind in EXIT_ANIMATIONS]
+    others = [kind for kind in allowed if kind not in ENTRANCE_ANIMATIONS and kind not in EXIT_ANIMATIONS]
+    steps = []
+    for index, kind in enumerate(entrances):
+        target = shapes[index % 4]
+        steps += [play(make_animation(kind, target, f"in{index}", run_time=0.1)), play(make_animation(AnimationKind.FADE_OUT, target, f"out{index}", run_time=0.1))]
+    steps.append(play(*(make_animation(AnimationKind.FADE_IN, shape, f"show-{shape}", run_time=0.1) for shape in shapes)))
+    steps += [play(make_animation(kind, shapes[index % 4], f"o{index}", run_time=0.1)) for index, kind in enumerate(others)]
+    for index, kind in enumerate(exits):
+        target = shapes[index % 4]
+        steps += [play(make_animation(kind, target, f"x{index}", run_time=0.1)), play(make_animation(AnimationKind.FADE_IN, target, f"back{index}", run_time=0.1))]
+    scene = Scene(id="s", name="Platon", objects=[axes, *solids], steps=steps)
+    assert len(entrances) >= 5 and len(exits) >= 3 and len(others) >= 5
+    script = generate_script(make_project(scene))
+    result = run_manim(tmp_path, script, "Platon", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]

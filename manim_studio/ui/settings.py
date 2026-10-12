@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QLocale, QSettings
 
 MAX_RECENT = 8
 
@@ -21,6 +21,11 @@ def _to_bool(value: object, default: bool) -> bool:
 #: Quality flags offered for the preview.
 PREVIEW_QUALITIES = ("l", "m")
 
+def system_language() -> str:
+    """The UI language to start with: German on German systems, English everywhere else."""
+    return "de" if QLocale.system().language() == QLocale.Language.German else "en"
+
+
 class AppSettings:
     """Typed access to the user's preferences."""
 
@@ -35,7 +40,7 @@ class AppSettings:
 
     @property
     def language(self) -> str:
-        return str(self._get("language", "de"))
+        return str(self._get("language", system_language()))
 
     @language.setter
     def language(self, value: str) -> None:

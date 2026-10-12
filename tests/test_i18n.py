@@ -126,3 +126,15 @@ def test_tr_formats_and_falls_back() -> None:
     set_language("de")
     assert tr("status.copied", count=2) == "2 Objekt(e) kopiert"
     assert tr("does.not.exist") == "does.not.exist"
+
+
+def test_default_language_follows_the_system(tmp_path, qapp) -> None:
+    from PySide6.QtCore import QSettings
+
+    from manim_studio.ui.settings import AppSettings, system_language
+
+    settings = AppSettings(QSettings(str(tmp_path / "fresh.ini"), QSettings.Format.IniFormat))
+    assert system_language() in ("de", "en")
+    assert settings.language == system_language()
+    settings.language = "de"
+    assert settings.language == "de"

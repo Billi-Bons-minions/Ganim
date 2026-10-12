@@ -16,7 +16,7 @@ from manim_studio.model.playback import state_at_time
 from manim_studio.model.stage_edits import VALUE, step_animation, value_edit
 from manim_studio.model.state import START, parameter_values, states_after
 from manim_studio.model.types import AnimationKind, ObjectKind
-from manim_studio.model.validation import validate_scene
+from manim_studio.model.validation import has_errors, validate_scene
 from tests.helpers import make_animation, make_object, make_project, play
 
 
@@ -223,3 +223,20 @@ def test_graph_validation() -> None:
     parameter = make_object(ObjectKind.PARAMETER, "x", "px", symbol="x")
     codes = {issue.code for issue in validate_scene(axes_scene(bad, lonely, parameter))}
     assert {"pieces_empty", "graph_missing", "parameter_symbol_invalid"} <= codes
+
+
+def test_implicit_curves() -> None:
+    from manim_studio.model.graphs import implicit_segments, parameter_users
+
+    axes = make_object(ObjectKind.AXES, "Achsen", "a")
+    circle = make_object(ObjectKind.FUNCTION_GRAPH, "Kreis", "k", axes_id="a", curve="implicit", implicit_expression="x^2 + y^2 - r^2")
+    radius = make_object(ObjectKind.PARAMETER, "r", "p", symbol="r", value=2.0)
+    scene = Scene(id="s", name="S", objects=[radius, axes, circle])
+    points = [point for segment in implicit_segments(scene, circle) for point in segment]
+    assert points and all(abs(math.hypot(x, y) - 2.0) < 0.05 for x, y in points)
+    assert parameter_users(scene, circle) == {"p"}
+    assert not has_errors(validate_scene(scene))
+    code = generate_script(make_project(scene))
+    assert "always_redraw(" in code and "achsen.plot_implicit_curve(" in code and "x ** 2 + y ** 2.0 - r.get_value() ** 2.0" in code
+    circle.params["implicit_expression"] = "x^2 + "
+    assert "expression_invalid" in {issue.code for issue in validate_scene(scene)}

@@ -89,6 +89,10 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
   - Platziert in Koordinaten der 3D-Achsen, die bei Bedarf automatisch angelegt werden.
   - Skalieren und Farbe animierbar.
 - Bühne: 3D-Flächen und -Körper werden jetzt korrekt gefüllt. Vorher löschten sich Vorder- und Rückseiten gegenseitig aus.
+- Neuer Kurventyp „Implizite Kurve f(x, y) = 0“:
+  - Manim: `plot_implicit_curve` bzw. `ImplicitFunction`.
+  - Bühne: Marching Squares, gecacht.
+  - Mit Parametern wird die Kurve per `always_redraw` mitgezogen.
 
 ### Halbfertig
 - (nichts)

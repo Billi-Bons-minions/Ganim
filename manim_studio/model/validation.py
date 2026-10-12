@@ -17,6 +17,7 @@ from manim_studio.model.schema import animation_allowed
 from manim_studio.model.types import (
     CURVE_DERIVATIVE,
     CURVE_FUNCTION,
+    CURVE_IMPLICIT,
     CURVE_PARAMETRIC,
     CURVE_PIECEWISE,
     CURVE_POLAR,
@@ -209,6 +210,8 @@ def _graph_issues(scene: Scene, obj: SceneObject, add) -> None:
         for key in ("x_expression", "y_expression"):
             if _expression_issue(scene, str(params.get(key, "")), "t", add):
                 break
+    elif curve == CURVE_IMPLICIT:
+        _expression_issue_names(scene, str(params.get("implicit_expression", "")), "x", ("y",), add)
     elif curve == CURVE_POLAR:
         _expression_issue(scene, str(params.get("r_expression", "")), "t", add)
     if curve in FUNCTION_CURVES and float(params.get("x_min", 0)) >= float(params.get("x_max", 1)):

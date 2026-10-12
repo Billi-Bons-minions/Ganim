@@ -1211,4 +1211,6 @@ STRINGS: dict[str, str] = {
     "choice.shape.cone": "Kegel",
     "choice.shape.cylinder": "Zylinder",
     "choice.shape.torus": "Torus (Ring)",
+    "choice.curve.implicit": "Implizite Kurve f(x, y) = 0",
+    "param.implicit_expression": "f(x, y) = 0",
 }

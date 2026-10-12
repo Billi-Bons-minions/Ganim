@@ -39,6 +39,7 @@ from manim_studio.model.geometry import (
 from manim_studio.model.types import (
     CURVE_DERIVATIVE,
     CURVE_FUNCTION,
+    CURVE_IMPLICIT,
     CURVE_PARAMETRIC,
     CURVE_PIECEWISE,
     CURVE_POLAR,
@@ -283,6 +284,8 @@ def curve_points(scene: Scene, graph: SceneObject, values: Values | None = None)
             samples = max(40, round(GRAPH_SAMPLES * (b - a) / (high - low)))
             segments += sample_curve(lambda x, e=piece.expression: _evaluate(e, x, values), a, b, limits, samples)
         return segments
+    if curve == CURVE_IMPLICIT:
+        return implicit_segments(scene, graph, values)
     t_min, t_max = param_float(graph.params, "t_min", 0.0), param_float(graph.params, "t_max", math.tau)
     if curve == CURVE_PARAMETRIC:
         fx = parse(scene, str(graph.params.get("x_expression", "")), "t")
@@ -298,6 +301,74 @@ def curve_points(scene: Scene, graph: SceneObject, values: Values | None = None)
     else:
         return []
     return _sample_parametric(point, t_min, t_max)
+
+
+IMPLICIT_GRID = (96, 64)
+_implicit_cache: dict[tuple, list[Segment]] = {}
+
+
+def implicit_range(scene: Scene, graph: SceneObject) -> tuple[float, float, float, float]:
+    """Where an implicit curve is searched: the range of its axes (like Manim) or the frame."""
+    axes = bound_axes(scene, graph)
+    if axes is None:
+        return -7.0, 7.0, -4.0, 4.0
+    return (
+        param_float(axes.params, "x_min", -5.0),
+        param_float(axes.params, "x_max", 5.0),
+        param_float(axes.params, "y_min", -3.0),
+        param_float(axes.params, "y_max", 3.0),
+    )
+
+
+def implicit_expression(scene: Scene, graph: SceneObject) -> Expression | None:
+    try:
+        return parse_expression(str(graph.params.get("implicit_expression", "")), "x", ("y", *parameter_symbols(scene)))
+    except ExpressionError:
+        return None
+
+
+def implicit_segments(scene: Scene, graph: SceneObject, values: Values | None = None) -> list[Segment]:
+    """The curve f(x, y) = 0 found with marching squares (short pieces in axes coordinates)."""
+    expression = implicit_expression(scene, graph)
+    if expression is None:
+        return []
+    values = scene_values(scene, values)
+    x0, x1, y0, y1 = implicit_range(scene, graph)
+    used = expression.used_parameters()
+    key = (str(graph.params.get("implicit_expression")), x0, x1, y0, y1, tuple(sorted((k, round(v, 9)) for k, v in values.items() if k in used)))
+    if key in _implicit_cache:
+        return _implicit_cache[key]
+    nx, ny = IMPLICIT_GRID
+    xs = [x0 + (x1 - x0) * i / nx for i in range(nx + 1)]
+    ys = [y0 + (y1 - y0) * j / ny for j in range(ny + 1)]
+
+    def value(x: float, y: float) -> float:
+        try:
+            result = expression.evaluate(x, {**values, "y": y})
+        except (ArithmeticError, ValueError, OverflowError):
+            return math.nan
+        return result if math.isfinite(result) else math.nan
+
+    grid = [[value(x, y) for y in ys] for x in xs]
+    segments: list[Segment] = []
+    for i in range(nx):
+        for j in range(ny):
+            corners = [(xs[i], ys[j], grid[i][j]), (xs[i + 1], ys[j], grid[i + 1][j]), (xs[i + 1], ys[j + 1], grid[i + 1][j + 1]), (xs[i], ys[j + 1], grid[i][j + 1])]
+            if any(math.isnan(c[2]) for c in corners):
+                continue
+            crossings = []
+            for (ax, ay, av), (bx, by, bv) in zip(corners, corners[1:] + corners[:1]):
+                if (av < 0) != (bv < 0):
+                    t = av / (av - bv)
+                    crossings.append((ax + (bx - ax) * t, ay + (by - ay) * t))
+            if len(crossings) == 2:
+                segments.append(crossings)
+            elif len(crossings) == 4:
+                segments += [crossings[:2], crossings[2:]]
+    if len(_implicit_cache) > 32:
+        _implicit_cache.clear()
+    _implicit_cache[key] = segments
+    return segments
 
 
 def _sample_parametric(point: Callable[[float], Point], low: float, high: float) -> list[Segment]:
@@ -712,6 +783,10 @@ def parameter_users(scene: Scene, obj: SceneObject, _seen: frozenset[str] = froz
     if obj.kind == ObjectKind.FUNCTION_GRAPH:
         for text, variable in _expression_texts(obj):
             expression = parse(scene, text, variable) if text.strip() else None
+            if expression is not None:
+                used |= {by_symbol[symbol] for symbol in expression.used_parameters() if symbol in by_symbol}
+        if obj.params.get("curve") == CURVE_IMPLICIT:
+            expression = implicit_expression(scene, obj)
             if expression is not None:
                 used |= {by_symbol[symbol] for symbol in expression.used_parameters() if symbol in by_symbol}
     if obj.kind == ObjectKind.VECTOR_FIELD:

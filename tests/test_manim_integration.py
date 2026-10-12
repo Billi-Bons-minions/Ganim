@@ -576,3 +576,18 @@ def test_solids_render(tmp_path) -> None:
     scene = Scene(id="s", name="Koerper", objects=[axes, *solids], steps=steps)
     result = run_manim(tmp_path, generate_script(make_project(scene)), "Koerper", "--dry_run")
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+
+
+def test_implicit_curves_render(tmp_path) -> None:
+    axes = make_object(ObjectKind.AXES, "Achsen", "a")
+    radius = make_object(ObjectKind.PARAMETER, "r", "p", symbol="r", value=1.0)
+    bound = make_object(ObjectKind.FUNCTION_GRAPH, "Kreis", "k", axes_id="a", curve="implicit", implicit_expression="x^2 + y^2 - r^2")
+    free = make_object(ObjectKind.FUNCTION_GRAPH, "Frei", "f", curve="implicit", implicit_expression="x^2/9 - y^2 - 1")
+    scene = Scene(
+        id="s",
+        name="Implizit",
+        objects=[radius, axes, bound, free],
+        steps=[play(make_animation(AnimationKind.CREATE, "k", run_time=0.3)), play(make_animation(AnimationKind.SET_VALUE, "p", value=2.0, run_time=0.3))],
+    )
+    result = run_manim(tmp_path, generate_script(make_project(scene)), "Implizit", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]

@@ -17,6 +17,7 @@ from manim_studio.model.geometry import bound_axes, param_float
 from manim_studio.model.graphs import Piece
 from manim_studio.model.types import (
     CURVE_FUNCTION,
+    CURVE_IMPLICIT,
     CURVE_PARAMETRIC,
     CURVE_PIECEWISE,
     CURVE_POLAR,
@@ -69,6 +70,9 @@ def _graph_uses_parameters(scene: Scene, graph: SceneObject | None) -> bool:
     if curve in FUNCTION_CURVES:
         pieces = graphs.function_pieces(scene, graph) or []
         return any(piece.expression.used_parameters() for piece in pieces)
+    if curve == CURVE_IMPLICIT:
+        expression = graphs.implicit_expression(scene, graph)
+        return expression is not None and bool(expression.used_parameters())
     keys = ("x_expression", "y_expression") if curve == CURVE_PARAMETRIC else ("r_expression",)
     expressions = [graphs.parse(scene, str(graph.params.get(key, "")), "t") for key in keys]
     return any(expression is not None and expression.used_parameters() for expression in expressions)
@@ -177,6 +181,15 @@ def graph_constructor(scene: Scene, graph: SceneObject, names: dict[str, str], h
                 options.append(("breaks", "[" + ", ".join(fmt_number(value) for value in breaks) + "]"))
             return call(STUDIO_PLOT, [axes_variable, function, py_range(low, high)], options + style, 2)
         return call(f"{axes_variable}.plot", [function], [("x_range", py_range(low, high))] + style, 2)
+    if curve == CURVE_IMPLICIT:
+        expression = graphs.implicit_expression(scene, graph)
+        if expression is None:
+            raise CodegenError("expression_invalid", graph.name)
+        function = f"lambda x, y: {expression.to_numpy(rename)}"
+        if axes_variable is not None:
+            return call(f"{axes_variable}.plot_implicit_curve", [function], style, 2)
+        x0, x1, y0, y1 = graphs.implicit_range(scene, graph)
+        return call("ImplicitFunction", [function], [("x_range", py_range(x0, x1)), ("y_range", py_range(y0, y1))] + style, 2)
     t_range = py_range(param_float(graph.params, "t_min", 0.0), param_float(graph.params, "t_max", math.tau))
     if curve == CURVE_PARAMETRIC:
         x_code = _expression_code(scene, graph, "x_expression", rename)

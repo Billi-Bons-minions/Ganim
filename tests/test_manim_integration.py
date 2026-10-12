@@ -24,6 +24,8 @@ pytestmark = [
 def run_manim(tmp_path, script: str, scene_name: str, *extra: str) -> subprocess.CompletedProcess:
     script_path = tmp_path / "szene.py"
     script_path.write_text(script, encoding="utf-8")
+    # Manim 0.19 creates its Tex folder without parents, and --dry_run does not create the media folder
+    (tmp_path / "media").mkdir(exist_ok=True)
     command = [sys.executable, "-m", "manim", "render", "-ql", "--media_dir", str(tmp_path / "media"), *extra,
                str(script_path), scene_name]
     environment = dict(os.environ, COLUMNS="200", NO_COLOR="1")

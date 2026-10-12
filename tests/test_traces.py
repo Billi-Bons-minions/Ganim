@@ -71,3 +71,27 @@ def test_trace_ignores_the_jump_onto_a_path(window) -> None:
     scene = window.editor.scene()
     points = trace_points(scene, scene.object_by_id(trace), 1.0)
     assert points[0] == pytest.approx((4.0, 0.0), abs=0.05)
+
+
+@pytest.mark.manim
+def test_trace_can_fade_out_before_it_recorded_anything(tmp_path) -> None:
+    """Fading out a TracedPath before its first frame crashed Manim (fuzz session 10100007)."""
+    pytest.importorskip("manim")
+    from manim_studio.model.entities import Scene
+    from tests.helpers import make_animation, make_object, make_project, play
+    from tests.test_manim_integration import run_manim
+
+    dot = make_object(ObjectKind.DOT, "Punkt", "d", -2.0, 0.0)
+    early = make_object(ObjectKind.TRACE, "Spur A", "a", target="d")
+    late = make_object(ObjectKind.TRACE, "Spur B", "b", target="d")
+    steps = [
+        play(make_animation(AnimationKind.FADE_OUT, "a", "out-a")),
+        play(make_animation(AnimationKind.FADE_IN, "b", "in-b")),
+        play(make_animation(AnimationKind.FADE_OUT, "b", "out-b"), make_animation(AnimationKind.MOVE, "d", "m", x=2.0, y=1.0)),
+    ]
+    scene = Scene(id="s", name="Spuren", objects=[dot, early, late], steps=steps)
+    assert not has_errors(validate_scene(scene))
+    script = generate_script(make_project(scene))
+    assert script.count(".update(0)") == 2
+    result = run_manim(tmp_path, script, "Spuren", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]

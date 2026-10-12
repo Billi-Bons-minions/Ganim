@@ -20,6 +20,7 @@ All notable changes to Manim Studio are listed here. The format follows
 
 ### Fixed
 - Manim's `Union` leaves a hole where two shapes drawn in opposite directions overlap (e.g. a sector and a triangle). Generated scripts unite the two areas themselves (`studio_union`), so the video shows the real union like the stage.
+- Fading out a motion trace before it recorded anything (e.g. in the first step) crashed Manim.
 - Motion paths along a regular polygon with an even number of corners started at the wrong corner (and a square-shaped one was turned by 45°).
 - The label of a point that follows a parameter showed fewer decimals on the stage than in the video.
 

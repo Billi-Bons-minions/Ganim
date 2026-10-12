@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from manim_studio import __version__
-from manim_studio.codegen.animations import STUDIO_SHAPE, STUDIO_SHAPE_SOURCE, STUDIO_TRANSFORM, STUDIO_TRANSFORM_SOURCE, step_code
+from manim_studio.codegen.animations import STUDIO_SHAPE, STUDIO_SHAPE_SOURCE, STUDIO_TRANSFORM, STUDIO_TRANSFORM_SOURCE, step_code, trace_start
 from manim_studio.codegen.errors import CodegenError
 from manim_studio.codegen.formatting import indent_lines
 from manim_studio.codegen.graph_code import (
@@ -122,8 +122,10 @@ def _updater_lines(scene: Scene, names: dict[str, str]) -> list[str]:
 def _initial_add_line(scene: Scene, names: dict[str, str]) -> list[str]:
     # added from back to front, so the layers match the stage
     objects = [scene.object_by_id(object_id) for object_id in drawing_order(scene)]
-    shown = [names[obj.id] for obj in objects if obj is not None and obj.kind not in UNADDED_KINDS and visible_at_start(scene, obj)]
-    return [f"self.add({', '.join(shown)})"] if shown else []
+    shown = [obj for obj in objects if obj is not None and obj.kind not in UNADDED_KINDS and visible_at_start(scene, obj)]
+    if not shown:
+        return []
+    return [f"self.add({', '.join(names[obj.id] for obj in shown)})"] + [trace_start(names[obj.id]) for obj in shown if obj.kind == ObjectKind.TRACE]
 
 
 def _timeline_lines(

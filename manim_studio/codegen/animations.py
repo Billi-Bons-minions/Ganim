@@ -536,7 +536,7 @@ def step_code(
         # a TracedPath cannot fade in: it is added and records from this step on
         rest = dataclasses.replace(step, animations=[anim for anim in step.animations if anim not in starts])
         lines = _step_lines(rest, number, scene, names, helpers, base_dir)
-        lines[1:1] = [f"self.add({_variable(names, anim.target_id)})" for anim in starts]
+        lines[1:1] = [line for anim in starts for line in (f"self.add({_variable(names, anim.target_id)})", trace_start(_variable(names, anim.target_id)))]
         if not rest.animations:
             lines.append(f"self.wait({fmt_float(max(anim.delay + anim.run_time for anim in starts))})")
     if step.kind == StepKind.PLAY:
@@ -561,6 +561,11 @@ def _reused_after_destroying_exit(step: Step, number: int, scene: Scene, names: 
             later.update(str(anim.params[key]) for key in ("target", "path", "partner") if anim.params.get(key))
     found = [anim.target_id for anim in step.animations if anim.kind in _DESTROYING and anim.target_id in later and anim.target_id in names]
     return list(dict.fromkeys(found))
+
+
+def trace_start(variable: str) -> str:
+    """A TracedPath gets its first point in its first frame; fading it out before that crashes Manim."""
+    return f"{variable}.update(0)  # the path starts here (fading out an empty path crashes Manim)"
 
 
 def _is_trace(scene: Scene, object_id: str) -> bool:

@@ -1351,4 +1351,9 @@ STRINGS: dict[str, str] = {
     "choice.shape.icosahedron": "Ikosaeder",
     "choice.shape.dodecahedron": "Dodekaeder",
     "param.show_vertices": "Ecken zeigen",
+    "kind.curved_arrow": "Gebogener Pfeil",
+    "param.tips_at": "Pfeilspitzen",
+    "choice.tips_at.end": "Am Ende",
+    "choice.tips_at.both": "An beiden Enden",
+    "choice.tips_at.none": "Keine (Bogen)",
 }

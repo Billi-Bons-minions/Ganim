@@ -19,10 +19,10 @@ Everything below was built for this first public version.
 - Dark and light theme, adjustable UI scale, German and English (switchable without restart; the first start follows the system language).
 - Welcome dialog with 5 example projects, an interactive tour, animated previews of every animation on hover, a list of keyboard shortcuts (*F1*).
 - Own styles, building blocks and templates; plugins (opt-in) with an example in `examples/plugins`.
-- Import of Manim scripts written by Manim Studio and of simple hand-written scenes.
+- Import of simple Manim scripts (basic shapes, lines and arrows, text and formulas, axes, plain function graphs, numbers, groups and common animations; other lines are skipped and listed).
 
 ### Objects
-- Shapes, lines, arrows, vectors, braces, dots, images (PNG/JPG/SVG).
+- Shapes, lines, arrows, curved arrows (one or two tips, or a plain arc), vectors, braces, dots, images (PNG/JPG/SVG).
 - Text with colored words, Markup text, bullet lists, code blocks, tables; with LaTeX formulas (`MathTex`, `Tex`) with colored parts and matrices.
 - Highlights that stick to an object (frame, background, underline, strike-through), angle marks between two lines, motion traces.
 - Number line, number plane (square or polar grid), axes, function graphs (terms, piecewise, parametric, polar, implicit, derivatives), area, Riemann rectangles, tangent, secant with slope triangle (difference quotient; as h → 0 it becomes the tangent), points on graphs with coordinates, zeros/extrema/inflection points/intersections, graph labels, tables of values, data points with regression, bar charts with CSV import, vector fields (arrows or stream lines).

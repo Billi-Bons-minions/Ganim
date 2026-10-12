@@ -268,6 +268,22 @@ def build_object(call: ast.Call, name: str, objects: dict[str, SceneObject]) -> 
             obj.params["length"], obj.x, obj.y, obj.rotation = round(length, 6), round(x, 6), round(y, 6), round(angle, 6)
         _style(obj, kwargs)
         return obj
+    if function in ("CurvedArrow", "CurvedDoubleArrow", "ArcBetweenPoints") and len(call.args) >= 2:
+        tips = {"CurvedArrow": "end", "CurvedDoubleArrow": "both"}.get(function, "none")
+        bend = math.degrees(_number(kwargs["angle"])) if "angle" in kwargs else 45.0  # Manim's default is PI / 4
+        obj = create_object(ObjectKind.CURVED_ARROW, name, tips_at=tips, angle=round(bend, 6))
+        length, x, y, angle = _length_between(call.args)
+        obj.params["length"], obj.rotation = round(length, 6), round(angle, 6)
+        # the object's position is the center of its bounding box, not the middle of the chord
+        from manim_studio.model.curved import curved_bounds
+
+        left, bottom, right, top = curved_bounds(obj)
+        cx, cy = (left + right) / 2, (bottom + top) / 2
+        turn = math.radians(angle)
+        obj.x = round(x + cx * math.cos(turn) - cy * math.sin(turn), 6)
+        obj.y = round(y + cx * math.sin(turn) + cy * math.cos(turn), 6)
+        _style(obj, kwargs)
+        return obj
     if function in ("Text", "MarkupText", "MathTex", "Tex"):
         kinds = {"Text": ObjectKind.TEXT, "MarkupText": ObjectKind.MARKUP_TEXT, "MathTex": ObjectKind.MATH_TEX, "Tex": ObjectKind.TEX}
         key = {"Text": "text", "MarkupText": "markup", "MathTex": "latex", "Tex": "tex"}[function]

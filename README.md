@@ -28,7 +28,7 @@ All of these clips were made from the built-in templates and the projects in [ex
 ## Features
 
 **Objects**
-- Shapes: circle, square, rectangle, triangle, ellipse, polygon, regular polygon, star, arc, sector, ring, line, dashed line, arrow, double arrow, vector, dot, brace, highlight (frame, background, underline, strike-through), angle marks, motion traces
+- Shapes: circle, square, rectangle, triangle, ellipse, polygon, regular polygon, star, arc, sector, ring, line, dashed line, arrow, double arrow, curved arrow (`CurvedArrow`, `CurvedDoubleArrow`, `ArcBetweenPoints`), vector, dot, brace, highlight (frame, background, underline, strike-through), angle marks, motion traces
 - Text: text with colored words, Markup text, bullet lists, code blocks with syntax highlighting, tables; with LaTeX also formulas (`MathTex`, `Tex`) with colored parts and matrices
 - Math: number line, number plane (square or polar grid), coordinate system with labels, function graphs (`2x^2 + sin(x)`, piecewise, parametric, polar, implicit `f(x, y) = 0`, derivatives), area under a curve, Riemann rectangles, tangents, secants with slope triangle (let h run to 0 and the secant becomes the tangent), points on graphs, zeros/extrema/inflection points/intersections, graph labels, tables of values, data points with regression lines, bar charts (CSV import), vector fields (arrows or stream lines), networks of vertices and edges (Manim's `Graph`/`DiGraph` with several layouts)
 - 3D: 3D axes, surfaces `z = f(x, y)`, 3D curves, solids (sphere, cube, box, cone, cylinder, torus and the Platonic solids tetrahedron, octahedron, icosahedron, dodecahedron), arrows, lines and points in space, camera orbits and camera moves
@@ -66,7 +66,7 @@ All of these clips were made from the built-in templates and the projects in [ex
 
 ### What Manim Studio does not do (yet)
 - It has no installer or app bundle yet: you install it with Python (see below).
-- The script import understands the code Manim Studio writes and simple hand-written scenes, not arbitrary Manim code (networks, for example, are skipped with a note).
+- The script import (*File → Import Manim script*) is meant for simple scenes: it reads basic shapes, lines and (curved) arrows, text and formulas, axes and number planes, plain function graphs, numbers, `ValueTracker`s, groups and the common animations. Everything else, including much of what Manim Studio itself writes (graph tools, 3D, networks, vector fields, lists), is skipped and listed. To keep working on a project, save it as `.msproj`.
 - 3D scenes are limited to the objects listed above; moving and rotating 3D solids is not possible as an animation.
 
 ## Installation

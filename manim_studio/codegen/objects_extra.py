@@ -109,6 +109,13 @@ def arc(obj: SceneObject) -> list[str]:
     return call("Arc", [], [("radius", fmt_float(_f(obj, "radius", 1.5)))] + _angles(obj) + line_style(obj), 2)
 
 
+def curved_arrow(obj: SceneObject) -> list[str]:
+    """``CurvedArrow``, ``CurvedDoubleArrow`` or (without tips) ``ArcBetweenPoints``."""
+    name = {"end": "CurvedArrow", "both": "CurvedDoubleArrow"}.get(str(obj.params.get("tips_at", "end")), "ArcBetweenPoints")
+    angle = ("angle", f"{fmt_float(_f(obj, 'angle', 60.0))} * DEGREES")
+    return call(name, _endpoints(obj), [angle] + line_style(obj), 2)
+
+
 def sector(obj: SceneObject) -> list[str]:
     return call("Sector", [], [("radius", fmt_float(_f(obj, "radius", 1.5)))] + _angles(obj) + shape_style(obj), 2)
 
@@ -391,6 +398,7 @@ EXTRA_CONSTRUCTORS: dict[ObjectKind, Callable[[SceneObject], list[str]]] = {
     ObjectKind.REGULAR_POLYGON: regular_polygon,
     ObjectKind.STAR: star,
     ObjectKind.ARC: arc,
+    ObjectKind.CURVED_ARROW: curved_arrow,
     ObjectKind.SECTOR: sector,
     ObjectKind.ANNULUS: annulus,
     ObjectKind.DECIMAL_NUMBER: decimal_number,

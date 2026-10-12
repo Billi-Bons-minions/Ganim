@@ -21,6 +21,7 @@ from PySide6.QtGui import (
     QTextDocument,
 )
 
+from manim_studio.model.curved import curved_bounds, curved_parts
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.extents import base_size, highlight_box, rotated_extent
 from manim_studio.model.geometry import param_float
@@ -145,6 +146,22 @@ def arc_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
     for point in points[1:]:
         path.lineTo(pt(*point))
     return [_stroke_primitive(path, obj, state)]
+
+
+def curved_arrow_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
+    """Arc and filled tips exactly like Manim's curved arrows (see ``model/curved.py``)."""
+    parts = curved_parts(obj)
+    path = QPainterPath(pt(*parts.shaft[0]))
+    for index in range(0, len(parts.shaft) - 3, 4):
+        path.cubicTo(*(pt(*point) for point in parts.shaft[index + 1 : index + 4]))
+    # Manim centers the arrow on the box around all points, the handles included
+    left, bottom, right, top = curved_bounds(obj)
+    primitives = [Primitive(rect=QRectF(pt(left, top), pt(right, bottom))), _stroke_primitive(path, obj, state)]
+    if parts.tips:
+        # Manim fills the tips completely, whatever the line's opacity
+        brush = QBrush(_color(state.stroke_color))
+        primitives += [Primitive(path=_polygon(tip), brush=brush) for tip in parts.tips]
+    return primitives
 
 
 def sector_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
@@ -619,6 +636,7 @@ def extra_drawing(scene: Scene, obj: SceneObject, state: ObjectState, resources:
         ObjectKind.DASHED_LINE: dashed_line_primitives,
         ObjectKind.NUMBER_LINE: number_line_primitives,
         ObjectKind.ARC: arc_primitives,
+        ObjectKind.CURVED_ARROW: curved_arrow_primitives,
         ObjectKind.SECTOR: sector_primitives,
         ObjectKind.ANNULUS: annulus_primitives,
         ObjectKind.POLYGON: polygon_primitives,

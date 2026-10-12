@@ -137,6 +137,10 @@ def base_size(scene: Scene, obj: SceneObject) -> tuple[float, float]:
         return layout.x_length, layout.y_length
     if kind == ObjectKind.POLYGON:
         return _points_size(list(p.get("points", [])))
+    if kind == ObjectKind.CURVED_ARROW:
+        from manim_studio.model.curved import curved_size
+
+        return curved_size(obj)
     if kind == ObjectKind.ARC:
         return _arc_size(param_float(p, "radius", 1.5), param_float(p, "start_angle", 0.0), param_float(p, "angle", 120.0), False)
     if kind == ObjectKind.SECTOR:

@@ -62,6 +62,7 @@ class ObjectKind(str, Enum):
     NETWORK = "network"
     VECTOR_3D = "vector_3d"
     SECANT = "secant"
+    CURVED_ARROW = "curved_arrow"
 
 
 class AnimationKind(str, Enum):

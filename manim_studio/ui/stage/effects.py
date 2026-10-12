@@ -62,7 +62,7 @@ def _main_outline(drawing: Drawing) -> QPolygonF:
     best_length = -1.0
     for primitive in drawing.primitives:
         if primitive.path is None:
-            if primitive.rect is not None:
+            if primitive.rect is not None and primitive.image is not None:
                 rect = QRectF(primitive.rect)
                 polygon = QPolygonF([rect.topLeft(), rect.topRight(), rect.bottomRight(), rect.bottomLeft(), rect.topLeft()])
                 if _length(polygon) > best_length:

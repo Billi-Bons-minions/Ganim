@@ -288,6 +288,16 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
     ObjectKind.DOUBLE_ARROW: KindInfo(
         ObjectKind.DOUBLE_ARROW, (_length("length", 3.0),), _LINE_STYLE, (("stroke_color", _WHITE),)
     ),
+    ObjectKind.CURVED_ARROW: KindInfo(
+        ObjectKind.CURVED_ARROW,
+        (
+            _length("length", 3.0),
+            ParamSpec("angle", ParamType.FLOAT, 60.0, minimum=-330.0, maximum=330.0, step=15.0, decimals=1),
+            ParamSpec("tips_at", ParamType.CHOICE, "end", choices=("end", "both", "none")),
+        ),
+        _LINE_STYLE,
+        (("stroke_color", _WHITE),),
+    ),
     ObjectKind.DASHED_LINE: KindInfo(
         ObjectKind.DASHED_LINE,
         (
@@ -846,6 +856,7 @@ MATRIX_KINDS = frozenset(
         ObjectKind.VECTOR,
         ObjectKind.DOUBLE_ARROW,
         ObjectKind.DASHED_LINE,
+        ObjectKind.CURVED_ARROW,
         ObjectKind.POLYGON,
         ObjectKind.REGULAR_POLYGON,
         ObjectKind.STAR,
@@ -936,7 +947,7 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
     if anim_kind == AnimationKind.ONE_BY_ONE:
         return obj_kind in (ObjectKind.BULLET_LIST, ObjectKind.GROUP)
     if anim_kind == AnimationKind.GROW_ARROW:
-        return obj_kind in ARROW_KINDS
+        return obj_kind in ARROW_KINDS  # GrowArrow needs Arrow.scale(scale_tips=...), CurvedArrow has no such method
     if anim_kind in _VECTOR_ONLY:
         return is_vector_object(obj_kind, params)
     return True

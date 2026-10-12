@@ -219,6 +219,20 @@ def _arc_icon(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: Q
     p.drawArc(QRectF(m, m, s - 2 * m, s - 2 * m), 0, 200 * 16)
 
 
+def _curved_arrow(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    arc = QPainterPath(QPointF(m * 1.2, s * 0.72))
+    arc.quadTo(QPointF(s * 0.45, s * 0.05), QPointF(s - m * 1.6, s * 0.55))
+    p.drawPath(arc)
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(stroke)
+    tip = QPainterPath(QPointF(s - m * 0.6, s * 0.8))
+    tip.lineTo(QPointF(s - m * 2.9, s * 0.62))
+    tip.lineTo(QPointF(s - m * 0.6, s * 0.42))
+    tip.closeSubpath()
+    p.drawPath(tip)
+
+
 def _sector(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
     p.drawPie(QRectF(m, m, s - 2 * m, s - 2 * m), 20 * 16, 110 * 16)
 
@@ -486,6 +500,7 @@ _EXTRA_DRAWERS = {
     ObjectKind.REGULAR_POLYGON: _regular_polygon,
     ObjectKind.STAR: _star,
     ObjectKind.ARC: _arc_icon,
+    ObjectKind.CURVED_ARROW: _curved_arrow,
     ObjectKind.SECTOR: _sector,
     ObjectKind.ANNULUS: _annulus,
     ObjectKind.DECIMAL_NUMBER: _decimal,

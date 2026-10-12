@@ -59,6 +59,7 @@ class Primitive:
     pen: QPen | None = None
     brush: QBrush | None = None
     image: QImage | None = None
+    #: where ``image`` is drawn; without an image it only widens the bounds
     rect: QRectF | None = None
 
 
@@ -573,7 +574,7 @@ def _translate(primitive: Primitive, dx: float, dy: float) -> None:
 
 
 def _hit_path(primitives: list[Primitive], bounds: QRectF, kind: ObjectKind) -> QPainterPath:
-    if kind in (ObjectKind.LINE, ObjectKind.ARROW, ObjectKind.FUNCTION_GRAPH, ObjectKind.VECTOR, ObjectKind.DOUBLE_ARROW, ObjectKind.DASHED_LINE, ObjectKind.ARC, ObjectKind.TANGENT, ObjectKind.SECANT, ObjectKind.CAMERA):
+    if kind in (ObjectKind.LINE, ObjectKind.ARROW, ObjectKind.FUNCTION_GRAPH, ObjectKind.VECTOR, ObjectKind.DOUBLE_ARROW, ObjectKind.DASHED_LINE, ObjectKind.ARC, ObjectKind.CURVED_ARROW, ObjectKind.TANGENT, ObjectKind.SECANT, ObjectKind.CAMERA):
         combined = QPainterPath()
         for primitive in primitives:
             if primitive.path is not None:

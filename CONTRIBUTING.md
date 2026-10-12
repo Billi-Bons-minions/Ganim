@@ -28,7 +28,7 @@ You need the system libraries Manim needs (Cairo, Pango, see the README). LaTeX 
 ```bash
 QT_QPA_PLATFORM=offscreen pytest -q                  # everything, including real Manim renders (a few minutes)
 QT_QPA_PLATFORM=offscreen pytest -q -m "not manim"   # fast: no Manim renders (about a minute)
-ruff check manim_studio tests tools examples         # only real errors (F) and import order (I)
+ruff check manim_studio tests tools examples packaging   # only real errors (F) and import order (I)
 ```
 
 Please do not reformat code: `ruff` is configured to check, not to restyle. CI runs the same commands on Python 3.10 (without LaTeX) and 3.13 (with LaTeX).

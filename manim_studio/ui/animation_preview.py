@@ -333,6 +333,36 @@ class AnimationPreview(QWidget):
             painter.setPen(self._pen(color, 3.0))
             painter.drawLine(mapped(0, 0), mapped(x, y))
 
+    def _draw_bent_grid(self, painter: QPainter, unit: float, image) -> None:
+        grid = QColor(BLUE)
+        grid.setAlphaF(0.6)
+        painter.setPen(self._pen(grid, 1.2))
+        for k in range(-2, 3):
+            for points in ([(k * 0.5, -1 + i / 20) for i in range(41)], [(-1 + i / 20, k * 0.5) for i in range(41)]):
+                path = QPainterPath()
+                for index, (x, y) in enumerate(points):
+                    u, v = image(x, y)
+                    point = QPointF(u * unit * 1.4, -v * unit * 1.4)
+                    if index == 0:
+                        path.moveTo(point)
+                    else:
+                        path.lineTo(point)
+                painter.drawPath(path)
+
+    def _draw_apply_complex(self, painter: QPainter, t: float, unit: float) -> None:
+        # a grid bent by z -> z^2, every point on a straight line to its image
+        def image(x: float, y: float) -> tuple[float, float]:
+            u, v = x * x - y * y, 2 * x * y
+            return x + (u - x) * t, y + (v - y) * t
+
+        self._draw_bent_grid(painter, unit, image)
+
+    def _draw_apply_pointwise(self, painter: QPainter, t: float, unit: float) -> None:
+        def image(x: float, y: float) -> tuple[float, float]:
+            return x + 0.3 * t * math.sin(3 * y), y + 0.3 * t * math.sin(3 * x)
+
+        self._draw_bent_grid(painter, unit, image)
+
     def _draw_network_parts(self, painter: QPainter, t: float, unit: float) -> None:
         points = [QPointF(-unit * 1.6, unit * 0.9), QPointF(0, -unit * 1.0), QPointF(unit * 1.6, unit * 0.9)]
         highlighted = _mix(QColor("#FFFFFF"), RED, t)

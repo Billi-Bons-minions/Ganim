@@ -406,3 +406,16 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
 
 ## Bühne = Video: Gitterlinien der Zahlenebene
 - Beim Bildvergleich der nichtlinearen Abbildungen gefunden: Manims `NumberPlane` zeichnet Linien von der Achse aus in beide Richtungen und lässt die äußeren Enden weg (`arange`). Eine Ebene von −7 bis 7 hat also keine Linie bei ±7, eine von −1 bis 4 keine bei −1 und 4. Die Bühne zeichnete sie. Jetzt gleich; Test gegen Manim für 7 Bereiche.
+
+## 4. Komplexe Ebene und nichtlineare Abbildungen
+- **Was:** Zwei neue Animationen: *Komplexe Abbildung f(z)* (`ApplyComplexFunction`) und *Punktweise Abbildung* (`ApplyPointwiseFunction`, x′ und y′ in x und y). Die Zahlenebene hat die Option *Zahlen*: keine, reell (`add_coordinates`) oder als komplexe Ebene (`ComplexPlane`). Neue Vorlage *Komplexe Abbildung w = z²* (jetzt 17).
+- **Entscheidungen:**
+  - Terme in z mit `i` als imaginärer Einheit (`2iz`, `e^(iz)`). Die Bühne rechnet mit `cmath`, das Skript mit NumPy. Funktionen ohne komplexe Entsprechung (floor, sign …) werden gemeldet. Parameter sind in Abbildungen (noch) nicht erlaubt: Manim berechnet das Ziel einmal beim Start der Animation, das ließe sich auf der Bühne nicht ehrlich zeigen.
+  - Wo eine Abbildung nicht definiert ist (`1/z` bei 0, `log(0)`), bleibt der Punkt stehen; Bilder weiter als 1000 Einheiten werden auf diesen Kreis zurückgeholt. Skript (`studio_map_point`) und Bühne machen das gleich, sodass Manim nie ungültige Punkte bekommt (sonst Absturz).
+  - Vor der Abbildung bekommt das Objekt viele kurze Kurvenstücke (`studio_prepare_map`, wie Manims `prepare_for_nonlinear_transform`), damit Linien sich biegen statt gerade zu bleiben.
+  - Nach einer Abbildung kann man das Objekt nicht mehr bewegen, drehen, skalieren oder verwandeln (Prüfung und Bühne sagen das). Die Bühne bildet die Form an ihrem Platz ab; eine spätere Bewegung würde Manim auf die gebogene Form anwenden, die Bühne aber in anderer Reihenfolge. Ein- und Ausblenden, Hervorheben und weitere Abbildungen gehen.
+  - Formeln (LaTeX) sind auf der Bühne Bilder und lassen sich nicht biegen; für sie ist die Abbildung gesperrt. Texte gehen.
+  - Die komplexe Ebene schreibt i, 2i, −i mit `Text` statt LaTeX (Manims eigene Beschriftung braucht LaTeX für das „i“); Lage wie bei Manim (rechts unterhalb des Punkts). Für 1 steht „i“, nicht „1i“.
+- **Gefunden:** `ApplyComplexFunction` definiert einen Bogenweg (Winkel arg f(1)), Manim 0.19 bis 0.22 benutzen ihn aber nie: Die Punkte laufen gerade. Die Bühne macht es ebenso (Test gegen Manims `interpolate`). Manim bildet nur die Ankerpunkte der Bézierkurven exakt ab (die Griffe folgen der Tangente); die Bühne tastet die Umrisse fein ab, beides stimmt im Bild überein.
+- **Nebenbei gefunden (eigene Commits):** Gitterlinien der Zahlenebene am Rand (siehe oben).
+- **Geprüft:** Bildvergleiche (z², exp, punktweise), Zwischenpositionen gegen Manim, Rendern mit 1/z durch den Ursprung, log, exp, Text, Achsen mit Zahlen und Graph (0.19 und 0.22).

@@ -83,7 +83,9 @@ def test_curved_arrows_with_every_animation_render(tmp_path) -> None:
     for index, obj in enumerate(arrows):
         obj.x, obj.y = -4.0 + 4.0 * index, 1.0
     circle = make_object(ObjectKind.CIRCLE, "Kreis", "k", 0.0, -2.0)
-    skipped = TRANSFORM_ANIMATIONS | MOTION_ANIMATIONS
+    from manim_studio.model.schema import WARP_ANIMATIONS
+
+    skipped = TRANSFORM_ANIMATIONS | MOTION_ANIMATIONS | WARP_ANIMATIONS  # maps fix the shape in place (see test_warps.py)
     allowed = [kind for kind in AnimationKind if animation_allowed(kind, ObjectKind.CURVED_ARROW, {}) and kind not in skipped]
     entrances = [kind for kind in allowed if kind in ENTRANCE_ANIMATIONS]
     exits = [kind for kind in allowed if kind in EXIT_ANIMATIONS]

@@ -776,6 +776,33 @@ def _a_apply_matrix(p: QPainter) -> None:
     _line(p, 3, 19, 15, 19)
 
 
+def _a_apply_complex(p: QPainter) -> None:
+    # the grid lines x = ±1 bent into two parabolas by z -> z^2, and the real axis
+    for sign in (1, -1):
+        path = QPainterPath()
+        for index in range(17):
+            v = -1 + index / 8
+            point = QPointF(12 + sign * (7 * (1 - v * v) - 3), 12 - 8 * v)
+            if index == 0:
+                path.moveTo(point)
+            else:
+                path.lineTo(point)
+        p.drawPath(path)
+    _line(p, 3, 12, 21, 12)
+
+
+def _a_apply_pointwise(p: QPainter) -> None:
+    # two wavy lines in each direction (x + sin y, y + sin x)
+    for k in (8, 16):
+        vertical, horizontal = QPainterPath(QPointF(k, 3)), QPainterPath(QPointF(3, k))
+        for index in range(1, 19):
+            t = 3 + index
+            vertical.lineTo(QPointF(k + 1.4 * math.sin(t / 2.2), t))
+            horizontal.lineTo(QPointF(t, k + 1.4 * math.sin(t / 2.2)))
+        p.drawPath(vertical)
+        p.drawPath(horizontal)
+
+
 def _a_network_parts(p: QPainter) -> None:
     points = ((5, 18), (12, 5), (19, 18))
     _line(p, *points[0], *points[2])
@@ -954,6 +981,8 @@ ICONS: dict[str, Drawer] = {
     "a_broadcast": _a_broadcast,
     "a_network_parts": _a_network_parts,
     "a_apply_matrix": _a_apply_matrix,
+    "a_apply_complex": _a_apply_complex,
+    "a_apply_pointwise": _a_apply_pointwise,
     "a_one_by_one": _a_one_by_one,
     "a_add_letters": _a_add_letters,
     "a_grow_arrow": _a_grow_arrow,

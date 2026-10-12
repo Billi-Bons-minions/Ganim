@@ -136,6 +136,39 @@ def number_size(text: str, font_size: float = AXIS_NUMBER_SIZE) -> tuple[float, 
     return width, height, glyphs[0][0] * scale
 
 
+#: Numbers of a number plane sit to the lower right of their point (``label_direction=DR``, ``SMALL_BUFF``).
+PLANE_NUMBER_BUFF = 0.1
+
+
+def plane_numbers(obj: SceneObject) -> list[tuple[str, float, float, bool]]:
+    """``(text, x, y, is_decimal_number)`` of the numbers of a number plane in axes values.
+
+    Like ``NumberPlane.add_coordinates`` or, for a complex plane, like ``ComplexPlane.add_coordinates``
+    (the y-axis as ``i``, ``2i`` …, written with ``Text`` instead of LaTeX); 0 is left out.
+    """
+    mode = obj.params.get("numbers", "none")
+    if obj.kind != ObjectKind.NUMBER_PLANE or mode not in ("real", "complex"):
+        return []
+    params = obj.params
+    x_min, x_max, x_step = float(params.get("x_min", -7.0)), float(params.get("x_max", 7.0)), float(params.get("x_step", 1.0))
+    y_min, y_max, y_step = float(params.get("y_min", -4.0)), float(params.get("y_max", 4.0)), float(params.get("y_step", 1.0))
+    ox, oy = origin_shift(x_min, x_max), origin_shift(y_min, y_max)
+    # the axes of a number plane leave out the origin (exclude_origin_tick)
+    numbers = [(axis_number_text(x, x_step), x, oy, True) for x in tick_values(x_min, x_max, x_step, False) if abs(x) > 1e-9]
+    for y in tick_values(y_min, y_max, y_step, False):
+        if abs(y) < 1e-9:
+            continue
+        numbers.append((imaginary_text(y, y_step) if mode == "complex" else axis_number_text(y, y_step), ox, y, mode != "complex"))
+    return numbers
+
+
+def imaginary_text(value: float, step: float) -> str:
+    """``i``, ``-i``, ``2i``, ``0.5i`` …: an imaginary axis number (the script's ``studio_complex_labels``)."""
+    number = axis_number_text(abs(value), step)
+    sign = "-" if value < 0 else ""
+    return sign + ("i" if number == "1" else number + "i")
+
+
 def axis_number_boxes(layout: AxesLayout, x_step: float, y_step: float, tips: bool) -> list[tuple[float, float, float, float]]:
     """``(left, bottom, right, top)`` of every axis number in local coordinates, placed like Manim.
 

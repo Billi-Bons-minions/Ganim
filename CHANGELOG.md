@@ -22,6 +22,9 @@ All notable changes to Manim Studio are listed here. The format follows
 
 - Value labels: the term, equation or slope of a tangent or secant, the coordinates or function value of a point and the area or integral of an area as an object of its own. It follows its tool (live with parameters) but can appear later, be highlighted or disappear on its own, and it can be shifted away from its automatic place. Button *Value as a separate label* on these tools; the template "A tangent slides along the graph" now writes its term after the tangent appears.
 
+- Nonlinear maps of the plane: *Complex map f(z)* (`ApplyComplexFunction`, e.g. `z^2`, `exp(z)`, `1/z` with `i` as imaginary unit) and *Pointwise map* (`ApplyPointwiseFunction` with x′ and y′). The stage bends the outlines point by point; where a map is undefined the point stays, like in the script, so Manim gets no invalid points.
+- Number planes can show their numbers, also as a complex plane (`ComplexPlane` with 1, 2 … and i, 2i …, written without LaTeX). Template "Complex map w = z²" (now 17 templates).
+
 ### Fixed
 - Manim's `Union` leaves a hole where two shapes drawn in opposite directions overlap (e.g. a sector and a triangle). Generated scripts unite the two areas themselves (`studio_union`), so the video shows the real union like the stage.
 - The stage draws texts in Manim's default font (Pango's serif font) instead of the interface font, so texts and labels are as wide as in the video.

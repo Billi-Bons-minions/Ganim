@@ -229,6 +229,8 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         + (
             ParamSpec("grid", ParamType.CHOICE, "cartesian", choices=("cartesian", "polar")),
             ParamSpec("azimuth_divisions", ParamType.INT, 12, minimum=2, maximum=72, visible_when=("grid", ("polar",))),
+            # numbers at the axes: real (1, 2 …) or as a complex plane (1, 2 … and i, 2i …)
+            ParamSpec("numbers", ParamType.CHOICE, "none", choices=("none", "real", "complex")),
         ),
         frozenset({"stroke_color", "stroke_width", "stroke_opacity"}),
         (("stroke_color", "#29ABCA"), ("stroke_width", 2.0)),
@@ -814,6 +816,11 @@ ANIMATION_PARAMS: dict[AnimationKind, tuple[ParamSpec, ...]] = {
         ParamSpec("m21", ParamType.FLOAT, 0.0, minimum=-20.0, maximum=20.0, step=0.25),
         ParamSpec("m22", ParamType.FLOAT, 1.0, minimum=-20.0, maximum=20.0, step=0.25),
     ),
+    AnimationKind.APPLY_COMPLEX: (ParamSpec("function", ParamType.EXPRESSION, "z^2", variable="z", extra_names=("i",)),),
+    AnimationKind.APPLY_POINTWISE: (
+        ParamSpec("x_function", ParamType.EXPRESSION, "x + 0.5 sin(y)", extra_names=("y",)),
+        ParamSpec("y_function", ParamType.EXPRESSION, "y + 0.5 sin(x)", extra_names=("y",)),
+    ),
     AnimationKind.NETWORK_PARTS: (
         ParamSpec("parts", ParamType.STRING, "A, A-B, B"),
         ParamSpec("effect", ParamType.CHOICE, "color", choices=NETWORK_PART_EFFECTS),
@@ -918,6 +925,11 @@ MATRIX_KINDS = frozenset(
         ObjectKind.TEX,
     }
 )
+#: Objects a nonlinear map (``ApplyComplexFunction``, ``ApplyPointwiseFunction``) can bend: the stage
+#: draws them as outlines it can move point by point (formulas are pictures on the stage).
+WARP_KINDS = (MATRIX_KINDS - {ObjectKind.MATH_TEX, ObjectKind.TEX}) | {ObjectKind.AXES, ObjectKind.NUMBER_LINE, ObjectKind.FUNCTION_GRAPH}
+#: The nonlinear maps.
+WARP_ANIMATIONS = frozenset({AnimationKind.APPLY_COMPLEX, AnimationKind.APPLY_POINTWISE})
 #: Arrow kinds that ``GrowArrow`` supports.
 ARROW_KINDS = frozenset({ObjectKind.ARROW, ObjectKind.VECTOR, ObjectKind.DOUBLE_ARROW})
 
@@ -958,7 +970,7 @@ _NOT_FOR_HIGHLIGHTS = (
 
 
 #: Animations that would fight with the updater of a coupled object (it sets the position itself).
-_NOT_FOR_COUPLED = frozenset({AnimationKind.MOVE, AnimationKind.APPLY_MATRIX}) | MOTION_ANIMATIONS | TRANSFORM_ANIMATIONS
+_NOT_FOR_COUPLED = frozenset({AnimationKind.MOVE, AnimationKind.APPLY_MATRIX, AnimationKind.APPLY_COMPLEX, AnimationKind.APPLY_POINTWISE}) | MOTION_ANIMATIONS | TRANSFORM_ANIMATIONS
 
 
 def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: dict[str, Any]) -> bool:
@@ -995,6 +1007,8 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
         return obj_kind == ObjectKind.NETWORK
     if anim_kind == AnimationKind.APPLY_MATRIX:
         return obj_kind in MATRIX_KINDS
+    if anim_kind in WARP_ANIMATIONS:
+        return obj_kind in WARP_KINDS
     if anim_kind == AnimationKind.ONE_BY_ONE:
         return obj_kind in (ObjectKind.BULLET_LIST, ObjectKind.GROUP)
     if anim_kind == AnimationKind.GROW_ARROW:

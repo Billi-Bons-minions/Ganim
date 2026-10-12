@@ -62,6 +62,8 @@ class ObjectState:
     part_colors: tuple[tuple[tuple[str, str, str], str], ...] = ()
     #: Where the shapes of a boolean shape are (see ``model/booleans.py``).
     parts: tuple = ()
+    #: Nonlinear maps the object went through, in order (see ``model/warps.py``).
+    warps: tuple = ()
 
 
 def first_reference(scene: Scene, object_id: str) -> tuple[Animation, bool] | None:
@@ -256,6 +258,12 @@ def apply_animation(states: dict[str, ObjectState], anim: Animation, scene: Scen
     elif kind == AnimationKind.APPLY_MATRIX:
         if not returns:
             states[anim.target_id] = apply_matrix(current, matrix_of(anim), 1.0)
+    elif kind in (AnimationKind.APPLY_COMPLEX, AnimationKind.APPLY_POINTWISE):
+        from manim_studio.model.warps import warp_of
+
+        warp = warp_of(anim)
+        if not returns and warp is not None:
+            states[anim.target_id] = replace(current, warps=(*current.warps, warp), visible=True)
     elif kind == AnimationKind.NETWORK_PARTS:
         if not returns and anim.params.get("effect", "color") == "color":
             colors = dict(current.part_colors)

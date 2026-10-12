@@ -14,6 +14,7 @@ together such as ``ax`` are split into known names (``a * x``).
 from __future__ import annotations
 
 import ast
+import cmath
 import copy
 import math
 import re
@@ -374,6 +375,75 @@ def _evaluate(node: ast.AST, names: dict[str, float]) -> float:
     if isinstance(node, ast.Call):
         assert isinstance(node.func, ast.Name)
         return float(FUNCTIONS[node.func.id][1](_evaluate(node.args[0], names)))
+    raise ExpressionError("not_allowed", type(node).__name__)
+
+
+#: Functions of complex numbers for maps such as ``exp(z)``; the script uses NumPy's functions of the same name.
+COMPLEX_FUNCTIONS: dict[str, Callable[[complex], complex]] = {
+    "sin": cmath.sin,
+    "cos": cmath.cos,
+    "tan": cmath.tan,
+    "asin": cmath.asin,
+    "arcsin": cmath.asin,
+    "acos": cmath.acos,
+    "arccos": cmath.acos,
+    "atan": cmath.atan,
+    "arctan": cmath.atan,
+    "sinh": cmath.sinh,
+    "cosh": cmath.cosh,
+    "tanh": cmath.tanh,
+    "exp": cmath.exp,
+    "log": cmath.log,
+    "ln": cmath.log,
+    "log10": cmath.log10,
+    "log2": lambda z: cmath.log(z) / math.log(2),
+    "sqrt": cmath.sqrt,
+    "abs": abs,
+}
+#: Name of the imaginary unit in complex terms (``2 + 3i``, ``e^(iz)``).
+IMAGINARY_UNIT = "i"
+
+
+def parse_complex(text: str, variable: str = "z") -> Expression:
+    """Parse a function of a complex number such as ``z^2``, ``exp(iz)`` or ``(z - 1)/(z + 1)``."""
+    expression = parse_expression(text, variable, (IMAGINARY_UNIT,))
+    for node in ast.walk(expression.tree):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id not in COMPLEX_FUNCTIONS:
+            raise ExpressionError("not_complex", node.func.id)
+    return expression
+
+
+def evaluate_complex(expression: Expression, z: complex) -> complex:
+    """Evaluate a term of ``parse_complex``; raises ``ArithmeticError``/``ValueError`` where it is undefined."""
+    return complex(_evaluate_complex(expression.tree.body, {expression.variable: complex(z), IMAGINARY_UNIT: 1j}))
+
+
+def _evaluate_complex(node: ast.AST, names: dict[str, complex]) -> complex:
+    if isinstance(node, ast.Constant):
+        return complex(node.value)
+    if isinstance(node, ast.Name):
+        if node.id in CONSTANTS:
+            return complex(CONSTANTS[node.id][1])
+        return names.get(node.id, 0j)
+    if isinstance(node, ast.UnaryOp):
+        value = _evaluate_complex(node.operand, names)
+        return -value if isinstance(node.op, ast.USub) else value
+    if isinstance(node, ast.BinOp):
+        left, right = _evaluate_complex(node.left, names), _evaluate_complex(node.right, names)
+        if isinstance(node.op, ast.Add):
+            return left + right
+        if isinstance(node.op, ast.Sub):
+            return left - right
+        if isinstance(node.op, ast.Mult):
+            return left * right
+        if isinstance(node.op, ast.Div):
+            return left / right
+        if left == 0 and right.real <= 0:
+            raise ZeroDivisionError("0 to a negative power")
+        return left**right
+    if isinstance(node, ast.Call):
+        assert isinstance(node.func, ast.Name)
+        return complex(COMPLEX_FUNCTIONS[node.func.id](_evaluate_complex(node.args[0], names)))
     raise ExpressionError("not_allowed", type(node).__name__)
 
 

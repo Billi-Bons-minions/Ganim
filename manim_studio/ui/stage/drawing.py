@@ -34,12 +34,14 @@ from manim_studio.model.geometry import (
     AXES_TIP_LENGTH,
     AXIS_NUMBER_BUFF,
     AXIS_NUMBER_SIZE,
+    PLANE_NUMBER_BUFF,
     AxesLayout,
     axes_layout,
     axis_number_text,
     origin_shift,
     param_float,
     plane_line_values,
+    plane_numbers,
     polar_grid,
     tick_values,
 )
@@ -465,11 +467,22 @@ def _number_plane_primitives(obj: SceneObject, state: ObjectState) -> list[Primi
     axis_pen = _pen("#FFFFFF", 2.0, 1.0, state.scale)
     frame = QPainterPath()
     frame.addRect(QRectF(_local_pt(layout, layout.x_min, layout.y_max), _local_pt(layout, layout.x_max, layout.y_min)))
-    return [
+    primitives = [
         Primitive(path=frame),
         Primitive(path=grid, pen=grid_pen),
         Primitive(path=_axis_lines(layout), pen=axis_pen),
     ]
+    numbers = QPainterPath()
+    for text, xv, yv, decimal in plane_numbers(obj):
+        # next_to(point, DR, buff=SMALL_BUFF): the upper left corner of the number
+        path = decimal_number_path(text)[0] if decimal else text_path(text, text_font(SceneObject(id="", kind=ObjectKind.TEXT, name=""), AXIS_NUMBER_SIZE))
+        bounds = path.boundingRect()
+        anchor = _local_pt(layout, xv, yv)
+        path.translate(anchor.x() + PLANE_NUMBER_BUFF * PX - bounds.left(), anchor.y() + PLANE_NUMBER_BUFF * PX - bounds.top())
+        numbers.addPath(path)
+    if not numbers.isEmpty():
+        primitives.append(Primitive(path=numbers, brush=QBrush(QColor("#FFFFFF"))))
+    return primitives
 
 
 # --- images ----------------------------------------------------------------------------
@@ -653,6 +666,13 @@ def build_drawing(scene: Scene, shape: SceneObject, state: ObjectState, resource
             _translate(primitive, -center.x(), -center.y())
         bounds.translate(-center.x(), -center.y())
         offset = QPointF(center)
+    if state.warps:
+        from manim_studio.ui.stage.warping import warp_primitives
+
+        primitives = warp_primitives(primitives, state)
+        bounds = QRectF()
+        for primitive in primitives:
+            bounds = bounds.united(_primitive_rect(primitive))
     if bounds.width() < 4 or bounds.height() < 4:
         bounds = bounds.adjusted(-4, -4, 4, 4)
     return Drawing(primitives=primitives, bounds=bounds, hit_path=_hit_path(primitives, bounds, shape.kind), offset=offset)

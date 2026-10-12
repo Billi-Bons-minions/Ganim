@@ -215,6 +215,17 @@ def simple_animation_code(anim: Animation, scene: Scene, names: dict[str, str], 
         # a linear map of the whole plane, around the origin (like 3Blue1Brown's grids)
         m11, m12, m21, m22 = (fmt_float(float(anim.params.get(key, default))) for key, default in (("m11", 1.0), ("m12", 0.0), ("m21", 0.0), ("m22", 1.0)))
         return f"ApplyMatrix({', '.join([f'[[{m11}, {m12}], [{m21}, {m22}]]', variable] + timing.args())})"
+    if anim.kind == AnimationKind.APPLY_COMPLEX:
+        # every point z moves to f(z), along an arc of angle arg f(1) (Manim's ApplyComplexFunction)
+        from manim_studio.model.expression import IMAGINARY_UNIT, parse_complex
+
+        code = parse_complex(str(anim.params.get("function", "z^2"))).to_numpy({IMAGINARY_UNIT: "1j"}, pad_variable=False)
+        return f"ApplyComplexFunction({', '.join([f'lambda z: {STUDIO_MAP_COMPLEX}(lambda z: {code}, z)', variable] + timing.args())})"
+    if anim.kind == AnimationKind.APPLY_POINTWISE:
+        from manim_studio.model.expression import parse_expression
+
+        x_code, y_code = (parse_expression(str(anim.params.get(key, default)), "x", ("y",)).to_numpy(pad_variable=False) for key, default in (("x_function", "x"), ("y_function", "y")))
+        return f"ApplyPointwiseFunction({', '.join([f'lambda p: {STUDIO_MAP_POINT}(lambda x, y: ({x_code}, {y_code}), p)', variable] + timing.args())})"
     if anim.kind == AnimationKind.TYPE_WITH_CURSOR:
         cursor = f"Rectangle(height={variable}.height * 1.1, width=0.06, fill_opacity=1, stroke_width=0, color={variable}.get_color()).move_to({variable}[0])"
         return f"TypeWithCursor({', '.join([variable, cursor, 'leave_cursor_on=False'] + timing.args())})"
@@ -541,6 +552,8 @@ def step_code(
             lines.append(f"self.wait({fmt_float(max(anim.delay + anim.run_time for anim in starts))})")
     if step.kind == StepKind.PLAY:
         lines += _arrow_fixes(step, scene, names, helpers)
+    if helpers is not None and any(f"{name}(" in line for line in lines for name in (STUDIO_MAP_POINT, STUDIO_MAP_COMPLEX)):
+        helpers.add(STUDIO_MAP)
     if reused:
         lines[1:1] = [f"self.remove({names[object_id][: -len('.copy()')]})" for object_id in reused]
     return lines
@@ -613,6 +626,45 @@ def _step_lines(
         lines += block
     return lines + [")"]
 
+
+STUDIO_MAP = "studio_map_point"
+STUDIO_MAP_POINT = "studio_map_point"
+STUDIO_MAP_COMPLEX = "studio_map_complex"
+STUDIO_PREPARE_MAP = "studio_prepare_map"
+#: Nonlinear maps; ``model/warps.py`` (stage) treats undefined and far points the same way.
+STUDIO_MAP_SOURCE = '''def studio_map_point(function, point):
+    """Image of a point under a map of the plane; where the map is undefined the point stays."""
+    with np.errstate(all="ignore"):
+        try:
+            x, y = (float(value) for value in function(point[0], point[1]))
+        except (ArithmeticError, ValueError, TypeError):
+            return np.array(point, dtype=float)
+    if not (np.isfinite(x) and np.isfinite(y)):
+        return np.array(point, dtype=float)
+    length = np.hypot(x, y)
+    if length > 1000.0:
+        x, y = x / length * 1000.0, y / length * 1000.0
+    return np.array([x, y, point[2]], dtype=float)
+
+
+def studio_map_complex(function, z):
+    """Image of a complex number, with the safety of studio_map_point."""
+
+    def pair(x, y):
+        w = complex(function(complex(x, y)))
+        return w.real, w.imag
+
+    point = studio_map_point(pair, [z.real, z.imag, 0.0])
+    return complex(point[0], point[1])
+
+
+def studio_prepare_map(mobject, curves=50):
+    """Split the outlines into many short curves, so that a nonlinear map bends them smoothly."""
+    for part in mobject.family_members_with_points():
+        missing = curves - part.get_num_curves()
+        if missing > 0:
+            part.insert_n_curves(missing)
+    return mobject'''
 
 STUDIO_SHAPE = "studio_shape"
 STUDIO_SHAPE_SOURCE = '''def studio_shape(mobject):

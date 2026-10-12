@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable
 
+from manim_studio.codegen.animations import STUDIO_MAP, STUDIO_PREPARE_MAP
 from manim_studio.codegen.data_code import bar_chart_code, bar_label_lines, data_plot_code
 from manim_studio.codegen.errors import CodegenError
 from manim_studio.codegen.formatting import assign, call
@@ -188,7 +189,37 @@ def _grid_style(obj: SceneObject, opacity: float | None = None) -> str:
 def _number_plane(obj: SceneObject) -> list[str]:
     # with a polar grid the square lines are hidden; the circles and rays come from polar_grid_line()
     opacity = 0.0 if polar_grid(obj) is not None else None
-    return call("NumberPlane", [], _axis_ranges(obj) + [("background_line_style", _grid_style(obj, opacity))], 2)
+    numbers = obj.params.get("numbers", "none")
+    kwargs = _axis_ranges(obj) + [("background_line_style", _grid_style(obj, opacity))]
+    if numbers in ("real", "complex"):
+        kwargs.append(("axis_config", '{"label_constructor": Text}'))  # numbers without LaTeX
+    return call("ComplexPlane" if numbers == "complex" else "NumberPlane", [], kwargs, 2)
+
+
+STUDIO_COMPLEX_LABELS = "studio_complex_labels"
+STUDIO_COMPLEX_LABELS_SOURCE = '''def studio_complex_labels(plane, font_size=24):
+    """The imaginary numbers of a complex plane (i, 2i, -i …), written with Text instead of LaTeX."""
+    axis = plane.get_y_axis()
+    places = axis.decimal_number_config.get("num_decimal_places", 0)
+    labels = VGroup()
+    for value in axis.get_tick_range():
+        if abs(value) < 1e-9:
+            continue
+        number = f"{abs(value):,.{places}f}"
+        text = ("-" if value < 0 else "") + ("i" if number == "1" else number + "i")
+        labels.add(Text(text, font_size=font_size).next_to(plane.n2p(complex(0, value)), DR, buff=SMALL_BUFF))
+    return labels'''
+
+
+def plane_number_lines(obj: SceneObject, variable: str, helpers: set[str]) -> list[str]:
+    """The numbers of a number plane (added after placing it, so they do not shift it)."""
+    numbers = obj.params.get("numbers", "none")
+    if numbers == "real":
+        return [f"{variable}.add_coordinates()"]
+    if numbers == "complex":
+        helpers.add(STUDIO_COMPLEX_LABELS)
+        return [f"{variable}.add_coordinates(*{variable}.get_x_axis().get_tick_range())", f"{variable}.add({STUDIO_COMPLEX_LABELS}({variable}))"]
+    return []
 
 
 def polar_grid_line(obj: SceneObject, variable: str) -> list[str]:
@@ -407,6 +438,7 @@ def object_code(
             lines += axis_label_lines(obj, variable)
         if obj.kind == ObjectKind.NUMBER_PLANE:
             lines += polar_grid_line(obj, variable)
+            lines += plane_number_lines(obj, variable, helpers)
         parameter = scene.object_by_id(obj.params.get("parameter_id")) if obj.kind == ObjectKind.DECIMAL_NUMBER else None
         from manim_studio.model.latex_term import result_term
 
@@ -432,6 +464,12 @@ def object_code(
         if isinstance(error, CodegenError):
             raise
         raise CodegenError("value_invalid", f"{obj.name}: {error}") from None
+    from manim_studio.model.warps import warped_objects
+
+    if obj.id in warped_objects(scene):
+        # many short curves, so that the nonlinear map later bends the outlines smoothly
+        helpers.add(STUDIO_MAP)
+        lines.append(f"{STUDIO_PREPARE_MAP}({variable})")
     if is_3d(scene) and obj.kind not in UNADDED_KINDS and obj.kind not in THREE_D_KINDS:
         lines.append(f"self.renderer.camera.add_fixed_in_frame_mobjects({variable})")
     if obj.kind == ObjectKind.HIGHLIGHT and obj.params.get("style") == "background":

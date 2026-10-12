@@ -31,6 +31,10 @@ HELPER_FUNCTIONS = frozenset(
         "studio_camera_frame",
         "studio_angle",
         "studio_union",
+        "studio_map_point",
+        "studio_map_complex",
+        "studio_prepare_map",
+        "studio_complex_labels",
     }
 )
 

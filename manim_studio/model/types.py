@@ -108,6 +108,8 @@ class AnimationKind(str, Enum):
     ONE_BY_ONE = "one_by_one"
     NETWORK_PARTS = "network_parts"
     APPLY_MATRIX = "apply_matrix"
+    APPLY_COMPLEX = "apply_complex"
+    APPLY_POINTWISE = "apply_pointwise"
 
 
 class StepKind(str, Enum):

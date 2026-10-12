@@ -27,6 +27,7 @@ from manim_studio.model.types import (
     FUNCTION_CURVES,
     GRAPH_TOOL_KINDS,
     LATEX_KINDS,
+    MOTION_ANIMATIONS,
     RATE_FUNCTIONS,
     REFERENCE_PARAMS,
     TRANSFORM_ANIMATIONS,
@@ -388,9 +389,43 @@ def _animation_issues(scene: Scene, step_index: int, anim: Animation) -> list[Is
             add(ERROR, "network_parts_unknown", ", ".join(unknown), target.id)
         elif not parts:
             add(ERROR, "network_parts_empty", object_id=target.id)
+    if anim.kind in (AnimationKind.APPLY_COMPLEX, AnimationKind.APPLY_POINTWISE):
+        from manim_studio.model.warps import warp_error, warp_of
+
+        kind, terms, _progress = warp_of(anim)
+        error = warp_error(kind, terms)
+        if error is not None:
+            add(ERROR, "expression_invalid", error.code + (f": {error.detail}" if error.detail else ""), target.id)
+        if target.kind == ObjectKind.FUNCTION_GRAPH and graphs.parameter_users(scene, target):
+            add(ERROR, "warp_redrawn", object_id=target.id)
     color = anim.params.get("color")
     if color is not None and not is_hex_color(color):
         add(ERROR, "color_invalid", str(color))
+    return issues
+
+
+#: Animations that move or reshape an object as a whole; after a nonlinear map they are refused.
+_AFTER_WARP = frozenset({AnimationKind.MOVE, AnimationKind.SCALE, AnimationKind.ROTATE, AnimationKind.APPLY_MATRIX}) | MOTION_ANIMATIONS | TRANSFORM_ANIMATIONS
+
+
+def _warp_order_issues(scene: Scene) -> list[Issue]:
+    """After a nonlinear map an object keeps its new shape where it is: moving, turning or transforming it is refused."""
+    from manim_studio.model import groups
+
+    issues: list[Issue] = []
+    warped: set[str] = set()
+    for index, step in enumerate(scene.steps):
+        if step.kind != StepKind.PLAY:
+            continue
+        for anim in step.animations:
+            obj = scene.object_by_id(anim.target_id)
+            leaves = set(groups.leaves(scene, anim.target_id)) if groups.is_group(obj) else {anim.target_id}
+            if anim.kind in _AFTER_WARP and leaves & warped:
+                issues.append(Issue(ERROR, "warp_then_move", scene.id, anim.target_id, index, anim.id))
+        for anim in step.animations:
+            if anim.kind in (AnimationKind.APPLY_COMPLEX, AnimationKind.APPLY_POINTWISE):
+                obj = scene.object_by_id(anim.target_id)
+                warped |= set(groups.leaves(scene, anim.target_id)) if groups.is_group(obj) else {anim.target_id}
     return issues
 
 
@@ -465,6 +500,7 @@ def validate_scene(
     for index, step in enumerate(scene.steps):
         issues.extend(_step_issues(scene, index, step))
     issues.extend(_hidden_object_issues(scene))
+    issues.extend(_warp_order_issues(scene))
     return sorted(issues, key=lambda issue: issue.severity != ERROR)
 
 

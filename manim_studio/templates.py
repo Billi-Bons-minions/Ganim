@@ -328,6 +328,28 @@ def moving_tangent() -> Scene:
     return scene
 
 
+def complex_map() -> Scene:
+    """3Blue1Brown style: the complex plane is bent by w = z²; a faint plane with numbers stays behind it."""
+    scene = create_scene(tr("template.complex_map.name"))
+    ranges = {"x_min": -4.0, "x_max": 4.0, "x_length": 8.0, "y_min": -3.0, "y_max": 3.0, "y_length": 6.0}
+    background = _add(scene, create_object(ObjectKind.NUMBER_PLANE, tr("kind.number_plane") + " 1", 0.0, 0.0, numbers="complex", **ranges))
+    background.stroke_opacity = 0.35
+    plane = _add(scene, create_object(ObjectKind.NUMBER_PLANE, tr("kind.number_plane") + " 2", 0.0, 0.0, **ranges))
+    plane.stroke_color = "#F7D96F"
+    circle = _add(scene, create_object(ObjectKind.CIRCLE, tr("kind.circle") + " 1", 1.0, 1.0, radius=0.5))
+    circle.stroke_color = "#FC6255"
+    # a text instead of LaTeX, so that the template also works without LaTeX
+    title = _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " 1", -4.9, 3.3, text="w = z²", font_size=40.0))
+    title.z_index = 1
+    backdrop = _add(scene, create_object(ObjectKind.HIGHLIGHT, tr("kind.highlight") + " 1", target=title.id, style="background", opacity=0.85))
+    _play(scene, create_animation(AnimationKind.CREATE, background.id, run_time=1.0))
+    _play(scene, create_animation(AnimationKind.CREATE, plane.id, run_time=1.5), create_animation(AnimationKind.CREATE, circle.id))
+    _play(scene, create_animation(AnimationKind.FADE_IN, backdrop.id), create_animation(AnimationKind.WRITE, title.id))
+    _play(scene, *(create_animation(AnimationKind.APPLY_COMPLEX, target.id, run_time=3.0, function="z^2") for target in (plane, circle)))
+    scene.steps.append(create_wait_step(1.5))
+    return scene
+
+
 def venn_diagram() -> Scene:
     """Two sets: their intersection follows a moving circle, then A without B."""
     scene = create_scene(tr("template.venn.name"))
@@ -373,4 +395,5 @@ BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("secant", "graph", secant_to_tangent),
     BuiltinTemplate("tangent", "graph", moving_tangent),
     BuiltinTemplate("venn", "a_fade_in", venn_diagram),
+    BuiltinTemplate("complex_map", "a_apply_complex", complex_map),
 )

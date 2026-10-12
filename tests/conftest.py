@@ -21,7 +21,7 @@ def qapp():
 @pytest.fixture()
 def window(tmp_path, qapp):
     """The main window with fresh settings and data folder (offscreen)."""
-    from PySide6.QtCore import QSettings, QThreadPool
+    from PySide6.QtCore import QEvent, QSettings, QThreadPool
 
     from manim_studio.i18n import set_language
     from manim_studio.ui.context import AppContext
@@ -43,4 +43,9 @@ def window(tmp_path, qapp):
     main.document.undo_stack.setClean()
     main.close()
     QThreadPool.globalInstance().waitForDone(60_000)
+    app.processEvents()
+    # Delete the window for real; closed windows would otherwise pile up and every new
+    # style sheet would be applied to all of them (each test got slower than the last).
+    main.deleteLater()
+    app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
     app.processEvents()

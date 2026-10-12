@@ -20,7 +20,7 @@ from manim_studio.model.factory import (
     unique_name,
 )
 from manim_studio.model.schema import kind_info
-from manim_studio.model.types import StepKind
+from manim_studio.model.types import CURVE_DERIVATIVE, GRAPH_TOOL_KINDS, ObjectKind, StepKind
 
 _OBJECT_FIELDS = {f.name for f in fields(SceneObject)} - {"id", "kind", "params"}
 _ANIMATION_FIELDS = {"run_time", "rate_func", "target_id", "kind"}
@@ -76,19 +76,42 @@ def add_object(scene: Scene, obj: SceneObject, index: int | None = None) -> str:
 REFERENCE_PARAMS = OBJECT_REFERENCE_KEYS
 
 
-def _expand_for_delete(scene: Scene, object_ids: Iterable[str]) -> set[str]:
+def expand_for_delete(scene: Scene, object_ids: Iterable[str]) -> set[str]:
     ids: set[str] = set()
     for object_id in object_ids:
         ids.add(object_id)
         obj = scene.object_by_id(object_id)
         if obj is not None and obj.kind.value == "group":
-            ids |= _expand_for_delete(scene, obj.params.get("members", []))
+            ids |= expand_for_delete(scene, obj.params.get("members", []))
     return ids
 
 
+def dependent_objects(scene: Scene, object_ids: Iterable[str]) -> set[str]:
+    """Objects that cannot exist without the given ones (a tangent without its graph ...)."""
+    removed = set(object_ids)
+    found: set[str] = set()
+    changed = True
+    while changed:
+        changed = False
+        for obj in scene.objects:
+            if obj.id in removed or obj.id in found:
+                continue
+            params = obj.params
+            needs = (
+                (obj.kind in GRAPH_TOOL_KINDS and params.get("graph_id"))
+                or (obj.kind in (ObjectKind.DATA_PLOT, ObjectKind.SURFACE, ObjectKind.CURVE_3D) and params.get("axes_id"))
+                or (obj.kind == ObjectKind.FUNCTION_GRAPH and params.get("curve") == CURVE_DERIVATIVE and params.get("derive_from"))
+            )
+            if needs and needs in removed | found:
+                found.add(obj.id)
+                changed = True
+    return found
+
+
 def remove_objects(scene: Scene, object_ids: Iterable[str]) -> None:
-    """Delete objects (groups with their members) and everything referring to them."""
-    ids = _expand_for_delete(scene, object_ids)
+    """Delete objects (groups with their members), their dependents and every reference to them."""
+    ids = expand_for_delete(scene, object_ids)
+    ids |= dependent_objects(scene, ids)
     scene.objects = [obj for obj in scene.objects if obj.id not in ids]
     for obj in scene.objects:
         for key in REFERENCE_PARAMS:

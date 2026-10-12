@@ -1122,4 +1122,11 @@ STRINGS: dict[str, str] = {
     "install.failed": "Die Installation ist fehlgeschlagen (Code {code}). Details siehe Protokoll.",
     "export.format.webm": "Video (WebM, klein, mit Transparenz)",
     "export.format.mov": "Video (MOV, mit Transparenz)",
+    "lock.not_animatable": "„{name}“ lässt sich in Schritt {step} so nicht animieren. Ändere es am Start oder wähle eine passende Animation.",
+    "status.hosts_added": "„{name}“ braucht {hosts} – automatisch mit eingefügt.",
+    "status.dependents_deleted": "Mit gelöscht, weil sie davon abhingen: {names}",
+    "status.own_step_for_conflict": "Diese Animationen kann Manim nicht gleichzeitig am selben Objekt abspielen – die neue steht deshalb im eigenen Schritt {step}.",
+    "issue.animation_conflict": "„{name}“ hat in diesem Schritt mehrere Animationen, die Manim nicht gleichzeitig abspielen kann. Verteile sie auf mehrere Schritte oder stelle den Schritt auf „nacheinander“.",
+    "codegen.animation_conflict": "„{detail}“ hat in einem Schritt mehrere Animationen, die Manim nicht gleichzeitig abspielen kann. Verteile sie auf mehrere Schritte.",
+    "lock.animation_conflict": "„{name}“ hat in Schritt {step} schon eine Animation, die sich nicht mit einer Bewegung kombinieren lässt. Nimm dafür einen neuen Schritt (+ Schritt).",
 }

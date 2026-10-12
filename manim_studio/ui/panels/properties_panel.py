@@ -311,8 +311,9 @@ class PropertiesPanel(QScrollArea):
             step = scene.step_by_id(entity_id)
             if step:
                 return ("step", scene.id, entity_id, step.kind)
-        if kind == INSPECT_OBJECTS and self.editor.selected_objects:
-            ids = tuple(self.editor.selected_objects)
+        # the selection may still name deleted objects until the editor sanitizes it
+        ids = tuple(object_id for object_id in self.editor.selected_objects if scene.object_by_id(object_id))
+        if kind == INSPECT_OBJECTS and ids:
             if len(ids) == 1:
                 obj = scene.object_by_id(ids[0])
                 if obj:

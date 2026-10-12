@@ -393,3 +393,27 @@ def test_video_formats_and_transparency(tmp_path, output_format, transparent, ex
         # VP9 keeps alpha in a side channel that is announced by the alpha_mode tag
         has_alpha = "a" in stream.codec_context.pix_fmt.replace("yuv", "") or stream.metadata.get("alpha_mode") == "1"
     assert has_alpha == transparent
+
+
+def test_fuzzing_regressions_render(tmp_path) -> None:
+    """Arrow turned into a group, path along a dashed line, group with a parameter."""
+    arrow = make_object(ObjectKind.ARROW, "Pfeil", "a1", -2.0, 1.0)
+    bars = make_object(ObjectKind.BAR_CHART, "Balken", "b1", 2.0, 0.0)
+    dashed = make_object(ObjectKind.DASHED_LINE, "Strich", "d1", 0.0, -2.0)
+    dot = make_object(ObjectKind.DOT, "Punkt", "p1", -1.5, -2.0)
+    parameter = make_object(ObjectKind.PARAMETER, "a", "k1", symbol="a")
+    group = make_object(ObjectKind.GROUP, "Gruppe", "g1", members=["p1", "k1", "d1"])
+    scene = Scene(
+        id="s",
+        name="Regression",
+        objects=[arrow, bars, dashed, dot, parameter, group],
+        steps=[
+            play(make_animation(AnimationKind.TRANSFORM, "a1", target="b1")),
+            play(make_animation(AnimationKind.FADE_OUT, "a1"), make_animation(AnimationKind.MOVE_ALONG_PATH, "p1", path="d1")),
+            play(make_animation(AnimationKind.SCALE, "g1", factor=0.5)),
+        ],
+    )
+    script = generate_script(make_project(scene))
+    assert "studio_shape(pfeil)" in script and "Line(strich.get_start(), strich.get_end())" in script
+    result = run_manim(tmp_path, script, "Regression", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]

@@ -1122,4 +1122,11 @@ STRINGS: dict[str, str] = {
     "install.failed": "The installation failed (code {code}). See the log for details.",
     "export.format.webm": "Video (WebM, small, supports transparency)",
     "export.format.mov": "Video (MOV, supports transparency)",
+    "lock.not_animatable": "“{name}” cannot be animated like this in step {step}. Change it at the start or choose a suitable animation.",
+    "status.hosts_added": "“{name}” needs {hosts} – added automatically.",
+    "status.dependents_deleted": "Also deleted because they depended on it: {names}",
+    "status.own_step_for_conflict": "Manim cannot play these animations on the same object at once – the new one got its own step {step}.",
+    "issue.animation_conflict": "“{name}” has several animations in this step that Manim cannot play at the same time. Split them into several steps or set the step to “one after another”.",
+    "codegen.animation_conflict": "“{detail}” has several animations in one step that Manim cannot play at the same time. Split them into several steps.",
+    "lock.animation_conflict": "“{name}” already has an animation in step {step} that cannot be combined with a movement. Use a new step (+ Step) for it.",
 }

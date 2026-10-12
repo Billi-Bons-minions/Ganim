@@ -33,7 +33,7 @@ from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.latex import colored_parts, colorize
 from manim_studio.model.schema import is_vector_image_path
 from manim_studio.model.three_d import THREE_D_KINDS, is_3d
-from manim_studio.model.types import GRAPH_TOOL_KINDS, INVISIBLE_KINDS, UNADDED_KINDS, ObjectKind
+from manim_studio.model.types import GRAPH_TOOL_KINDS, INVISIBLE_KINDS, UNADDED_KINDS, UNGROUPABLE, ObjectKind
 
 Kwargs = list[tuple[str, str]]
 
@@ -228,7 +228,8 @@ def _special_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> tupl
     """Code for objects that depend on others; returns ``(lines, needs_placement)``."""
     variable = names[obj.id]
     if obj.kind == ObjectKind.GROUP:
-        member_ids = [m for m in obj.params.get("members", []) if m in names]
+        # parameters (ValueTrackers) and the camera are not mobjects and cannot be grouped
+        member_ids = [m for m in obj.params.get("members", []) if m in names and (member := scene.object_by_id(m)) is not None and member.kind not in UNGROUPABLE]
         if not member_ids:
             raise CodegenError("group_empty", obj.name)
         return group_code(variable, [names[m] for m in member_ids]), False

@@ -10,7 +10,7 @@ from pathlib import Path
 from manim_studio.model import graphs, groups
 from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.data import bar_values, data_points
-from manim_studio.model.entities import STEP_TOGETHER, Animation, Scene, SceneObject, Step
+from manim_studio.model.entities import STEP_LAGGED, STEP_TOGETHER, Animation, Scene, SceneObject, Step
 from manim_studio.model.expression import check_expression, is_valid_name
 from manim_studio.model.paths import local_outline
 from manim_studio.model.schema import animation_allowed
@@ -23,13 +23,15 @@ from manim_studio.model.types import (
     FUNCTION_CURVES,
     GRAPH_TOOL_KINDS,
     LATEX_KINDS,
-    MODIFIER_ANIMATIONS,
     RATE_FUNCTIONS,
     REFERENCE_PARAMS,
     TRANSFORM_ANIMATIONS,
+    UNGROUPABLE,
     AnimationKind,
     ObjectKind,
     StepKind,
+    simultaneous_conflicts,
+    transform_conflicts,
 )
 
 ERROR = "error"
@@ -82,7 +84,8 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
     if obj.kind in (ObjectKind.TABLE, ObjectKind.MATRIX) and not any(params.get("rows", [])):
         add(ERROR, "table_empty")
     if obj.kind == ObjectKind.GROUP:
-        if not groups.members(scene, obj.id):
+        drawable = [m for m in groups.members(scene, obj.id) if (member := scene.object_by_id(m)) is not None and member.kind not in UNGROUPABLE]
+        if not drawable:
             add(ERROR, "group_empty")
         elif obj.id in groups.ancestors(scene, obj.id):
             add(ERROR, "group_cycle")
@@ -279,11 +282,10 @@ def _step_issues(scene: Scene, index: int, step: Step) -> list[Issue]:
     issues: list[Issue] = []
     for anim in step.animations:
         issues.extend(_animation_issues(scene, index, anim))
-    if step.mode == STEP_TOGETHER:
-        transformed = {anim.target_id for anim in step.animations if anim.kind in TRANSFORM_ANIMATIONS}
-        moved = {anim.target_id for anim in step.animations if anim.kind in MODIFIER_ANIMATIONS}
-        for target_id in sorted(transformed & moved):
-            issues.append(Issue(ERROR, "transform_conflict", scene.id, target_id, index))
+    if step.mode in (STEP_TOGETHER, STEP_LAGGED):
+        transformed = transform_conflicts(step.animations)
+        for target_id in sorted(simultaneous_conflicts(step.animations)):
+            issues.append(Issue(ERROR, "transform_conflict" if target_id in transformed else "animation_conflict", scene.id, target_id, index))
     return issues
 
 

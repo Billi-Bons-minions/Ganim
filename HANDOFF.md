@@ -45,6 +45,11 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
 
 ### Änderungen der Nacht vom 12.10. (neueste unten)
 - Export: Transparenz funktionierte mit Manim 0.22 nicht (MP4 hat keinen Alphakanal). Jetzt wird automatisch MOV erzeugt. Neue Formate: WebM und MOV, beide mit Transparenz.
+- Robustheit (gefunden per Fuzzing: zufällige Bearbeitungen über den echten Controller plus Manim-Dry-Run der erzeugten Skripte):
+  - Neue Regel „gleichzeitig spielbar“ (`types.simultaneous_conflicts`), gemeinsam für Validierung, Codegen und Controller. Konflikte landen beim Hinzufügen automatisch in einem neuen Schritt.
+  - Abhängige Objekte (Tangente, Fläche, Datenpunkte, 3D-Fläche, Ableitung) bringen fehlende Achsen bzw. Graphen beim Einfügen mit und werden mit ihrem Host gelöscht.
+  - Manim-Abstürze behoben: Pfeil nach Verwandlung in eine Gruppe (`studio_shape`), Pfad entlang gestrichelter Linie, Gruppe mit Parameter, Inspektor bei veralteter Auswahl.
+  - Aufnahme lehnt unpassende Animationen ab (z. B. Bewegen eines Parameters).
 
 ### Halbfertig
 - (nichts)

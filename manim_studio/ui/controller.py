@@ -12,10 +12,10 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog, QWidget
 from manim_studio.i18n import tr
 from manim_studio.model import graphs, groups
 from manim_studio.model import operations as ops
-from manim_studio.model.animation_builder import allowed_for_objects, build_animations
+from manim_studio.model.animation_builder import allowed_for_objects, build_animations, reference_candidates
 from manim_studio.model.arrange import arrange_deltas, move_layer
 from manim_studio.model.assets import relative_asset_path
-from manim_studio.model.entities import Scene
+from manim_studio.model.entities import STEP_SEQUENCE, Scene
 from manim_studio.model.factory import (
     clone_scene,
     create_animation,
@@ -47,7 +47,7 @@ from manim_studio.model.stage_edits import (
     would_create,
 )
 from manim_studio.model.state import START, states_after
-from manim_studio.model.types import GRAPH_TOOL_KINDS, REFERENCE_PARAMS, UNADDED_KINDS, AnimationKind, ObjectKind, StepKind
+from manim_studio.model.types import GRAPH_TOOL_KINDS, REFERENCE_PARAMS, UNADDED_KINDS, UNGROUPABLE, AnimationKind, ObjectKind, StepKind, simultaneous_conflicts
 from manim_studio.ui.document import ProjectDocument
 from manim_studio.ui.editor_state import INSPECT_ANIMATION, INSPECT_STEP, EditorState
 from manim_studio.ui.settings import AppSettings
@@ -142,9 +142,37 @@ class EditorController(QObject):
         for key, value in (attributes or {}).items():
             setattr(obj, key, value)
         self._attach(obj)
-        self._edit(tr("undo.add_object", name=name), lambda s: ops.add_object(s, obj))
+        hosts = self._missing_hosts(obj, names)
+
+        def mutate(s: Scene) -> None:
+            for host in hosts:
+                ops.add_object(s, host)
+            ops.add_object(s, obj)
+
+        self._edit(tr("undo.add_object", name=name), mutate)
+        if hosts:
+            self.statusMessage.emit(tr("status.hosts_added", name=name, hosts=", ".join(host.name for host in hosts)))
         self.editor.select_objects([obj.id])
         return obj.id
+
+    def _missing_hosts(self, obj, names: list[str]) -> list:
+        """Create the axes / graph a new object needs but the scene does not have yet."""
+        hosts = []
+
+        def new(kind: ObjectKind, **params):
+            host = create_object(kind, unique_name(names + [h.name for h in hosts], tr(f"kind.{kind.value}")), obj.x, obj.y, **params)
+            hosts.append(host)
+            return host
+
+        if obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D) and not obj.params.get("axes_id"):
+            obj.params["axes_id"] = new(ObjectKind.AXES_3D).id
+        elif obj.kind == ObjectKind.DATA_PLOT and not obj.params.get("axes_id"):
+            obj.params["axes_id"] = new(ObjectKind.AXES, show_numbers=True).id
+        elif obj.kind in GRAPH_TOOL_KINDS and not obj.params.get("graph_id"):
+            axes = [o for o in self.scene().objects if o.kind in (ObjectKind.AXES, ObjectKind.NUMBER_PLANE)]
+            axes_id = axes[-1].id if axes else new(ObjectKind.AXES).id
+            obj.params["graph_id"] = new(ObjectKind.FUNCTION_GRAPH, axes_id=axes_id).id
+        return hosts
 
     def _free_symbol(self) -> str:
         used = set(graphs.parameter_symbols(self.scene())) | {graphs.parameter_symbol(o) for o in graphs.parameter_objects(self.scene())}
@@ -209,7 +237,11 @@ class EditorController(QObject):
         ids = list(ids if ids is not None else self.editor.selected_objects)
         if not ids:
             return
-        self._edit(tr("undo.delete_objects", count=len(ids)), lambda s: ops.remove_objects(s, ids))
+        dependents = ops.dependent_objects(self.scene(), ops.expand_for_delete(self.scene(), ids))
+        names = ", ".join(sorted(self._object_name(object_id) for object_id in dependents))
+        self._edit(tr("undo.delete_objects", count=len(ids) + len(dependents)), lambda s: ops.remove_objects(s, ids))
+        if dependents:
+            self.statusMessage.emit(tr("status.dependents_deleted", names=names))
         self.editor.select_objects([])
 
     def duplicate_objects(self) -> None:
@@ -357,7 +389,8 @@ class EditorController(QObject):
 
     def group_selection(self) -> None:
         """Put the selected objects into a new group."""
-        ids = list(self.editor.selected_objects)
+        scene = self.scene()
+        ids = [i for i in self.editor.selected_objects if (obj := scene.object_by_id(i)) is not None and obj.kind not in UNGROUPABLE]
         if len(ids) < 2:
             self.statusMessage.emit(tr("status.group_needs_two"))
             return
@@ -608,6 +641,9 @@ class EditorController(QObject):
 
     def add_reference_animation(self, kind: AnimationKind, source_id: str, other_id: str, same_step: bool, inspect: bool = True) -> None:
         """Add a transform, a move along a path or a swap with a second object."""
+        if not allowed_for_objects(self.scene(), kind, [source_id]) or other_id not in {o.id for o in reference_candidates(self.scene(), kind, source_id)}:
+            self.statusMessage.emit(tr("status.animation_not_allowed"))
+            return
         animation = create_animation(kind, source_id, **{REFERENCE_PARAMS[kind]: other_id})
         self._insert_animations([animation], same_step and self.recording(), kind, inspect)
 
@@ -643,6 +679,12 @@ class EditorController(QObject):
     def _insert_animations(self, animations: list, use_current: bool, kind: AnimationKind, inspect: bool) -> None:
         cursor = self.editor.cursor
         label = tr(f"anim.{kind.value}")
+        if use_current:
+            step = self.scene().steps[cursor]
+            if step.mode != STEP_SEQUENCE and simultaneous_conflicts([*step.animations, *animations]) - simultaneous_conflicts(step.animations):
+                # e.g. transforming and moving one object, or creating it while it wiggles
+                use_current = False
+                self.statusMessage.emit(tr("status.own_step_for_conflict", step=cursor + 2))
         if use_current:
             step_id = self.scene().steps[cursor].id
 

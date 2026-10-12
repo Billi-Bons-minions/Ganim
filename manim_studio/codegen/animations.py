@@ -12,8 +12,9 @@ from manim_studio.codegen.literals import LiteralError, fmt_float, py_color, py_
 from manim_studio.codegen.three_d_code import orbit_call
 from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import STEP_LAGGED, STEP_SEQUENCE, Animation, Scene, Step
-from manim_studio.model.schema import animation_allowed
+from manim_studio.model.schema import ARROW_KINDS, animation_allowed
 from manim_studio.model.types import (
+    LINE_KINDS,
     MODIFIER_ANIMATIONS,
     RATE_FUNCTIONS,
     REFERENCE_PARAMS,
@@ -21,6 +22,8 @@ from manim_studio.model.types import (
     AnimationKind,
     ObjectKind,
     StepKind,
+    simultaneous_conflicts,
+    transform_conflicts,
 )
 
 #: Manim class for every animation that is generated as a plain call.
@@ -140,6 +143,10 @@ def _extra_arguments(anim: Animation, scene: Scene, names: dict[str, str]) -> li
         other = params.get(key)
         if other == anim.target_id or other not in names:
             raise CodegenError(f"{key}_missing", names.get(anim.target_id, ""))
+        path = scene.object_by_id(str(other))
+        if anim.kind == AnimationKind.MOVE_ALONG_PATH and path is not None and path.kind == ObjectKind.DASHED_LINE:
+            # a dashed line keeps its points in the dashes, so follow the line through its ends
+            return [f"Line({names[str(other)]}.get_start(), {names[str(other)]}.get_end())"]
         return [names[str(other)]]
     return []
 
@@ -269,18 +276,20 @@ def needs_combination(animations: list[Animation]) -> bool:
     """Return ``True`` if one object's animations must be merged into a StudioTransform."""
     modifiers = [anim for anim in animations if anim.kind in MODIFIER_ANIMATIONS]
     effects = [anim for anim in animations if anim.kind in COMBINABLE]
-    return bool(modifiers) and bool(effects)
+    return bool(effects) and (bool(modifiers) or len(effects) > 1)
 
 
-def _check_transform_conflicts(step: Step, names: dict[str, str]) -> None:
-    transformed = {anim.target_id for anim in step.animations if anim.kind in TRANSFORM_ANIMATIONS}
-    for anim in step.animations:
-        if anim.kind in MODIFIER_ANIMATIONS | set(COMBINABLE) and anim.target_id in transformed:
-            raise CodegenError("transform_conflict", names.get(anim.target_id, ""))
+def _check_conflicts(step: Step, names: dict[str, str]) -> None:
+    """Refuse animations of one object that Manim cannot play at the same time."""
+    conflicts = simultaneous_conflicts(step.animations)
+    if conflicts:
+        object_id = sorted(conflicts, key=lambda i: names.get(i, i))[0]
+        code = "transform_conflict" if object_id in transform_conflicts(step.animations) else "animation_conflict"
+        raise CodegenError(code, names.get(object_id, ""))
 
 
 def _together_codes(step: Step, scene: Scene, names: dict[str, str], helpers: set[str]) -> list[str]:
-    _check_transform_conflicts(step, names)
+    _check_conflicts(step, names)
     total = step.duration()
     by_target: dict[str, list[Animation]] = {}
     for anim in step.animations:
@@ -348,6 +357,8 @@ def step_animation_codes(step: Step, scene: Scene, names: dict[str, str], helper
     """Return the expressions passed to ``self.play`` for a play step."""
     helpers = helpers if helpers is not None else set()
     if step.mode in (STEP_LAGGED, STEP_SEQUENCE):
+        if step.mode == STEP_LAGGED:
+            _check_conflicts(step, names)
         codes = _ordered_codes(step, scene, names, helpers)
         if not codes:
             return []
@@ -395,10 +406,32 @@ def code_step_lines(step: Step, number: int) -> list[str]:
     return [header] + code.split("\n")
 
 
+def _arrow_fixes(step: Step, scene: Scene, names: dict[str, str], helpers: set[str] | None) -> list[str]:
+    """Arrows transformed into a shape without a line must not scale like arrows afterwards."""
+    lines = []
+    for anim in step.animations:
+        source = scene.object_by_id(anim.target_id)
+        target = scene.object_by_id(str(anim.params.get("target", "")))
+        if anim.kind == AnimationKind.TRANSFORM and source is not None and target is not None and source.kind in ARROW_KINDS and target.kind not in LINE_KINDS:
+            lines.append(f"{STUDIO_SHAPE}({names[source.id]})")
+            if helpers is not None:
+                helpers.add(STUDIO_SHAPE)
+    return lines
+
+
 def step_code(
     step: Step, number: int, scene: Scene, names: dict[str, str], helpers: set[str] | None = None, base_dir: str | Path | None = None
 ) -> list[str]:
     """Return the lines of one timeline step (comment + ``self.play``/``self.wait``)."""
+    lines = _step_lines(step, number, scene, names, helpers, base_dir)
+    if step.kind == StepKind.PLAY:
+        lines += _arrow_fixes(step, scene, names, helpers)
+    return lines
+
+
+def _step_lines(
+    step: Step, number: int, scene: Scene, names: dict[str, str], helpers: set[str] | None = None, base_dir: str | Path | None = None
+) -> list[str]:
     header = f"# Step {number}"
     extras = _step_extras(step, base_dir)
     subcaption = step.subcaption.strip()
@@ -436,6 +469,15 @@ def step_code(
         lines += block
     return lines + [")"]
 
+
+STUDIO_SHAPE = "studio_shape"
+STUDIO_SHAPE_SOURCE = '''def studio_shape(mobject):
+    """An arrow that was transformed into another shape has no line left.
+
+    From now on it scales like a normal shape (``Arrow.scale`` needs the line).
+    """
+    mobject.scale = VMobject.scale.__get__(mobject)
+    return mobject'''
 
 #: Source of the helper class, emitted once per script when needed.
 STUDIO_TRANSFORM_SOURCE = '''class StudioTransform(Animation):

@@ -143,6 +143,54 @@ MODIFIER_ANIMATIONS = frozenset(
     {AnimationKind.MOVE, AnimationKind.SCALE, AnimationKind.ROTATE, AnimationKind.CHANGE_COLOR}
 )
 
+#: Effects that can run together with movements of the same object (but not with a transform of it).
+COMBINABLE_EFFECTS = frozenset(
+    {
+        AnimationKind.CREATE,
+        AnimationKind.WRITE,
+        AnimationKind.DRAW_BORDER_THEN_FILL,
+        AnimationKind.UNCREATE,
+        AnimationKind.FADE_IN,
+        AnimationKind.FADE_OUT,
+        AnimationKind.GROW_FROM_CENTER,
+        AnimationKind.INDICATE,
+    }
+)
+
+
+#: Highlights that draw extra shapes but leave the object itself untouched.
+DETACHED_EFFECTS = frozenset({AnimationKind.FLASH, AnimationKind.CIRCUMSCRIBE, AnimationKind.FOCUS_ON})
+
+
+def _participants(animations) -> dict[str, list[AnimationKind]]:
+    by_object: dict[str, list[AnimationKind]] = {}
+    for anim in animations:
+        if anim.kind in DETACHED_EFFECTS or anim.kind == AnimationKind.ORBIT:
+            continue
+        by_object.setdefault(anim.target_id, []).append(anim.kind)
+        if anim.kind in TRANSFORM_ANIMATIONS and anim.params.get("target"):
+            by_object.setdefault(str(anim.params["target"]), []).append(anim.kind)
+        if anim.kind == AnimationKind.SWAP and anim.params.get("partner"):
+            by_object.setdefault(str(anim.params["partner"]), []).append(anim.kind)
+    return by_object
+
+
+def simultaneous_conflicts(animations) -> set[str]:
+    """Objects with animations that Manim cannot play at the same time.
+
+    Several animations of one object only work together if all of them are
+    movements/colors or visibility effects (they are merged into one animation).
+    """
+    combinable = MODIFIER_ANIMATIONS | COMBINABLE_EFFECTS
+    return {object_id for object_id, kinds in _participants(animations).items() if len(kinds) > 1 and not all(kind in combinable for kind in kinds)}
+
+
+def transform_conflicts(animations) -> set[str]:
+    """The conflicting objects that take part in a transform (reported with their own message)."""
+    by_object = _participants(animations)
+    return {object_id for object_id in simultaneous_conflicts(animations) if any(kind in TRANSFORM_ANIMATIONS for kind in by_object[object_id])}
+
+
 #: Animations that only draw attention and do not change the final state.
 EMPHASIS_ANIMATIONS = frozenset(
     {
@@ -204,6 +252,8 @@ GRAPH_TOOL_KINDS = frozenset(
 
 #: Kinds that are not drawn and never added to the Manim scene.
 INVISIBLE_KINDS = frozenset({ObjectKind.GROUP, ObjectKind.PARAMETER})
+#: Kinds that are no mobjects and therefore cannot be members of a group.
+UNGROUPABLE = frozenset({ObjectKind.PARAMETER, ObjectKind.CAMERA})
 #: Kinds that are not added to the Manim scene (the camera is shown on the stage only).
 UNADDED_KINDS = INVISIBLE_KINDS | {ObjectKind.CAMERA}
 #: Animations a camera understands.

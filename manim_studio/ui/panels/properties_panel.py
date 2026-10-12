@@ -34,6 +34,7 @@ from manim_studio.model import operations as ops
 from manim_studio.model.animation_builder import allowed_for_objects, reference_candidates
 from manim_studio.model.arrange import ALIGN_MODES, DISTRIBUTE_MODES
 from manim_studio.model.assets import relative_asset_path
+from manim_studio.model.attach import ATTACH_FOLLOW, ATTACH_FORMULA, ATTACH_SPECS, ATTACHABLE_KINDS, attach_mode, can_follow, is_attached, set_attach_mode
 from manim_studio.model.entities import STEP_LAGGED, STEP_MODES, STEP_TOGETHER, Animation, SceneObject, Step
 from manim_studio.model.expression import check_expression
 from manim_studio.model.frame import ASPECTS
@@ -497,12 +498,17 @@ class PropertiesPanel(QScrollArea):
         def commit(value: Any) -> None:
             if spec.type == ParamType.FILE:
                 value = relative_asset_path(str(value), self.document.base_dir)
+            if spec.key == "attach":
+                self._edit(label, lambda s: set_attach_mode(s, object_id, str(value)), f"obj:{object_id}:p:{spec.key}")
+                return
             self._edit(label, lambda s: ops.set_object_param(s, object_id, spec.key, value), f"obj:{object_id}:p:{spec.key}")
 
         def visible() -> bool:
             return spec.is_visible(self._object(object_id).params, defaults)
 
         allowed = graphs.is_function_curve if spec.key in FUNCTION_GRAPH_REFS else (lambda obj: True)
+        if spec.key == "attach_target":
+            allowed = lambda obj: can_follow(self.editor.scene(), object_id, obj)  # noqa: E731
         widget, show = self._param_editor(spec, commit, exclude=lambda: object_id, allowed=allowed)
         form.row(label, widget, lambda: self._object(object_id).params.get(spec.key, spec.default), show)
         if spec.type == ParamType.EXPRESSION:
@@ -516,6 +522,15 @@ class PropertiesPanel(QScrollArea):
             marker.hide()
             form.bindings.append(Binding(marker, visible, lambda value: form.layout.setRowVisible(widget, bool(value))))
             form.bindings[-1].refresh()
+
+    def _attach_note(self, object_id: str) -> str:
+        mode = attach_mode(self._object(object_id))
+        if mode == ATTACH_FOLLOW:
+            return tr("prop.attach_follow_note")
+        if mode == ATTACH_FORMULA:
+            symbols = ", ".join(graphs.parameter_symbols(self.editor.scene()))
+            return tr("prop.attach_formula_note", symbols=symbols or "–")
+        return tr("prop.attach_none_note")
 
     def _expression_message(self, object_id: str, spec: ParamSpec) -> str:
         scene = self.editor.scene()
@@ -571,6 +586,11 @@ class PropertiesPanel(QScrollArea):
                 self._object_field_row(form, object_id, field, spec, tr(f"prop.{field}"))
         if kind in LINE_KINDS and recording < 0:
             self._endpoint_rows(form, object_id)
+        if kind in ATTACHABLE_KINDS:
+            form.section(tr("section.attach"))
+            for spec in ATTACH_SPECS:
+                self._object_param_row(form, object_id, spec)
+            form.note(lambda: self._attach_note(object_id))
         if kind == ObjectKind.FUNCTION_GRAPH:
             self._graph_tools_section(form, object_id)
         if info.params:
@@ -789,7 +809,8 @@ class PropertiesPanel(QScrollArea):
                 self.controller.set_step_value(object_id, MOVE, x, y, merge_key=f"step:{object_id}:move")
 
             widget, show = self._float_editor(_POSITION_SPEC, commit)
-            widget.setEnabled(not bound)
+            # a coupled object is placed by its updater, a bound graph by its axes
+            widget.setEnabled(not bound and not is_attached(self._object(object_id)))
             form.row(tr(f"prop.target_{axis}"), widget, lambda axis=axis: getattr(scene_state(), axis), show)
 
         def angle() -> float:

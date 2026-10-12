@@ -386,7 +386,13 @@ def refresh_group_states(scene: Scene, states: dict[str, ObjectState]) -> dict[s
 
 
 def refresh_attached_states(scene: Scene, states: dict[str, ObjectState]) -> dict[str, ObjectState]:
-    """Highlights follow their target: same place, turn and size (Manim redraws them every frame)."""
+    """Coupled objects follow their target or formula; highlights follow their target (same place, turn and size)."""
+    from manim_studio.model.attach import attached_positions
+
+    coupled = attached_positions(scene, lambda object_id: (states[object_id].x, states[object_id].y) if object_id in states else None, parameter_values(scene, states))
+    for object_id, (x, y) in coupled.items():
+        if object_id in states:
+            states[object_id] = replace(states[object_id], x=x, y=y)
     for obj in scene.objects:
         if obj.id not in states:
             continue

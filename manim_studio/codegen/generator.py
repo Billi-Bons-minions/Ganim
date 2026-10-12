@@ -76,6 +76,34 @@ def _object_lines(
     return lines
 
 
+def _updater_lines(scene: Scene, names: dict[str, str]) -> list[str]:
+    """Coupled objects: ``add_updater`` that keeps them next to their target or on their formula."""
+    from manim_studio.codegen.graph_code import renames
+    from manim_studio.codegen.literals import fmt_float
+    from manim_studio.model.attach import ATTACH_FOLLOW, ATTACH_FORMULA, attach_mode, follow_offset, follow_target, position_formulas
+
+    lines: list[str] = []
+    rename = renames(scene, names)
+    for obj in scene.objects:
+        mode = attach_mode(obj)
+        if mode == ATTACH_FOLLOW:
+            target = follow_target(scene, obj)
+            if target is None or target.id not in names:
+                raise CodegenError("attach_target_missing", obj.name)
+            dx, dy = follow_offset(scene, obj, target)
+            point = f"{names[target.id]}.get_center() + np.array([{fmt_float(dx)}, {fmt_float(dy)}, 0.0])"
+        elif mode == ATTACH_FORMULA:
+            formulas = position_formulas(scene, obj)
+            if formulas is None:
+                raise CodegenError("attach_formula_invalid", obj.name)
+            x_code, y_code = (formula.to_numpy(rename, pad_variable=False) for formula in formulas)
+            point = f"[{x_code}, {y_code}, 0.0]"
+        else:
+            continue
+        lines.append(f"{names[obj.id]}.add_updater(lambda m: m.move_to({point}), call_updater=True)")
+    return (["# Coupled objects move with their target or formula"] + lines) if lines else []
+
+
 def _initial_add_line(scene: Scene, names: dict[str, str]) -> list[str]:
     # added from back to front, so the layers match the stage
     objects = [scene.object_by_id(object_id) for object_id in drawing_order(scene)]
@@ -132,6 +160,9 @@ def construct_body(
     if object_lines:
         _shift(object_spans, len(lines) + 1)
         lines += [""] + object_lines
+    updaters = _updater_lines(scene, names)
+    if updaters:
+        lines += [""] + updaters
     add_line = _initial_add_line(scene, names)
     if add_line:
         lines += [""] + add_line

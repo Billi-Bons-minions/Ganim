@@ -151,8 +151,11 @@ def update_object(scene: Scene, object_id: str, **values: Any) -> None:
 
 def set_object_param(scene: Scene, object_id: str, key: str, value: Any) -> None:
     """Set a kind-specific parameter of an object."""
+    from manim_studio.model.attach import ATTACH_SPECS, ATTACHABLE_KINDS
+
     obj = require_object(scene, object_id)
-    if kind_info(obj.kind).param(key) is None:
+    coupling = obj.kind in ATTACHABLE_KINDS and any(spec.key == key for spec in ATTACH_SPECS)
+    if kind_info(obj.kind).param(key) is None and not coupling:
         raise ModelError(f"unknown parameter {key} for {obj.kind.value}")
     obj.params[key] = value
     if obj.kind == ObjectKind.HIGHLIGHT and key in ("style", "target"):

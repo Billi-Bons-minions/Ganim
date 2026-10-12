@@ -687,3 +687,12 @@ def test_linear_map_renders(tmp_path) -> None:
     )
     result = run_manim(tmp_path, generate_script(make_project(scene)), "Abbildung")
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_coupled_objects_render(tmp_path) -> None:
+    from tests.test_attach import _scene
+
+    scene = _scene()
+    scene.name = "Kopplung"
+    result = run_manim(tmp_path, generate_script(make_project(scene)), "Kopplung")
+    assert result.returncode == 0, result.stdout + result.stderr

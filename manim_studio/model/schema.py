@@ -853,8 +853,17 @@ _NOT_FOR_HIGHLIGHTS = (
 )
 
 
+#: Animations that would fight with the updater of a coupled object (it sets the position itself).
+_NOT_FOR_COUPLED = frozenset({AnimationKind.MOVE, AnimationKind.APPLY_MATRIX}) | MOTION_ANIMATIONS | TRANSFORM_ANIMATIONS
+
+
 def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: dict[str, Any]) -> bool:
     """Return ``True`` if the animation can be applied to the object."""
+    if anim_kind in _NOT_FOR_COUPLED and params.get("attach") in ("follow", "formula"):
+        from manim_studio.model.attach import ATTACHABLE_KINDS
+
+        if obj_kind in ATTACHABLE_KINDS:
+            return False
     if obj_kind in (ObjectKind.HIGHLIGHT, ObjectKind.ANGLE, ObjectKind.VECTOR_FIELD) and anim_kind in _NOT_FOR_HIGHLIGHTS:
         return False
     if obj_kind == ObjectKind.SOLID and anim_kind in (

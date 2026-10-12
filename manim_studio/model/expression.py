@@ -293,15 +293,17 @@ class Expression:
         names[self.variable] = float(x)
         return float(_evaluate(self.tree.body, names))
 
-    def to_numpy(self, rename: dict[str, str] | None = None) -> str:
+    def to_numpy(self, rename: dict[str, str] | None = None, pad_variable: bool = True) -> str:
         """Return Python/NumPy code for the term (the body of ``lambda x: ...``).
 
         ``rename`` maps parameter names onto code, e.g. ``{"a": "a.get_value()"}``.
+        A term without the variable gets ``+ 0 * x`` (so that it still works on arrays)
+        unless ``pad_variable`` is off.
         """
         tree = _NumpyTransformer(self.variable, rename or {}).visit(_clone(self.tree))
         ast.fix_missing_locations(tree)
         code = ast.unparse(tree)
-        if not _mentions(self.tree, self.variable):
+        if pad_variable and not _mentions(self.tree, self.variable):
             code = f"{code} + 0 * {self.variable}"
         return code
 

@@ -86,6 +86,7 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
             add(ERROR, "radii_invalid")
     if obj.kind in (ObjectKind.TABLE, ObjectKind.MATRIX) and not any(params.get("rows", [])):
         add(ERROR, "table_empty")
+    _attach_issues(scene, obj, add)
     if obj.kind == ObjectKind.CAMERA and round(obj.rotation, 6) != 0:
         from manim_studio.model.three_d import is_3d
 
@@ -181,6 +182,25 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
         elif not resolve_asset_path(path, base_dir).is_file():
             add(ERROR, "image_not_found", path)
     return issues
+
+
+def _attach_issues(scene: Scene, obj: SceneObject, add) -> None:
+    """A coupled object needs a target to follow (without a circle) or valid position formulas."""
+    from manim_studio.model.attach import ATTACH_FOLLOW, ATTACH_FORMULA, attach_mode, follows_circularly, formula_error
+
+    mode = attach_mode(obj)
+    if mode == ATTACH_FOLLOW:
+        target = scene.object_by_id(obj.params.get("attach_target"))
+        if target is None or target.id == obj.id:
+            add(ERROR, "attach_target_missing")
+        elif follows_circularly(scene, obj):
+            add(ERROR, "attach_cycle", target.name)
+    elif mode == ATTACH_FORMULA:
+        error = formula_error(scene, obj)
+        if error == "only_parameters":
+            add(ERROR, "attach_only_parameters")
+        elif error is not None:
+            add(ERROR, "expression_invalid", error)
 
 
 def _expression_issue_names(scene: Scene, text: str, variable: str, extra: tuple[str, ...], add) -> bool:

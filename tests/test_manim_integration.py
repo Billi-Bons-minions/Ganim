@@ -167,7 +167,8 @@ def test_all_new_object_kinds_render(tmp_path) -> None:
         obj(ObjectKind.ARC, "Bogen", -5.0, -2.0),
         obj(ObjectKind.SECTOR, "Sektor", -3.0, -2.0),
         obj(ObjectKind.ANNULUS, "Ring", 5.0, -2.0),
-        obj(ObjectKind.DECIMAL_NUMBER, "Zahl", 0.0, 3.3, value=3.14159, decimals=2, unit="cm", show_sign=True),
+        # the unit is typeset with LaTeX by Manim
+        obj(ObjectKind.DECIMAL_NUMBER, "Zahl", 0.0, 3.3, value=3.14159, decimals=2, unit="cm" if shutil.which("latex") and shutil.which("dvisvgm") else "", show_sign=True),
         obj(ObjectKind.TABLE, "Tabelle", 5.0, 0.0, rows=[["x", "y"], ["1"]]),
         obj(ObjectKind.CODE, "Code", 0.0, 0.5),
         obj(ObjectKind.MARKUP_TEXT, "Markup", 0.0, -2.0, font_size=28.0),

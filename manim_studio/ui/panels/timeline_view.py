@@ -49,9 +49,9 @@ def group_color(kind: AnimationKind) -> QColor:
         return QColor(palette.danger)
     if kind in TRANSFORM_ANIMATIONS:
         return QColor("#9A72AC")
-    if kind in EMPHASIS_ANIMATIONS:
+    if kind in EMPHASIS_ANIMATIONS or kind == AnimationKind.NETWORK_PARTS:
         return QColor(palette.warning)
-    if kind in MODIFIER_ANIMATIONS or kind in MOTION_ANIMATIONS:
+    if kind in MODIFIER_ANIMATIONS or kind in MOTION_ANIMATIONS or kind == AnimationKind.APPLY_MATRIX:
         return QColor(palette.accent)
     if kind == AnimationKind.SET_VALUE:
         return QColor("#5CD0B3")

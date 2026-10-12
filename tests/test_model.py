@@ -202,3 +202,17 @@ def test_project_round_trip_is_identical(tmp_path) -> None:
 def test_invalid_project_files_are_rejected(text: str) -> None:
     with pytest.raises(ProjectFormatError):
         loads_project(text)
+
+
+def test_a_number_with_unit_needs_latex() -> None:
+    from manim_studio.model.entities import Scene
+    from manim_studio.model.types import ObjectKind
+    from manim_studio.model.validation import validate_scene
+    from tests.helpers import make_object
+
+    number = make_object(ObjectKind.DECIMAL_NUMBER, "Zahl", "z", unit="cm")
+    scene = Scene(id="s", name="S", objects=[number])
+    assert "unit_needs_latex" in {issue.code for issue in validate_scene(scene, latex_available=False)}
+    assert "unit_needs_latex" not in {issue.code for issue in validate_scene(scene, latex_available=True)}
+    number.params["unit"] = ""
+    assert "unit_needs_latex" not in {issue.code for issue in validate_scene(scene, latex_available=False)}

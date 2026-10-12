@@ -1312,4 +1312,5 @@ STRINGS: dict[str, str] = {
     "issue.attach_camera_3d": "In 3D scenes the camera cannot be coupled; use camera moves instead.",
     "issue.parameter_conflict": "“{name}” depends on a parameter that changes in the same step. Manim cannot play both at once – put the animation into a step of its own or set the step to “One after another”.",
     "codegen.parameter_conflict": "“{detail}” depends on a parameter that changes in the same step. Put the animation into a step of its own.",
+    "issue.unit_needs_latex": "Manim typesets the unit with LaTeX, which is not installed. Leave the unit empty (or put it next to the number as a text) or install LaTeX.",
 }

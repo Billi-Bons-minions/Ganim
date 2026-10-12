@@ -85,3 +85,34 @@ def test_solids() -> None:
     code = generate_script(make_project(scene))
     assert "k0 = Sphere(" in code and ".move_to(achsen.c2p(1.0, 0.0, 0.5))" in code and "Cone(" in code and "show_base=True" in code
     assert not animation_allowed(AnimationKind.MOVE, ObjectKind.SOLID, {}) and animation_allowed(AnimationKind.SCALE, ObjectKind.SOLID, {})
+
+
+def test_vectors_lines_and_points_in_space() -> None:
+    from manim_studio.model import operations as ops
+    from manim_studio.model.graphs import is_bound
+    from manim_studio.model.schema import animation_allowed
+    from manim_studio.model.three_d import vector_points
+
+    axes = make_object(ObjectKind.AXES_3D, "Raum", "r")
+    arrow = make_object(ObjectKind.VECTOR_3D, "v", "v", axes_id="r", to_x=1.0, to_y=2.0, to_z=3.0)
+    line = make_object(ObjectKind.VECTOR_3D, "s", "s", axes_id="r", element="line", from_x=1.0)
+    point = make_object(ObjectKind.VECTOR_3D, "p", "p", axes_id="r", element="point", to_x=-1.0, to_y=0.0, to_z=1.0)
+    scene = Scene(id="s", name="S", objects=[axes, arrow, line, point], steps=[play(make_animation(AnimationKind.CREATE, "v"))])
+    assert is_3d(scene) and is_bound(scene, arrow) and not has_errors(validate_scene(scene))
+    assert vector_points(scene, arrow) == [to_space(axes, 0.0, 0.0, 0.0), to_space(axes, 1.0, 2.0, 3.0)]
+    assert vector_points(scene, point) == [to_space(axes, -1.0, 0.0, 1.0)]
+    code = "".join(generate_script(make_project(scene)).split())  # calls may be wrapped over several lines
+    assert "v=Arrow3D(start=raum.c2p(0.0,0.0,0.0),end=raum.c2p(1.0,2.0,3.0)" in code
+    assert "s=Line3D(start=raum.c2p(1.0,0.0,0.0),end=raum.c2p(2.0,1.0,2.0)" in code
+    assert "p=Dot3D(point=raum.c2p(-1.0,0.0,1.0),radius=0.08" in code
+    assert not animation_allowed(AnimationKind.MOVE, ObjectKind.VECTOR_3D, {}) and animation_allowed(AnimationKind.SCALE, ObjectKind.VECTOR_3D, {})
+    ops.remove_objects(scene, ["r"])  # without its axes a vector cannot exist
+    assert scene.objects == []
+
+
+def test_a_new_3d_vector_brings_its_axes(window) -> None:
+    controller = window.controller
+    vector = controller.add_object(ObjectKind.VECTOR_3D)
+    scene = window.editor.scene()
+    axes = [obj for obj in scene.objects if obj.kind == ObjectKind.AXES_3D]
+    assert len(axes) == 1 and scene.object_by_id(vector).params["axes_id"] == axes[0].id

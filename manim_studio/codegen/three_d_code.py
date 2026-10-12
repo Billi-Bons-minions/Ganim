@@ -120,6 +120,25 @@ def solid_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> list[st
     return _placed(call(_SURFACE_SOLIDS.get(shape, "Sphere"), [], size + [("checkerboard_colors", "False")] + style, 2), point)
 
 
+def vector_3d_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> list[str]:
+    """``Arrow3D``, ``Line3D`` or ``Dot3D`` between points given in coordinates of the 3D axes."""
+    axes = _axes_variable(scene, obj, names)
+    p = obj.params
+
+    def point(prefix: str, defaults: tuple[float, float, float]) -> str:
+        return f"{axes}.c2p({', '.join(fmt_float(param_float(p, f'{prefix}_{axis}', default)) for axis, default in zip('xyz', defaults))})"
+
+    color = py_color(obj.stroke_color)
+    end = point("to", (2.0, 1.0, 2.0))
+    element = p.get("element", "arrow")
+    if element == "point":
+        return call("Dot3D", [], [("point", end), ("radius", fmt_float(param_float(p, "radius", 0.08))), ("color", color)], 2)
+    start = point("from", (0.0, 0.0, 0.0))
+    # Manim draws 3D lines as thin cylinders; the stroke width sets their thickness
+    thickness = fmt_float(round(max(obj.stroke_width, 0.5) * 0.005, 4))
+    return call("Arrow3D" if element == "arrow" else "Line3D", [], [("start", start), ("end", end), ("thickness", thickness), ("color", color)], 2)
+
+
 def _placed(lines: list[str], point: str) -> list[str]:
     """Append ``.move_to(point)`` to a (possibly wrapped) constructor call."""
     return lines[:-1] + [f"{lines[-1]}.move_to({point})"]

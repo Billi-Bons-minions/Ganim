@@ -147,6 +147,21 @@ def _vector_field(p: QPainter, s: float, m: float, w: float, stroke: QColor, fil
             p.drawLine(QPointF(cx, cy), QPointF(ex, ey))
 
 
+def _vector_3d(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    # three axes seen at an angle and an arrow pointing into the space between them
+    origin = QPointF(s * 0.38, s * 0.66)
+    p.setPen(QPen(neutral, w * 0.7))
+    for end in (QPointF(s * 0.38, m), QPointF(s - m, s * 0.66), QPointF(m, s - m)):
+        p.drawLine(origin, end)
+    color = QColor("#FC6255")
+    p.setPen(QPen(color, w * 1.2))
+    tip = QPointF(s * 0.78, s * 0.3)
+    p.drawLine(origin, tip)
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(color)
+    p.drawPolygon(QPolygonF([tip, QPointF(tip.x() - s * 0.2, tip.y() + s * 0.04), QPointF(tip.x() - s * 0.06, tip.y() + s * 0.18)]))
+
+
 def _solid(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
     color = QColor("#58C4DD")
     p.setPen(QPen(color, w))
@@ -445,6 +460,7 @@ _EXTRA_DRAWERS = {
     ObjectKind.TRACE: _trace,
     ObjectKind.VECTOR_FIELD: _vector_field,
     ObjectKind.SOLID: _solid,
+    ObjectKind.VECTOR_3D: _vector_3d,
     ObjectKind.BULLET_LIST: _bullet_list,
     ObjectKind.NETWORK: _network,
     ObjectKind.POLYGON: _polygon,

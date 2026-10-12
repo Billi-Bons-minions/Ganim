@@ -49,7 +49,7 @@ from manim_studio.model.stage_edits import (
     would_create,
 )
 from manim_studio.model.state import START, states_after
-from manim_studio.model.types import GRAPH_TOOL_KINDS, LINE_KINDS, REFERENCE_PARAMS, UNADDED_KINDS, UNGROUPABLE, AnimationKind, ObjectKind, StepKind
+from manim_studio.model.types import GRAPH_TOOL_KINDS, LINE_KINDS, ON_3D_AXES, REFERENCE_PARAMS, UNADDED_KINDS, UNGROUPABLE, AnimationKind, ObjectKind, StepKind
 from manim_studio.ui.document import ProjectDocument
 from manim_studio.ui.editor_state import INSPECT_ANIMATION, INSPECT_STEP, EditorState
 from manim_studio.ui.settings import AppSettings
@@ -185,7 +185,7 @@ class EditorController(QObject):
             hosts.append(host)
             return host
 
-        if obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID) and not obj.params.get("axes_id"):
+        if obj.kind in ON_3D_AXES and not obj.params.get("axes_id"):
             obj.params["axes_id"] = new(ObjectKind.AXES_3D).id
         elif obj.kind == ObjectKind.DATA_PLOT and not obj.params.get("axes_id"):
             obj.params["axes_id"] = new(ObjectKind.AXES, show_numbers=True).id
@@ -209,7 +209,7 @@ class EditorController(QObject):
             axes = [o for o in scene.objects if o.kind in (ObjectKind.AXES, ObjectKind.NUMBER_PLANE)]
             if axes:
                 obj.params["axes_id"] = axes[-1].id
-        if obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID) and not obj.params.get("axes_id"):
+        if obj.kind in ON_3D_AXES and not obj.params.get("axes_id"):
             axes = [o for o in scene.objects if o.kind == ObjectKind.AXES_3D]
             if axes:
                 obj.params["axes_id"] = axes[-1].id

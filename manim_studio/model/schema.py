@@ -372,6 +372,22 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         _SHAPE_STYLE,
         (("stroke_color", "#29ABCA"), ("fill_color", "#58C4DD"), ("fill_opacity", 0.75), ("stroke_width", 0.5)),
     ),
+    ObjectKind.VECTOR_3D: KindInfo(
+        ObjectKind.VECTOR_3D,
+        (
+            ParamSpec("axes_id", ParamType.OBJECT_REF, None, ref_kinds=(ObjectKind.AXES_3D,)),
+            ParamSpec("element", ParamType.CHOICE, "arrow", choices=("arrow", "line", "point")),
+            ParamSpec("from_x", ParamType.FLOAT, 0.0, minimum=-1000.0, maximum=1000.0, step=0.5, visible_when=("element", ("arrow", "line"))),
+            ParamSpec("from_y", ParamType.FLOAT, 0.0, minimum=-1000.0, maximum=1000.0, step=0.5, visible_when=("element", ("arrow", "line"))),
+            ParamSpec("from_z", ParamType.FLOAT, 0.0, minimum=-1000.0, maximum=1000.0, step=0.5, visible_when=("element", ("arrow", "line"))),
+            ParamSpec("to_x", ParamType.FLOAT, 2.0, minimum=-1000.0, maximum=1000.0, step=0.5),
+            ParamSpec("to_y", ParamType.FLOAT, 1.0, minimum=-1000.0, maximum=1000.0, step=0.5),
+            ParamSpec("to_z", ParamType.FLOAT, 2.0, minimum=-1000.0, maximum=1000.0, step=0.5),
+            ParamSpec("radius", ParamType.FLOAT, 0.08, minimum=0.01, maximum=5.0, step=0.02, visible_when=("element", ("point",))),
+        ),
+        _LINE_STYLE,
+        (("stroke_color", "#FC6255"), ("fill_color", "#FC6255"), ("stroke_width", 4.0)),
+    ),
     ObjectKind.VECTOR_FIELD: KindInfo(
         ObjectKind.VECTOR_FIELD,
         (
@@ -866,7 +882,7 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
             return False
     if obj_kind in (ObjectKind.HIGHLIGHT, ObjectKind.ANGLE, ObjectKind.VECTOR_FIELD) and anim_kind in _NOT_FOR_HIGHLIGHTS:
         return False
-    if obj_kind == ObjectKind.SOLID and anim_kind in (
+    if obj_kind in (ObjectKind.SOLID, ObjectKind.VECTOR_3D) and anim_kind in (
         {AnimationKind.MOVE, AnimationKind.ROTATE, AnimationKind.SET_VALUE, AnimationKind.ORBIT} | TRANSFORM_ANIMATIONS | MOTION_ANIMATIONS
     ):
         return False  # solids are placed by their 3D axes

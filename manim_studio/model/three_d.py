@@ -15,7 +15,7 @@ from manim_studio.model.expression import Expression, ExpressionError, parse_exp
 from manim_studio.model.geometry import param_float
 from manim_studio.model.types import ObjectKind
 
-THREE_D_KINDS = frozenset({ObjectKind.AXES_3D, ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID})
+THREE_D_KINDS = frozenset({ObjectKind.AXES_3D, ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID, ObjectKind.VECTOR_3D})
 #: Shapes of a 3D solid.
 SOLID_SHAPES = ("sphere", "cube", "prism", "cone", "cylinder", "torus")
 DEFAULT_PHI = 70.0
@@ -236,6 +236,18 @@ def solid_center(scene: Scene, obj: SceneObject) -> Point3 | None:
     if axes is None:
         return None
     return to_space(axes, *(param_float(obj.params, key, 0.0) for key in ("center_x", "center_y", "center_z")))
+
+
+def vector_points(scene: Scene, obj: SceneObject) -> list[Point3]:
+    """Start and end of a 3D arrow or line, or the position of a 3D point (scene coordinates)."""
+    axes = axes_of(scene, obj)
+    if axes is None:
+        return []
+    end = to_space(axes, *(param_float(obj.params, key, default) for key, default in (("to_x", 2.0), ("to_y", 1.0), ("to_z", 2.0))))
+    if obj.params.get("element", "arrow") == "point":
+        return [end]
+    start = to_space(axes, *(param_float(obj.params, key, 0.0) for key in ("from_x", "from_y", "from_z")))
+    return [start, end]
 
 
 def _grid_quads(function, u_range: tuple[float, float], v_range: tuple[float, float], nu: int, nv: int) -> list[Quad]:

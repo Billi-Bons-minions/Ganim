@@ -20,7 +20,7 @@ from manim_studio.model.factory import (
     unique_name,
 )
 from manim_studio.model.schema import kind_info
-from manim_studio.model.types import CURVE_DERIVATIVE, GRAPH_TOOL_KINDS, ObjectKind, StepKind
+from manim_studio.model.types import CURVE_DERIVATIVE, GRAPH_TOOL_KINDS, ON_3D_AXES, ObjectKind, StepKind
 
 _OBJECT_FIELDS = {f.name for f in fields(SceneObject)} - {"id", "kind", "params"}
 _ANIMATION_FIELDS = {"run_time", "rate_func", "target_id", "kind"}
@@ -101,7 +101,7 @@ def dependent_objects(scene: Scene, object_ids: Iterable[str]) -> set[str]:
                 (obj.kind in GRAPH_TOOL_KINDS and params.get("graph_id"))
                 or (obj.kind in (ObjectKind.HIGHLIGHT, ObjectKind.TRACE) and params.get("target"))
                 or (obj.kind == ObjectKind.ANGLE and next((params.get(key) for key in ("first_line", "second_line") if params.get(key) in removed | found), None))
-                or (obj.kind in (ObjectKind.DATA_PLOT, ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID) and params.get("axes_id"))
+                or ((obj.kind == ObjectKind.DATA_PLOT or obj.kind in ON_3D_AXES) and params.get("axes_id"))
                 or (obj.kind == ObjectKind.FUNCTION_GRAPH and params.get("curve") == CURVE_DERIVATIVE and params.get("derive_from"))
             )
             if needs and needs in removed | found:

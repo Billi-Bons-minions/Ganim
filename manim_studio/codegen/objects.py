@@ -33,7 +33,7 @@ from manim_studio.codegen.objects_extra import (
     vector_field_code,
 )
 from manim_studio.codegen.objects_extra import text as extra_text
-from manim_studio.codegen.three_d_code import axes_3d_code, curve_3d_code, solid_code, surface_code
+from manim_studio.codegen.three_d_code import axes_3d_code, curve_3d_code, solid_code, surface_code, vector_3d_code
 from manim_studio.model import graphs
 from manim_studio.model.angles import ANGLE_LINE_KEYS, angle_lines
 from manim_studio.model.assets import resolve_asset_path
@@ -43,7 +43,7 @@ from manim_studio.model.latex import colored_parts, colorize
 from manim_studio.model.schema import is_vector_image_path
 from manim_studio.model.three_d import THREE_D_KINDS, is_3d
 from manim_studio.model.traces import trace_target
-from manim_studio.model.types import GRAPH_TOOL_KINDS, INVISIBLE_KINDS, UNADDED_KINDS, UNGROUPABLE, ObjectKind
+from manim_studio.model.types import GRAPH_TOOL_KINDS, INVISIBLE_KINDS, ON_3D_AXES, UNADDED_KINDS, UNGROUPABLE, ObjectKind
 
 Kwargs = list[tuple[str, str]]
 
@@ -337,6 +337,8 @@ def object_code(
             lines, place = bullet_list_code(obj, variable), True
         elif obj.kind == ObjectKind.SOLID:
             lines, place = assign(variable, solid_code(scene, obj, names)), False
+        elif obj.kind == ObjectKind.VECTOR_3D:
+            lines, place = assign(variable, vector_3d_code(scene, obj, names)), False
         elif obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D):
             rename = renames(scene, names)
             build = surface_code if obj.kind == ObjectKind.SURFACE else curve_3d_code
@@ -384,7 +386,7 @@ def object_code(
 def dependencies(scene: Scene, obj: SceneObject) -> list[str]:
     """Return ids of objects that must be created before ``obj``."""
     result: list[str] = []
-    if obj.kind in (ObjectKind.FUNCTION_GRAPH, ObjectKind.DATA_PLOT, ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID) and obj.params.get("axes_id"):
+    if (obj.kind in (ObjectKind.FUNCTION_GRAPH, ObjectKind.DATA_PLOT) or obj.kind in ON_3D_AXES) and obj.params.get("axes_id"):
         result.append(str(obj.params.get("axes_id")))
     if obj.kind in GRAPH_TOOL_KINDS:
         for key in ("x_parameter",):

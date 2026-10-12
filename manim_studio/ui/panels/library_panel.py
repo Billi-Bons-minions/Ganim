@@ -66,7 +66,7 @@ CATEGORIES: tuple[tuple[str, tuple[ObjectKind, ...]], ...] = (
             ObjectKind.BAR_CHART,
         ),
     ),
-    ("three_d", (ObjectKind.AXES_3D, ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID)),
+    ("three_d", (ObjectKind.AXES_3D, ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID, ObjectKind.VECTOR_3D)),
     ("media", (ObjectKind.IMAGE, ObjectKind.CAMERA)),
 )
 

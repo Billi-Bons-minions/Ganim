@@ -9,10 +9,11 @@ from PySide6.QtGui import QBrush, QPainterPath
 
 from manim_studio.model import graphs
 from manim_studio.model.entities import Scene, SceneObject
+from manim_studio.model.geometry import param_float
 from manim_studio.model.state import ObjectState
-from manim_studio.model.three_d import View, _matrix, axes_lines, axes_of, axis_tips, curve_points, project, solid_quads, surface_grid
+from manim_studio.model.three_d import View, _matrix, axes_lines, axes_of, axis_tips, curve_points, project, solid_quads, surface_grid, vector_points
 from manim_studio.model.types import ObjectKind
-from manim_studio.ui.stage.drawing import Primitive, StageResources, _color, _pen, pt
+from manim_studio.ui.stage.drawing import PX, Primitive, StageResources, _color, _pen, pt
 
 
 def _path(lines: list[list[tuple[float, float]]], offset: tuple[float, float]) -> QPainterPath:
@@ -50,6 +51,8 @@ def three_d_primitives(scene: Scene, obj: SceneObject, state: ObjectState, resou
             tips.closeSubpath()
         return [Primitive(path=_path(lines, offset), pen=pen), Primitive(path=tips, brush=QBrush(_color(state.stroke_color)))], False
     offset = graphs.bound_anchor(scene, obj) if axes_of(scene, obj) is not None else (state.x, state.y)
+    if obj.kind == ObjectKind.VECTOR_3D:
+        return _vector_primitives(obj, state, project(vector_points(scene, obj), view), offset), False
     if obj.kind == ObjectKind.CURVE_3D:
         line = project(curve_points(scene, obj, values), view)
         return [Primitive(path=_path([line], offset), pen=_pen(state.stroke_color, obj.stroke_width, obj.stroke_opacity, state.scale))], False
@@ -83,3 +86,30 @@ def three_d_primitives(scene: Scene, obj: SceneObject, state: ObjectState, resou
     brush = QBrush(_color(state.fill_color, obj.fill_opacity * 0.85)) if obj.fill_opacity > 0 else None
     pen = _pen(state.stroke_color, obj.stroke_width, obj.stroke_opacity, state.scale) if obj.stroke_width > 0 else None
     return [Primitive(path=path, brush=brush, pen=pen)], False
+
+
+def _vector_primitives(obj: SceneObject, state: ObjectState, flat: list[tuple[float, float]], offset: tuple[float, float]) -> list[Primitive]:
+    """A 3D arrow (shaft and cone, seen from the camera), a 3D line or a 3D point."""
+    brush = QBrush(_color(state.stroke_color, obj.stroke_opacity))
+    if len(flat) == 1:
+        radius = param_float(obj.params, "radius", 0.08)
+        path = QPainterPath()
+        path.addEllipse(pt(flat[0][0] - offset[0], flat[0][1] - offset[1]), radius * PX, radius * PX)
+        return [Primitive(path=path, brush=brush)]
+    if len(flat) < 2:
+        return []
+    (sx, sy), (ex, ey) = flat
+    length = math.hypot(ex - sx, ey - sy)
+    pen = _pen(state.stroke_color, obj.stroke_width, obj.stroke_opacity, state.scale)
+    if obj.params.get("element", "arrow") != "arrow" or length < 1e-6:
+        return [Primitive(path=_path([[(sx, sy), (ex, ey)]], offset), pen=pen)]
+    # Manim's Arrow3D: a cone of height 0.3 and radius 0.08 at the end
+    tip = min(0.3, length * 0.5)
+    ux, uy = (ex - sx) / length, (ey - sy) / length
+    bx, by = ex - ux * tip, ey - uy * tip
+    head = QPainterPath()
+    head.moveTo(pt(ex - offset[0], ey - offset[1]))
+    head.lineTo(pt(bx - uy * 0.08 - offset[0], by + ux * 0.08 - offset[1]))
+    head.lineTo(pt(bx + uy * 0.08 - offset[0], by - ux * 0.08 - offset[1]))
+    head.closeSubpath()
+    return [Primitive(path=_path([[(sx, sy), (bx, by)]], offset), pen=pen), Primitive(path=head, brush=brush)]

@@ -27,7 +27,7 @@ Everything below was built for this first public version.
 - Highlights that stick to an object (frame, background, underline, strike-through), angle marks between two lines, motion traces.
 - Number line, number plane, axes, function graphs (terms, piecewise, parametric, polar, implicit, derivatives), area, Riemann rectangles, tangent, points on graphs with coordinates, zeros/extrema/inflection points/intersections, graph labels, data points with regression, bar charts with CSV import, vector fields (arrows or stream lines).
 - Networks of vertices and edges (Manim's `Graph`/`DiGraph`) with circular, spring, Kamada-Kawai, shell, spiral and tree layouts.
-- 3D axes, surfaces, 3D curves and solids (sphere, cube, box, cone, cylinder, torus).
+- 3D axes, surfaces, 3D curves, solids (sphere, cube, box, cone, cylinder, torus) and arrows, lines and points in space (`Arrow3D`, `Line3D`, `Dot3D`).
 - Parameters (`ValueTracker`) with sliders, usable in all formulas and shown with live numbers.
 
 ### Animations

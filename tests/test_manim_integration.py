@@ -705,3 +705,18 @@ def test_camera_following_a_dot_renders(tmp_path) -> None:
     scene = Scene(id="s", name="Folgen", objects=[dot, camera], steps=[play(make_animation(AnimationKind.MOVE, "d", x=4.0, y=2.0), make_animation(AnimationKind.SCALE, "k", factor=0.6))])
     result = run_manim(tmp_path, generate_script(make_project(scene)), "Folgen")
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_vectors_in_space_render(tmp_path) -> None:
+    axes = make_object(ObjectKind.AXES_3D, "Raum", "r")
+    arrow = make_object(ObjectKind.VECTOR_3D, "v", "v", axes_id="r")
+    line = make_object(ObjectKind.VECTOR_3D, "s", "s", axes_id="r", element="line", from_x=2.0, from_y=1.0, to_z=0.0)
+    point = make_object(ObjectKind.VECTOR_3D, "p", "p", axes_id="r", element="point")
+    scene = Scene(
+        id="s",
+        name="Raumvektoren",
+        objects=[axes, arrow, line, point],
+        steps=[play(make_animation(AnimationKind.CREATE, "r"), make_animation(AnimationKind.CREATE, "v")), play(make_animation(AnimationKind.CREATE, "s"), make_animation(AnimationKind.FADE_IN, "p"), make_animation(AnimationKind.SCALE, "v", factor=1.5))],
+    )
+    result = run_manim(tmp_path, generate_script(make_project(scene)), "Raumvektoren")
+    assert result.returncode == 0, result.stdout + result.stderr

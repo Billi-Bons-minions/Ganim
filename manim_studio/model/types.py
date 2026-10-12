@@ -60,6 +60,7 @@ class ObjectKind(str, Enum):
     SOLID = "solid"
     BULLET_LIST = "bullet_list"
     NETWORK = "network"
+    VECTOR_3D = "vector_3d"
 
 
 class AnimationKind(str, Enum):
@@ -120,6 +121,9 @@ class Visibility(str, Enum):
     SHOWN = "shown"
     HIDDEN = "hidden"
 
+
+#: Objects placed in the coordinates of 3D axes.
+ON_3D_AXES = frozenset({ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID, ObjectKind.VECTOR_3D})
 
 #: Animations that bring an object onto the screen.
 ENTRANCE_ANIMATIONS = frozenset(

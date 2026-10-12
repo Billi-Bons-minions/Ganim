@@ -144,7 +144,7 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
         _graph_issues(scene, obj, add)
     if obj.kind in GRAPH_TOOL_KINDS:
         _tool_issues(scene, obj, add)
-    if obj.kind == ObjectKind.SOLID:
+    if obj.kind in (ObjectKind.SOLID, ObjectKind.VECTOR_3D):
         from manim_studio.model.three_d import axes_of as solid_axes
 
         if solid_axes(scene, obj) is None:

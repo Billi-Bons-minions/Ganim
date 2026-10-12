@@ -28,6 +28,8 @@ from manim_studio.model.types import (
 
 #: Name of the helper function emitted into scripts that need clipped graphs.
 STUDIO_PLOT = "studio_plot"
+STUDIO_DASHED = "studio_dashed_line"
+STUDIO_LINES = "studio_lines_to_point"
 POINT_LABEL_SIZE = 24.0
 AXIS_LABEL_SIZE = 28.0
 SMALL_BUFF = 0.1
@@ -333,7 +335,7 @@ def _secant_parts(axes_variable: str, obj: SceneObject, x0: str, y0: str, x1: st
         parts += [f"Dot({point(x, y)}, radius={fmt_float(radius)}, color={color}, fill_opacity={opacity})" for x, y in ((x0, y0), (x1, y1))]
     if obj.params.get("show_triangle", True):
         legs = (((x0, y0), (x1, y0)), ((x1, y0), (x1, y1)))
-        parts += [f"DashedLine({point(*start)}, {point(*end)}, color={color}, stroke_width=2, stroke_opacity={opacity})" for start, end in legs]
+        parts += [f"{STUDIO_DASHED}({point(*start)}, {point(*end)}, color={color}, stroke_width=2, stroke_opacity={opacity})" for start, end in legs]
     return parts
 
 
@@ -385,7 +387,7 @@ def _point_parts(
     radius = fmt_float(param_float(obj.params, "radius", 0.08))
     parts = []
     if obj.params.get("show_lines", True) and obj.kind == ObjectKind.GRAPH_POINT:
-        parts.append(f"{axes_variable}.get_lines_to_point({point}, color={color}, stroke_width=2)")
+        parts.append(f"{STUDIO_LINES}({axes_variable}, {point}, color={color}, stroke_width=2)")
     parts.append(f"Dot({point}, radius={radius}, color={color})")
     if label is not None:
         buff = fmt_float(param_float(obj.params, "radius", 0.08) + SMALL_BUFF)
@@ -490,6 +492,16 @@ def graph_object_code(scene: Scene, obj: SceneObject, names: dict[str, str], hel
         return _assign(variable, lines), not bound
     if obj.kind not in GRAPH_TOOL_KINDS:
         return None
+    lines, placement = _tool_code(scene, obj, names, variable)
+    code = "\n".join(lines)
+    if f"{STUDIO_LINES}(" in code:
+        helpers.update((STUDIO_LINES, STUDIO_DASHED))
+    if f"{STUDIO_DASHED}(" in code:
+        helpers.add(STUDIO_DASHED)
+    return lines, placement
+
+
+def _tool_code(scene: Scene, obj: SceneObject, names: dict[str, str], variable: str) -> tuple[list[str], bool]:
     dynamic = is_dynamic(scene, obj)
     if obj.kind in (ObjectKind.TANGENT, ObjectKind.SECANT):
         build = tangent_code if obj.kind == ObjectKind.TANGENT else secant_code
@@ -516,6 +528,19 @@ def _with_placement(lines: list[str], obj: SceneObject) -> list[str]:
 def _assign(variable: str, lines: list[str]) -> list[str]:
     return [f"{variable} = {lines[0]}"] + lines[1:]
 
+
+#: Dashed helper lines that may have length 0 (a point on an axis, a secant with
+#: h = 0); Manim 0.19 fails on a ``DashedLine`` of length 0.
+STUDIO_DASHED_SOURCE = '''def studio_dashed_line(start, end, **kwargs):
+    """A DashedLine that may also have length 0 (it is then invisibly short)."""
+    start, end = np.array(start, dtype=float), np.array(end, dtype=float)
+    if np.linalg.norm(end - start) < 1e-6:
+        end = start + np.array([1e-6, 0.0, 0.0])
+    return DashedLine(start, end, **kwargs)'''
+
+STUDIO_LINES_SOURCE = '''def studio_lines_to_point(axes, point, **kwargs):
+    """Like axes.get_lines_to_point, but also for points on an axis."""
+    return VGroup(*(studio_dashed_line(axis.get_projection(point), point, **kwargs) for axis in (axes.y_axis, axes.x_axis)))'''
 
 #: Source of the clipping plot helper, emitted once per script when needed.
 STUDIO_PLOT_SOURCE = '''def studio_plot(axes, function, x_range, y_range=None, breaks=(), **kwargs):

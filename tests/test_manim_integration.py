@@ -760,3 +760,24 @@ def test_secant_becomes_the_tangent_in_manim(tmp_path) -> None:
     assert isinstance(line, Line)
     (x_start, y_start), (x_end, y_end) = (axes.p2c(point)[:2] for point in (line.get_start(), line.get_end()))
     assert (y_end - y_start) / (x_end - x_start) == pytest.approx(2.0)  # tangent slope of x² at 1
+
+
+def test_dashed_helper_lines_of_length_zero_render(tmp_path) -> None:
+    """Points on an axis and flat secants have dashed lines of length 0 (Manim 0.19 failed on them)."""
+    objects = [
+        make_object(ObjectKind.AXES, "Achsen", "ax"),
+        make_object(ObjectKind.PARAMETER, "a", "pa", symbol="a", value=1.0),
+        make_object(ObjectKind.FUNCTION_GRAPH, "Graph", "g", expression="x^2", axes_id="ax"),
+        make_object(ObjectKind.GRAPH_POINT, "Ursprung", "p", graph_id="g", x_value=0.0),
+        make_object(ObjectKind.GRAPH_POINT, "Wanderer", "q", graph_id="g", x_parameter="pa"),
+        make_object(ObjectKind.SECANT, "Flach", "s", graph_id="g", x_value=-1.0, h=2.0),
+        make_object(ObjectKind.SECANT, "Grenzwert", "s2", graph_id="g", x_value=1.0, h_parameter="pa"),
+    ]
+    steps = [
+        play(*(make_animation(AnimationKind.FADE_IN, object_id) for object_id in ("ax", "g", "p", "q", "s", "s2"))),
+        play(make_animation(AnimationKind.SET_VALUE, "pa", "v", value=0.0, run_time=0.5)),
+        play(make_animation(AnimationKind.FADE_OUT, "p"), make_animation(AnimationKind.FADE_OUT, "s")),
+    ]
+    script = generate_script(make_project(Scene(id="s", name="Nulllinien", objects=objects, steps=steps)))
+    result = run_manim(tmp_path, script, "Nulllinien")
+    assert result.returncode == 0, result.stdout + result.stderr + script

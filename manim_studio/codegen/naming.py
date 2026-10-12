@@ -17,6 +17,11 @@ _TRANSLITERATION = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae"
 #: name would be shadowed inside them (``x0 = x0.get_value()``).
 BUILD_LOCALS = frozenset({"mob", "x0", "y0", "x1", "y1", "dx", "slope", "left", "right"})
 
+#: Helper functions the generated script may define next to the scene classes.
+HELPER_FUNCTIONS = frozenset(
+    {"studio_plot", "studio_dashed_line", "studio_lines_to_point", "studio_shape", "studio_camera_frame", "studio_angle"}
+)
+
 #: Lower-case names used by the generated code or Python itself.
 RESERVED_VARIABLES = (
     frozenset(keyword.kwlist)
@@ -25,6 +30,7 @@ RESERVED_VARIABLES = (
     | frozenset(name for name in dir(builtins) if name.islower())
     | {"self", "np", "x", "config", "rate_functions", "manim", "numpy"}
     | BUILD_LOCALS
+    | HELPER_FUNCTIONS
 )
 
 #: Class names the generated code relies on.

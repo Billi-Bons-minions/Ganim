@@ -247,14 +247,15 @@ def test_secant_code() -> None:
     code = generate_script(make_project(scene), CodegenOptions())
     static = code.split("sekante = VGroup(")[1].split("def sekante_2_build")[0]
     assert "Line(achsen.c2p(0.0, -3.0), achsen.c2p(4.0, 13.0), color=" in static
-    assert static.count("Dot(") == 2 and static.count("DashedLine(") == 2
+    assert static.count("Dot(") == 2 and static.count("studio_dashed_line(") == 2
+    assert "def studio_dashed_line(start, end, **kwargs):" in code  # dashed lines of length 0 (h = 0)
     assert "def sekante_2_build():" in code and "dx = h.get_value()" in code
     assert "sekante_2 = always_redraw(sekante_2_build)" in code
     compile(code, "secant.py", "exec")
     plain = secant_scene(show_triangle=False, radius=0.0)
     code = generate_script(make_project(plain), CodegenOptions())
     build = code.split("def sekante_2_build():")[1].split("sekante_2 = ")[0]
-    assert "Dot(" not in build and "DashedLine(" not in build
+    assert "Dot(" not in build and "dashed_line(" not in build
 
 
 def test_objects_named_like_build_locals_are_renamed() -> None:

@@ -468,3 +468,27 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
   - *Überblenden* und *Passende Formen verwandeln* bekommen keinen Bogen (sie blenden über bzw. bewegen Teile einzeln).
   - Import: Steht `path_arc` neben `.rotate(…)`, gehört der Bogen zur Drehung (so erzeugt Manim Studio selbst Drehen + Bewegen) und wird nicht zur Bogenbahn.
 - **Bühne = Video, dabei gefunden:** Kreise, Ellipsen und Punkte liefen auf der Bühne im Uhrzeigersinn, Rechtecke begannen oben links (Qts `addEllipse`/`addRect`). Manim beginnt Kreise rechts gegen den Uhrzeigersinn und Rechtecke oben rechts. Weil *Verwandeln* die Punkte in dieser Reihenfolge paart, war die Form auf halbem Weg vom Kreis zum Quadrat auf der Bühne zu klein und verdreht (auch ohne Bogen). Außerdem begann *Erzeugen* an einer anderen Stelle als im Video. Jetzt gleich; Bildvergleich mitten in der Verwandlung deckungsgleich.
+
+# Zusammenfassung der Abendschicht (12.10.)
+
+## Fertig (je ein Commit, mit Tests gegen echtes Manim, Doku; gepusht)
+1. Mengenformen (Vereinigung, Schnitt, Differenz, symmetrische Differenz), Vorlage Venn-Diagramm
+2. Funktionswerte von Graphen in Formeln (`f(a)`)
+3. Wertbeschriftung als eigenes Objekt, folgt ihrem Werkzeug
+4. Komplexe Ebene und nichtlineare Abbildungen (ApplyComplexFunction/ApplyPointwiseFunction), Vorlage w = z²
+5. Kamera dreht dauerhaft (3D)
+6. 3D-Körper im Raum bewegen und drehen; Licht wie Manims ThreeDCamera
+7. Zoom-Lupe (ZoomedScene), Vorlage „Lupe: lokal linear“
+8a. Bewegen und Verwandeln auf einer Bogenbahn (`path_arc`)
+- Dazu mehrere Korrekturen „Bühne = Video“ (Schrift wie Pango, Achsenmarken, Achsenbeschriftungen, Gitterlinien, Textgröße und Zeilenabstand, Punktreihenfolge von Kreisen und Rechtecken) und zwei Fuzz-Runden. CI ist für alle Commits bis zur Lupe grün; der Lauf für die Bogenbahn lief beim Schreiben noch (lokal 579 Tests grün, Manim 0.22 und 0.19).
+
+## Nicht fertig (nächste Schritte, in dieser Reihenfolge)
+- 8b. Farbverläufe: noch nicht begonnen (nur Manims Verhalten nachgelesen: Verlauf von `c − offset` nach `c + offset`, Richtung UL, dreht beim Drehen mit, in 0.19 und 0.22 gleich).
+- 8c. Gestrichelte Varianten aller Formen.
+- 9. Graph-Werkzeuge an der Integralfunktion; Import erweitern.
+- 10. Weitere Vorlagen/Beispiele, README-GIFs der neuen Funktionen.
+- Bekannte Grenzen: 3D sortiert ganze Körper statt Flächen; Skalieren eines bewegten 3D-Körpers; Lupe und 3D nicht im selben Gesamtvideo; keine Parameter in Abbildungstermen.
+
+## Deine Entscheidungen
+- Release/Tag/PyPI: nichts veröffentlicht, wartet auf deine Freigabe.
+- Bogenbahn zusammen mit Skalieren/Drehen desselben Objekts: ich erzeuge `StudioTransform` (nur die Mitte läuft auf dem Bogen, wie auf der Bühne) statt Manims `.animate(path_arc=…)`, das auch Skalierung/Drehung „mitdreht“. Passt das so?

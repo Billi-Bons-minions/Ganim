@@ -57,11 +57,12 @@ ATTACHABLE_KINDS = frozenset(
         ObjectKind.CODE,
         ObjectKind.BULLET_LIST,
         ObjectKind.NETWORK,
+        ObjectKind.CAMERA,  # 2D only: the camera follows an object
     }
 )
 
 #: Objects another object can follow (their position is a real, moving center).
-FOLLOWABLE_KINDS = ATTACHABLE_KINDS | {ObjectKind.NUMBER_PLANE, ObjectKind.AXES, ObjectKind.NUMBER_LINE}
+FOLLOWABLE_KINDS = (ATTACHABLE_KINDS - {ObjectKind.CAMERA}) | {ObjectKind.NUMBER_PLANE, ObjectKind.AXES, ObjectKind.NUMBER_LINE}
 
 ATTACH_SPECS: tuple[ParamSpec, ...] = (
     ParamSpec("attach", ParamType.CHOICE, ATTACH_NONE, choices=ATTACH_MODES),
@@ -191,8 +192,16 @@ def set_attach_mode(scene: Scene, object_id: str, mode: str) -> None:
     obj.params["attach"] = mode
     if mode == ATTACH_FOLLOW and not (scene.object_by_id(obj.params.get("attach_target")) and can_follow(scene, object_id, scene.object_by_id(obj.params.get("attach_target")))):
         candidates = [other for other in scene.objects if can_follow(scene, object_id, other)]
+        if obj.kind == ObjectKind.CAMERA:
+            # a camera rather follows something that moves than the coordinate grid
+            moving = [other for other in candidates if other.kind not in (ObjectKind.NUMBER_PLANE, ObjectKind.AXES, ObjectKind.NUMBER_LINE)]
+            candidates = moving or candidates
         nearest = min(candidates, key=lambda other: (other.x - obj.x) ** 2 + (other.y - obj.y) ** 2, default=None)
         obj.params["attach_target"] = nearest.id if nearest is not None else None
+    target = scene.object_by_id(obj.params.get("attach_target"))
+    if mode == ATTACH_FOLLOW and obj.kind == ObjectKind.CAMERA and target is not None:
+        # a following camera keeps its target in the middle of the picture
+        obj.x, obj.y = _start_position(scene, target)
     if mode == ATTACH_FORMULA and not obj.params.get("attach_x") and not obj.params.get("attach_y"):
         obj.params["attach_x"] = f"{round(obj.x, 4):g}"
         obj.params["attach_y"] = f"{round(obj.y, 4):g}"

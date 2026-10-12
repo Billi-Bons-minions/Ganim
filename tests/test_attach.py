@@ -86,3 +86,21 @@ def test_switching_on_keeps_things_in_place_and_deleting_the_target_detaches() -
     assert dot.params["attach_target"] == "b"  # the nearest object
     ops.remove_objects(scene, ["b"])
     assert dot.params["attach_target"] is None and "attach_target_missing" in {issue.code for issue in validate_scene(scene)}
+
+
+def test_camera_follows_in_2d_only() -> None:
+    from manim_studio.model.attach import ATTACH_FOLLOW
+
+    scene = _scene()
+    camera = make_object(ObjectKind.CAMERA, "Kamera", "k", 0.0, 0.0)
+    scene.objects.append(make_object(ObjectKind.NUMBER_PLANE, "Ebene", "e"))
+    scene.objects.append(camera)
+    set_attach_mode(scene, "k", ATTACH_FOLLOW)
+    assert camera.params["attach_target"] != "e"  # rather something that moves than the grid
+    target = scene.object_by_id(camera.params["attach_target"])
+    end = states_after(scene, 0)
+    assert (end["k"].x, end["k"].y) == pytest.approx((end[target.id].x, end[target.id].y))  # the target stays in the middle
+    code = generate_script(make_project(scene))
+    assert "self.add(self.camera.frame)" in code and "self.camera.frame.add_updater(" in code
+    scene.objects.append(make_object(ObjectKind.AXES_3D, "Raum", "r"))
+    assert "attach_camera_3d" in {issue.code for issue in validate_scene(scene)}

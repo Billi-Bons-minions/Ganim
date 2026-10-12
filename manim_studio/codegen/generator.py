@@ -100,6 +100,8 @@ def _updater_lines(scene: Scene, names: dict[str, str]) -> list[str]:
             point = f"[{x_code}, {y_code}, 0.0]"
         else:
             continue
+        if obj.kind == ObjectKind.CAMERA:
+            lines.append(f"self.add({names[obj.id]})  # updaters only run on objects in the scene")
         lines.append(f"{names[obj.id]}.add_updater(lambda m: m.move_to({point}), call_updater=True)")
     return (["# Coupled objects move with their target or formula"] + lines) if lines else []
 

@@ -1309,4 +1309,5 @@ STRINGS: dict[str, str] = {
     "codegen.attach_target_missing": "“{detail}” should follow an object that is missing.",
     "codegen.attach_formula_invalid": "The position formula of “{detail}” is invalid.",
     "lock.coupled": "“{name}” is coupled and placed automatically. Change its coupling in the properties panel instead.",
+    "issue.attach_camera_3d": "In 3D scenes the camera cannot be coupled; use camera moves instead.",
 }

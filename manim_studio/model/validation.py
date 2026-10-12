@@ -189,6 +189,12 @@ def _attach_issues(scene: Scene, obj: SceneObject, add) -> None:
     from manim_studio.model.attach import ATTACH_FOLLOW, ATTACH_FORMULA, attach_mode, follows_circularly, formula_error
 
     mode = attach_mode(obj)
+    if mode != "none" and obj.kind == ObjectKind.CAMERA:
+        from manim_studio.model.three_d import is_3d
+
+        if is_3d(scene):
+            add(ERROR, "attach_camera_3d")
+            return
     if mode == ATTACH_FOLLOW:
         target = scene.object_by_id(obj.params.get("attach_target"))
         if target is None or target.id == obj.id:

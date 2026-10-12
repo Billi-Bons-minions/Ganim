@@ -696,3 +696,11 @@ def test_coupled_objects_render(tmp_path) -> None:
     scene.name = "Kopplung"
     result = run_manim(tmp_path, generate_script(make_project(scene)), "Kopplung")
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_camera_following_a_dot_renders(tmp_path) -> None:
+    dot = make_object(ObjectKind.DOT, "Punkt", "d", -4.0, -1.0)
+    camera = make_object(ObjectKind.CAMERA, "Kamera", "k", -4.0, -1.0, attach="follow", attach_target="d")
+    scene = Scene(id="s", name="Folgen", objects=[dot, camera], steps=[play(make_animation(AnimationKind.MOVE, "d", x=4.0, y=2.0), make_animation(AnimationKind.SCALE, "k", factor=0.6))])
+    result = run_manim(tmp_path, generate_script(make_project(scene)), "Folgen")
+    assert result.returncode == 0, result.stdout + result.stderr

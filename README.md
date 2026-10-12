@@ -1,5 +1,7 @@
 # Manim Studio
 
+*Ganim – Vibe Coded GUI for Manim*
+
 Mit Manim Studio erstellst du Animationen für die [Manim Community Edition](https://www.manim.community) per Maus, ohne eine Zeile Code zu schreiben.
 Im Hintergrund erzeugt die App ein gültiges Manim-Skript und rendert es mit Manim. Das Skript lässt sich jederzeit ansehen und exportieren.
 

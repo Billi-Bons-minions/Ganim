@@ -650,3 +650,23 @@ def test_networks_render(tmp_path) -> None:
     ]
     result = run_manim(tmp_path, generate_script(make_project(Scene(id="s", name="Netze", objects=[plain, directed, tree], steps=steps))), "Netze", "--dry_run")
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+
+
+def test_highlighting_vertices_and_edges_renders(tmp_path) -> None:
+    net = make_object(ObjectKind.NETWORK, "Netz", "n", vertices="A, B, C", edges="A->B\nB->C", directed=True)
+    plain = make_object(ObjectKind.NETWORK, "Ohne", "o", 3.0, 0.0, vertices="X, Y", edges="X-Y", labels=False)
+    scene = Scene(
+        id="s",
+        name="Netze",
+        objects=[net, plain],
+        steps=[
+            play(make_animation(AnimationKind.CREATE, "n"), make_animation(AnimationKind.CREATE, "o")),
+            play(
+                make_animation(AnimationKind.NETWORK_PARTS, "n", parts="A, A->B", color="#FC6255"),
+                make_animation(AnimationKind.NETWORK_PARTS, "o", parts="Y-X, X", effect="indicate"),
+            ),
+            play(make_animation(AnimationKind.NETWORK_PARTS, "n", parts="C, B-C", effect="flash")),
+        ],
+    )
+    result = run_manim(tmp_path, generate_script(make_project(scene)), "Netze")
+    assert result.returncode == 0, result.stdout + result.stderr

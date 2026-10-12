@@ -315,6 +315,17 @@ class AnimationPreview(QWidget):
                 painter.setPen(self._pen(color, 2.0))
                 painter.drawEllipse(QPointF(0, 0), unit * 1.8 * local, unit * 1.8 * local)
 
+    def _draw_network_parts(self, painter: QPainter, t: float, unit: float) -> None:
+        points = [QPointF(-unit * 1.6, unit * 0.9), QPointF(0, -unit * 1.0), QPointF(unit * 1.6, unit * 0.9)]
+        highlighted = _mix(QColor("#FFFFFF"), RED, t)
+        for (a, b), color in (((0, 2), QColor("#FFFFFF")), ((1, 2), QColor("#FFFFFF")), ((0, 1), highlighted)):
+            painter.setPen(self._pen(color, 2.0))
+            painter.drawLine(points[a], points[b])
+        painter.setPen(Qt.PenStyle.NoPen)
+        for index, point in enumerate(points):
+            painter.setBrush(_mix(BLUE, RED, t) if index < 2 else BLUE)
+            painter.drawEllipse(point, unit * 0.32, unit * 0.32)
+
     def _draw_shrink_to_center(self, painter: QPainter, t: float, unit: float) -> None:
         painter.scale(max(1 - t, 0.001), max(1 - t, 0.001))
         self._circle(painter, unit)

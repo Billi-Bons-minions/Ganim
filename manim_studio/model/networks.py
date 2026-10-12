@@ -148,3 +148,48 @@ def _raw_layout(obj: SceneObject) -> dict[str, tuple[float, float]]:
     except Exception:  # noqa: BLE001 - a layout that cannot handle this graph falls back to a circle
         return _circle(vertices, scale)
     return {v: (round(float(positions[v][0]), 6), round(float(positions[v][1]), 6)) for v in vertices}
+
+
+#: A vertex or an edge of a network: ``("v", name, "")`` or ``("e", start, end)``.
+Part = tuple[str, str, str]
+
+
+def vertex_part(name: str) -> Part:
+    return ("v", name, "")
+
+
+def edge_part(start: str, end: str) -> Part:
+    return ("e", start, end)
+
+
+def network_parts(obj: SceneObject, text: str) -> tuple[list[Part], list[str]]:
+    """The vertices and edges named in ``text`` (e.g. ``"A, A-B, B"``) and the names that do not exist.
+
+    A name that is a vertex wins over reading it as an edge (``"A-1"`` may be a vertex).
+    In undirected networks ``B-A`` means the edge ``A-B``.
+    """
+    vertices = network_vertices(obj)
+    edges = [edge for edge in network_edges(obj) if edge[0] in vertices and edge[1] in vertices]
+    directed = bool(obj.params.get("directed"))
+    parts: list[Part] = []
+    unknown: list[str] = []
+    for token in re.split(r"[,;\n]", text):
+        token = token.strip()
+        if not token:
+            continue
+        part: Part | None = None
+        if token in vertices:
+            part = vertex_part(token)
+        else:
+            match = _EDGE.match(token)
+            if match:
+                a, b = match.group(1), match.group(3)
+                if (a, b) in edges:
+                    part = edge_part(a, b)
+                elif not directed and (b, a) in edges:
+                    part = edge_part(b, a)
+        if part is None:
+            unknown.append(token)
+        elif part not in parts:
+            parts.append(part)
+    return parts, unknown

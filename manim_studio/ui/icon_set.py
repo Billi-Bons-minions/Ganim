@@ -763,6 +763,21 @@ def _a_broadcast(p: QPainter) -> None:
     p.restore()
 
 
+def _a_network_parts(p: QPainter) -> None:
+    points = ((5, 18), (12, 5), (19, 18))
+    _line(p, *points[0], *points[2])
+    p.save()
+    pen = p.pen()
+    pen.setWidthF(pen.widthF() * 1.8)
+    p.setPen(pen)
+    _line(p, *points[0], *points[1])
+    p.restore()
+    _line(p, *points[1], *points[2])
+    _circle(p, *points[0], 2.6, fill=True)
+    _circle(p, *points[1], 2.6, fill=True)
+    _circle(p, *points[2], 2.6)
+
+
 def _a_one_by_one(p: QPainter) -> None:
     for row, alpha in enumerate((1.0, 0.65, 0.3)):
         p.save()
@@ -924,6 +939,7 @@ ICONS: dict[str, Drawer] = {
     "a_transform_from_copy": _a_from_copy,
     "a_passing_flash": _a_passing_flash,
     "a_broadcast": _a_broadcast,
+    "a_network_parts": _a_network_parts,
     "a_one_by_one": _a_one_by_one,
     "a_add_letters": _a_add_letters,
     "a_grow_arrow": _a_grow_arrow,

@@ -13,6 +13,7 @@ from manim_studio.codegen.literals import LiteralError, fmt_float, py_color, py_
 from manim_studio.codegen.three_d_code import orbit_call
 from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import STEP_LAGGED, STEP_SEQUENCE, Animation, Scene, Step
+from manim_studio.model.geometry import param_float
 from manim_studio.model.schema import ARROW_KINDS, animation_allowed
 from manim_studio.model.three_d import is_3d
 from manim_studio.model.types import (
@@ -208,11 +209,49 @@ def simple_animation_code(anim: Animation, scene: Scene, names: dict[str, str], 
         shift = f", shift={direction} * 0.3" if direction else ""
         lag = fmt_float(float(anim.params.get("lag_ratio", 0.6)))
         return f"LaggedStart(*[FadeIn(item{shift}) for item in {variable}], {', '.join([f'lag_ratio={lag}'] + timing.args())})"
+    if anim.kind == AnimationKind.NETWORK_PARTS:
+        return network_parts_code(anim, scene, variable, timing)
     if anim.kind == AnimationKind.TYPE_WITH_CURSOR:
         cursor = f"Rectangle(height={variable}.height * 1.1, width=0.06, fill_opacity=1, stroke_width=0, color={variable}.get_color()).move_to({variable}[0])"
         return f"TypeWithCursor({', '.join([variable, cursor, 'leave_cursor_on=False'] + timing.args())})"
     arguments = [variable] + _extra_arguments(anim, scene, names) + timing.args()
     return f"{ANIMATION_CLASSES[anim.kind]}({', '.join(arguments)})"
+
+
+def network_parts_code(anim: Animation, scene: Scene, variable: str, timing: Timing) -> str:
+    """Recolor, light up or flash single vertices (``graph.vertices[v]``) and edges (``graph.edges[(a, b)]``)."""
+    from manim_studio.model.networks import network_parts
+
+    obj = scene.object_by_id(anim.target_id)
+    parts, unknown = network_parts(obj, str(anim.params.get("parts", ""))) if obj is not None else ([], [])
+    if unknown:
+        raise CodegenError("network_parts_unknown", ", ".join(unknown))
+    if not parts:
+        raise CodegenError("network_parts_empty", obj.name if obj is not None else "")
+    color = py_color(str(anim.params.get("color", "")))
+    effect = str(anim.params.get("effect", "color"))
+    options = ", ".join(timing.args())
+    codes = []
+    for kind, a, b in parts:
+        mobject = f"{variable}.vertices[{py_str(a)}]" if kind == "v" else f"{variable}.edges[({py_str(a)}, {py_str(b)})]"
+        if effect == "indicate":
+            # like Indicate (to the color and back), but a vertex keeps the color of its label
+            there_and_back = f"run_time={fmt_float(timing.run_time)}, rate_func=lambda t: there_and_back({timing.rate_func}(t))"
+            if kind == "v":
+                codes.append(f"{mobject}.animate({there_and_back}).scale(1.2).set_fill({color}, family=False)")
+            else:
+                codes.append(f"Indicate({mobject}, color={color}, {there_and_back})")
+        elif effect == "flash" and kind == "v":
+            radius = fmt_float(param_float(obj.params, "radius", 0.3) + 0.15)
+            codes.append(f"Flash({mobject}, color={color}, flash_radius={radius}, {options})")
+        elif effect == "flash":
+            codes.append(f"ShowPassingFlash({mobject}.copy().set_stroke({color}, width=8), time_width=0.5, {options})")
+        elif kind == "v":
+            # only the dot: a label inside the vertex keeps its color
+            codes.append(f"{mobject}.animate({options}).set_fill({color}, family=False)")
+        else:
+            codes.append(f"{mobject}.animate({options}).set_color({color})")
+    return codes[0] if len(codes) == 1 else "AnimationGroup(\n" + "".join(f"{INDENT}{code},\n" for code in codes) + ")"
 
 
 def _modifier_call(anim: Animation) -> str:

@@ -8,12 +8,14 @@ from dataclasses import replace
 from manim_studio.model import groups
 from manim_studio.model.entities import Animation, Scene, Step
 from manim_studio.model.paths import arc_point, path_polyline, point_at
-from manim_studio.model.rate_functions import rate
+from manim_studio.model.rate_functions import rate, there_and_back
 from manim_studio.model.state import (
     START,
     ObjectState,
     apply_animation,
     apply_to_group,
+    network_animation_parts,
+    part_color,
     refresh_group_states,
     states_after,
 )
@@ -202,6 +204,14 @@ def apply_partial(states: dict[str, ObjectState], anim: Animation, progress: flo
         )
     elif kind in (AnimationKind.CIRCUMSCRIBE, AnimationKind.PASSING_FLASH, AnimationKind.BROADCAST):
         states[anim.target_id] = replace(state, outline=progress, outline_color=str(anim.params.get("color", "#F7D96F")))
+    elif kind == AnimationKind.NETWORK_PARTS:
+        # recoloring blends to the new color; lighting up and flashing go there and back
+        color = str(anim.params.get("color", "#F7D96F"))
+        amount = progress if anim.params.get("effect", "color") == "color" else there_and_back(progress)
+        colors = dict(state.part_colors)
+        for part in network_animation_parts(scene, anim):
+            colors[part] = _mix(part_color(state, part), color, amount)
+        states[anim.target_id] = replace(state, part_colors=tuple(colors.items()))
     elif kind == AnimationKind.SET_VALUE:
         target = float(anim.params.get("value", state.value))
         states[anim.target_id] = replace(state, value=state.value + (target - state.value) * progress)

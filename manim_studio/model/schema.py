@@ -686,6 +686,8 @@ COLOR_TARGET_CHOICES = ("both", "stroke", "fill")
 
 #: Edges an object can grow from.
 EDGE_CHOICES = ("down", "up", "left", "right")
+#: What "highlight vertices/edges" does: recolor for good, light up briefly, or flash.
+NETWORK_PART_EFFECTS = ("color", "indicate", "flash")
 
 ANIMATION_PARAMS: dict[AnimationKind, tuple[ParamSpec, ...]] = {
     AnimationKind.FADE_IN: (
@@ -703,6 +705,11 @@ ANIMATION_PARAMS: dict[AnimationKind, tuple[ParamSpec, ...]] = {
         ParamSpec("time_width", ParamType.FLOAT, 0.3, minimum=0.05, maximum=1.0, step=0.05),
     ),
     AnimationKind.BROADCAST: (ParamSpec("rings", ParamType.INT, 5, minimum=1, maximum=20, step=1),),
+    AnimationKind.NETWORK_PARTS: (
+        ParamSpec("parts", ParamType.STRING, "A, A-B, B"),
+        ParamSpec("effect", ParamType.CHOICE, "color", choices=NETWORK_PART_EFFECTS),
+        ParamSpec("color", ParamType.COLOR, _YELLOW),
+    ),
     AnimationKind.ONE_BY_ONE: (
         ParamSpec("lag_ratio", ParamType.FLOAT, 0.6, minimum=0.05, maximum=1.0, step=0.05),
         ParamSpec("shift", ParamType.CHOICE, "up", choices=SHIFT_CHOICES),
@@ -836,6 +843,8 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
         return False
     if anim_kind in (AnimationKind.ADD_LETTERS, AnimationKind.TYPE_WITH_CURSOR):
         return obj_kind == ObjectKind.TEXT
+    if anim_kind == AnimationKind.NETWORK_PARTS:
+        return obj_kind == ObjectKind.NETWORK
     if anim_kind == AnimationKind.ONE_BY_ONE:
         return obj_kind in (ObjectKind.BULLET_LIST, ObjectKind.GROUP)
     if anim_kind == AnimationKind.GROW_ARROW:

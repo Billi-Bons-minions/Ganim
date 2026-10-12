@@ -293,9 +293,10 @@ def network_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
     def local(point: tuple[float, float]) -> QPointF:
         return QPointF(point[0] * PX, -point[1] * PX)
 
-    edges = QPainterPath()
-    tips = QPainterPath()
     directed = bool(obj.params.get("directed"))
+    colors = dict(state.part_colors)
+    # one path per color: highlighted vertices and edges are drawn in their own color
+    edge_paths: dict[str, tuple[QPainterPath, QPainterPath]] = {}
     for a, b in network_edges(obj):
         if a not in layout or b not in layout:
             continue
@@ -303,6 +304,7 @@ def network_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
         length = math.hypot(bx - ax, by - ay)
         if length < 1e-9:
             continue
+        edges, tips = edge_paths.setdefault(colors.get(("e", a, b), state.stroke_color), (QPainterPath(), QPainterPath()))
         ux, uy = (bx - ax) / length, (by - ay) / length
         start = (ax + ux * radii[a], ay + uy * radii[a])
         end = (bx - ux * radii[b], by - uy * radii[b])
@@ -316,13 +318,16 @@ def network_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
         else:
             edges.moveTo(local(start))
             edges.lineTo(local(end))
-    primitives = [Primitive(path=edges, pen=_pen(state.stroke_color, obj.stroke_width, obj.stroke_opacity, state.scale))]
-    if directed:
-        primitives.append(Primitive(path=tips, brush=QBrush(_color(state.stroke_color, obj.stroke_opacity))))
-    dots = QPainterPath()
+    primitives = []
+    for color, (edges, tips) in edge_paths.items():
+        primitives.append(Primitive(path=edges, pen=_pen(color, obj.stroke_width, obj.stroke_opacity, state.scale)))
+        if directed:
+            primitives.append(Primitive(path=tips, brush=QBrush(_color(color, obj.stroke_opacity))))
+    dot_paths: dict[str, QPainterPath] = {}
     for vertex, point in layout.items():
-        dots.addEllipse(local(point), radii[vertex] * PX, radii[vertex] * PX)
-    primitives.append(Primitive(path=dots, brush=QBrush(_color(state.fill_color, obj.fill_opacity))))
+        dot_paths.setdefault(colors.get(("v", vertex, ""), state.fill_color), QPainterPath()).addEllipse(local(point), radii[vertex] * PX, radii[vertex] * PX)
+    for color, dots in dot_paths.items():
+        primitives.append(Primitive(path=dots, brush=QBrush(_color(color, obj.fill_opacity))))
     if labels:
         text_path_all = QPainterPath()
         for vertex, point in layout.items():

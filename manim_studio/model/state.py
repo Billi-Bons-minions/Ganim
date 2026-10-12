@@ -56,6 +56,8 @@ class ObjectState:
     theta: float = 0.0
     #: Extra geometry of attached objects (angle marks: start angle and sweep in degrees).
     geometry: tuple[float, ...] = ()
+    #: Colors of single vertices and edges of a network (``(part, color)`` pairs).
+    part_colors: tuple[tuple[tuple[str, str, str], str], ...] = ()
 
 
 def first_reference(scene: Scene, object_id: str) -> tuple[Animation, bool] | None:
@@ -247,6 +249,12 @@ def apply_animation(states: dict[str, ObjectState], anim: Animation, scene: Scen
         if partner is not None and not returns:
             states[anim.target_id] = replace(current, x=partner.x, y=partner.y, visible=True)
             states[partner.object_id] = replace(partner, x=current.x, y=current.y, visible=True)
+    elif kind == AnimationKind.NETWORK_PARTS:
+        if not returns and anim.params.get("effect", "color") == "color":
+            colors = dict(current.part_colors)
+            for part in network_animation_parts(scene, anim):
+                colors[part] = str(anim.params.get("color", current.fill_color))
+            states[anim.target_id] = replace(current, part_colors=tuple(colors.items()))
     elif kind == AnimationKind.SET_VALUE:
         if not returns:
             states[anim.target_id] = replace(current, value=float(anim.params.get("value", current.value)))
@@ -257,6 +265,24 @@ def apply_animation(states: dict[str, ObjectState], anim: Animation, scene: Scen
         states[anim.target_id] = _apply_modifier(current, anim)
     else:
         states[anim.target_id] = replace(current, visible=True)
+
+
+def network_animation_parts(scene: Scene | None, anim: Animation) -> list[tuple[str, str, str]]:
+    """The existing vertices and edges a "highlight vertices/edges" animation names."""
+    from manim_studio.model.networks import network_parts
+
+    obj = scene.object_by_id(anim.target_id) if scene is not None else None
+    if obj is None or obj.kind != ObjectKind.NETWORK:
+        return []
+    return network_parts(obj, str(anim.params.get("parts", "")))[0]
+
+
+def part_color(state: ObjectState, part: tuple[str, str, str]) -> str:
+    """Current color of a vertex (fill) or an edge (stroke) of a network."""
+    for key, color in state.part_colors:
+        if key == part:
+            return color
+    return state.fill_color if part[0] == "v" else state.stroke_color
 
 
 def _rotate_about(x: float, y: float, cx: float, cy: float, degrees: float) -> tuple[float, float]:

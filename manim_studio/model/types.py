@@ -101,6 +101,7 @@ class AnimationKind(str, Enum):
     PASSING_FLASH = "passing_flash"
     BROADCAST = "broadcast"
     ONE_BY_ONE = "one_by_one"
+    NETWORK_PARTS = "network_parts"
 
 
 class StepKind(str, Enum):

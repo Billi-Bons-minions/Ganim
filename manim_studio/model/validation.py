@@ -305,6 +305,14 @@ def _animation_issues(scene: Scene, step_index: int, anim: Animation) -> list[Is
             add(ERROR, f"{key}_missing", object_id=target.id)
         elif anim.kind == AnimationKind.MOVE_ALONG_PATH and local_outline(scene, other) is None:
             add(ERROR, "path_unsupported", other.name, other.id)
+    if anim.kind == AnimationKind.NETWORK_PARTS and target.kind == ObjectKind.NETWORK:
+        from manim_studio.model.networks import network_parts
+
+        parts, unknown = network_parts(target, str(anim.params.get("parts", "")))
+        if unknown:
+            add(ERROR, "network_parts_unknown", ", ".join(unknown), target.id)
+        elif not parts:
+            add(ERROR, "network_parts_empty", object_id=target.id)
     color = anim.params.get("color")
     if color is not None and not is_hex_color(color):
         add(ERROR, "color_invalid", str(color))
@@ -369,7 +377,11 @@ def _hidden_object_issues(scene: Scene) -> list[Issue]:
             state = states.get(anim.target_id)
             if obj is None or state is None or groups.is_group(obj) or obj.kind in UNADDED_KINDS:
                 continue
-            if not state.visible and (anim.kind in EXIT_ANIMATIONS or (anim.kind in TRANSFORM_ANIMATIONS and anim.kind != AnimationKind.TRANSFORM_FROM_COPY)):
+            if not state.visible and (
+                anim.kind in EXIT_ANIMATIONS
+                or anim.kind == AnimationKind.NETWORK_PARTS
+                or (anim.kind in TRANSFORM_ANIMATIONS and anim.kind != AnimationKind.TRANSFORM_FROM_COPY)
+            ):
                 issues.append(Issue(WARNING, "animated_while_hidden", scene.id, obj.id, index, anim.id, obj.name))
         for anim in step.animations:
             apply_animation(states, anim, scene)

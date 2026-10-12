@@ -219,6 +219,8 @@ class _Form:
             line.addWidget(picture)
         label = QLabel(text)
         label.setProperty("role", "title")
+        # long titles (e.g. "Highlight vertices/edges · Step 12") wrap instead of widening the panel
+        label.setWordWrap(True)
         font = label.font()
         font.setPointSizeF(font.pointSizeF() * 1.2)
         label.setFont(font)

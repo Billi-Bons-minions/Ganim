@@ -32,6 +32,7 @@ All of these clips were made from the built-in templates and the projects in [ex
 - Text: text with colored words, Markup text, bullet lists, code blocks with syntax highlighting, tables; with LaTeX also formulas (`MathTex`, `Tex`) with colored parts, matrices and an optional computed result (`= 3.50`, live with parameters)
 - Math: number line, number plane (square or polar grid, with numbers or as a complex plane with 1, 2 … and i, 2i …), coordinate system with labels, function graphs (`2x^2 + sin(x)`, piecewise, parametric, polar, implicit `f(x, y) = 0`, derivatives, integral functions F(x) = ∫ f(t) dt), area under a curve, Riemann rectangles, tangents and secants with a live label of their current term (e.g. `t(x) = 1.50x − 0.25`, also while they move along the graph), secants with slope triangle (let h run to 0 and the secant becomes the tangent), points on graphs, **value labels** as objects of their own (the term of a tangent or secant, the coordinates of a point, the size of an area; they follow their tool but appear, are highlighted and disappear separately), zeros/extrema/inflection points/intersections, graph labels, tables of values, data points with regression lines, bar charts (CSV import), vector fields (arrows or stream lines), networks of vertices and edges (Manim's `Graph`/`DiGraph` with several layouts)
 - 3D (shaded on the stage like Manim's 3D camera): 3D axes, surfaces `z = f(x, y)` or parametric `x(u, v), y(u, v), z(u, v)`, 3D curves, solids (sphere, cube, box, cone, cylinder, torus and the Platonic solids tetrahedron, octahedron, icosahedron, dodecahedron) that move and turn in space, arrows, lines and points in space, camera orbits, camera moves and a camera that keeps turning (`begin_ambient_camera_rotation`)
+- A **zoom lens** (Manim's `ZoomedScene`): a frame on the stage and a display that shows it magnified; it pops out, moves and zooms in
 - Images (PNG, JPG, SVG), groups, layers, lock/hide, align and distribute
 
 **Animations** (each with duration, delay and easing)
@@ -57,7 +58,7 @@ All of these clips were made from the built-in templates and the projects in [ex
 - Export of the generated Python script; the code view shows it at any time
 
 **More**
-- 17 templates (e.g. title card, function analysis, secant to tangent, sliding tangent, Pythagorean theorem, orbit, 3D solids, conic sections, presentation slide, graph theory, linear map, complex map w = z², sets with a Venn diagram) and 5 example projects in the welcome dialog
+- 18 templates (e.g. title card, function analysis, secant to tangent, sliding tangent, Pythagorean theorem, orbit, 3D solids, conic sections, presentation slide, graph theory, linear map, complex map w = z², a zoom lens on a tangent, sets with a Venn diagram) and 5 example projects in the welcome dialog
 - Interactive tour, hover previews for every animation, a list of all keyboard shortcuts (*F1*)
 - Dark and light theme, adjustable UI scale, German and English
 - Autosave and recovery after a crash, project packages (project and images in one file), your own styles, building blocks and templates

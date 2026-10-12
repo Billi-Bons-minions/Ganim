@@ -215,6 +215,10 @@ def simple_animation_code(anim: Animation, scene: Scene, names: dict[str, str], 
         # a linear map of the whole plane, around the origin (like 3Blue1Brown's grids)
         m11, m12, m21, m22 = (fmt_float(float(anim.params.get(key, default))) for key, default in (("m11", 1.0), ("m12", 0.0), ("m21", 0.0), ("m22", 1.0)))
         return f"ApplyMatrix({', '.join([f'[[{m11}, {m12}], [{m21}, {m22}]]', variable] + timing.args())})"
+    if _is_lens(scene, anim.target_id) and anim.kind == AnimationKind.FADE_IN:
+        return f"Restore({', '.join(['self.zoomed_display'] + timing.args())})"
+    if _is_lens(scene, anim.target_id) and anim.kind == AnimationKind.FADE_OUT:
+        return f"AnimationGroup({', '.join([f'FadeOut({variable})', 'FadeOut(self.zoomed_display)'] + timing.args())})"
     if anim.kind == AnimationKind.MOVE_3D:
         # the center of the solid's bounding box goes to a point of its 3D axes
         from manim_studio.model.three_d import axes_of
@@ -562,14 +566,18 @@ def step_code(
         names = {**names, **{object_id: f"{names[object_id]}.copy()" for object_id in reused}}
     starts = [anim for anim in step.animations if step.kind == StepKind.PLAY and anim.kind in ENTRANCE_ANIMATIONS and _is_trace(scene, anim.target_id)]
     turns = [anim for anim in step.animations if step.kind == StepKind.PLAY and anim.kind == AnimationKind.AMBIENT_ROTATION]
-    if not starts and not turns:
+    pops = [anim for anim in step.animations if step.kind == StepKind.PLAY and anim.kind == AnimationKind.FADE_IN and _is_lens(scene, anim.target_id)]
+    if pops and not starts and not turns:
+        lines = _step_lines(step, number, scene, names, helpers, base_dir)
+        lines[1:1] = _lens_lines(names, pops)
+    elif not starts and not turns:
         lines = _step_lines(step, number, scene, names, helpers, base_dir)
     else:
         # a TracedPath cannot fade in: it is added and records from this step on;
         # a lasting camera rotation starts before the step and goes on in the later ones
         rest = dataclasses.replace(step, animations=[anim for anim in step.animations if anim not in starts and anim not in turns])
         lines = _step_lines(rest, number, scene, names, helpers, base_dir)
-        lines[1:1] = _ambient_lines(scene, number - 1, turns) + [
+        lines[1:1] = _ambient_lines(scene, number - 1, turns) + _lens_lines(names, pops) + [
             line for anim in starts for line in (f"self.add({_variable(names, anim.target_id)})", trace_start(_variable(names, anim.target_id)))
         ]
         if not rest.animations:
@@ -627,6 +635,19 @@ def ambient_stop_lines(scene: Scene, last_index: int) -> list[str]:
 def trace_start(variable: str) -> str:
     """A TracedPath gets its first point in its first frame; fading it out before that crashes Manim."""
     return f"{variable}.update(0)  # the path starts here (fading out an empty path crashes Manim)"
+
+
+def _is_lens(scene: Scene, object_id: str) -> bool:
+    obj = scene.object_by_id(object_id)
+    return obj is not None and obj.kind == ObjectKind.ZOOM_LENS
+
+
+def _lens_lines(names: dict[str, str], pops: list[Animation]) -> list[str]:
+    """The zoomed display pops out of the lens (``get_zoomed_display_pop_out_animation``, with our timing)."""
+    if not pops:
+        return []
+    variable = names[pops[0].target_id]
+    return ["self.activate_zooming()", "self.zoomed_display.save_state()", f"self.zoomed_display.replace({variable}, stretch=True)"]
 
 
 def _is_trace(scene: Scene, object_id: str) -> bool:

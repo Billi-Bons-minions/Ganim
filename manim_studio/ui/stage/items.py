@@ -27,6 +27,9 @@ ROLE_ENDPOINT = "endpoint"
 class ObjectItem(QGraphicsObject):
     """Displays one scene object; position and rotation follow the Manim state."""
 
+    #: set while a zoom lens draws the stage into its display (the lens itself is left out then)
+    rendering_view = False
+
     def __init__(self, object_id: str) -> None:
         super().__init__()
         self.object_id = object_id
@@ -71,6 +74,8 @@ class ObjectItem(QGraphicsObject):
         return path
 
     def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget: QWidget | None = None) -> None:
+        if ObjectItem.rendering_view and any(primitive.view_source is not None for primitive in self.drawing.primitives):
+            return
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
         effects = self.effects

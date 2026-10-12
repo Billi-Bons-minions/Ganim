@@ -125,6 +125,11 @@ def _initial_add_line(scene: Scene, names: dict[str, str]) -> list[str]:
     # added from back to front, so the layers match the stage
     objects = [scene.object_by_id(object_id) for object_id in drawing_order(scene)]
     shown = [obj for obj in objects if obj is not None and obj.kind not in UNADDED_KINDS and visible_at_start(scene, obj)]
+    lens = next((obj for obj in scene.objects if obj.kind == ObjectKind.ZOOM_LENS and visible_at_start(scene, obj)), None)
+    if lens is not None:
+        return ([f"self.add({', '.join(names[obj.id] for obj in shown)})"] if shown else []) + ["self.activate_zooming()"] + [
+            trace_start(names[obj.id]) for obj in shown if obj.kind == ObjectKind.TRACE
+        ]
     if not shown:
         return []
     return [f"self.add({', '.join(names[obj.id] for obj in shown)})"] + [trace_start(names[obj.id]) for obj in shown if obj.kind == ObjectKind.TRACE]
@@ -212,6 +217,8 @@ def scene_class_code(
     """Return the full ``class ...(Scene)`` block of one scene (``spans`` count from its first line)."""
     if is_3d(scene):
         base = "ThreeDScene"
+    elif any(obj.kind == ObjectKind.ZOOM_LENS for obj in scene.objects):
+        base = "ZoomedScene"  # a moving camera with a zoomed camera beside it
     else:
         base = "MovingCameraScene" if any(obj.kind == ObjectKind.CAMERA for obj in scene.objects) else "Scene"
     header = [f"class {class_name}({base}):", "    def construct(self):"]
@@ -254,8 +261,11 @@ def joined_class_code(project: Project, class_names_by_id: dict[str, str], scene
     """A scene that runs the ``construct`` of every scene one after another."""
     camera = any(obj.kind == ObjectKind.CAMERA for scene in scenes for obj in scene.objects)
     three_d = any(is_3d(scene) for scene in scenes)
+    lens = any(obj.kind == ObjectKind.ZOOM_LENS for scene in scenes for obj in scene.objects)
+    if lens and three_d:
+        raise CodegenError("lens_joined_3d", "")
     names = ", ".join(class_names_by_id[scene.id] for scene in scenes)
-    base = "ThreeDScene" if three_d else "MovingCameraScene" if camera else "Scene"
+    base = "ThreeDScene" if three_d else "ZoomedScene" if lens else "MovingCameraScene" if camera else "Scene"
     lines = [
         f"class {JOINED_CLASS}({base}):",
         '    """All scenes of the project, one after another."""',
@@ -265,7 +275,7 @@ def joined_class_code(project: Project, class_names_by_id: dict[str, str], scene
     if three_d:
         # the 3D camera gets a steerable frame, so 2D camera moves keep working
         lines.append(f"        {STUDIO_CAMERA}(self)")
-    if camera or three_d:
+    if camera or three_d or lens:
         lines.append("        self.camera.frame.save_state()")
     lines.append(f"        for scene_class in ({names},):")
     if three_d:
@@ -274,7 +284,7 @@ def joined_class_code(project: Project, class_names_by_id: dict[str, str], scene
     if transition == "fade":
         lines += ["            if self.mobjects:", "                self.play(*[FadeOut(mobject) for mobject in self.mobjects], run_time=0.5)"]
     lines.append("            self.clear()")
-    if camera or three_d:
+    if camera or three_d or lens:
         lines.append("            self.camera.frame.restore()")
     return lines
 

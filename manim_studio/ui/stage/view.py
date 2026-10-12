@@ -8,7 +8,7 @@ from typing import Callable
 
 import shiboken6
 from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPen, QPixmap, QTransform, QWheelEvent
+from PySide6.QtGui import QBrush, QColor, QImage, QKeyEvent, QMouseEvent, QPainter, QPen, QPixmap, QTransform, QWheelEvent
 from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QWidget
 
 from manim_studio.model import groups
@@ -245,6 +245,27 @@ class StageView(QGraphicsView):
 
     # --- content --------------------------------------------------------------
 
+    def _render_lens_views(self) -> None:
+        """Draw what a zoom lens frames into its display (outside of painting: Qt cannot nest scene renders)."""
+        for item in self._items.values():
+            for primitive in item.drawing.primitives:
+                if primitive.view_source is None or primitive.rect is None:
+                    continue
+                size = primitive.rect.size() * 2.0
+                image = QImage(max(1, round(size.width())), max(1, round(size.height())), QImage.Format.Format_ARGB32_Premultiplied)
+                image.fill(Qt.GlobalColor.transparent)
+                painter = QPainter(image)
+                painter.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform)
+                ObjectItem.rendering_view = True  # the lens leaves itself out
+                try:
+                    self._scene.render(painter, QRectF(image.rect()), primitive.view_source, Qt.AspectRatioMode.IgnoreAspectRatio)
+                finally:
+                    ObjectItem.rendering_view = False
+                    painter.end()
+                primitive.image = image
+                primitive.brush = QBrush(QColor(255, 255, 255))
+                item.update()
+
     def set_content(
         self,
         scene: Scene,
@@ -286,16 +307,20 @@ class StageView(QGraphicsView):
             item.setFlag(item.GraphicsItemFlag.ItemIsSelectable, not obj.locked)
             item.setPos(pt(state.x, state.y))
             item.setRotation(-state.rotation)
-            item.setScale(state.scale)
+            # the lens draws its zoom itself (its display keeps its size)
+            item.setScale(1.0 if obj.kind == ObjectKind.ZOOM_LENS else state.scale)
             item.setTransform(local_matrix(state.matrix, state.rotation))
             if obj.kind == ObjectKind.CAMERA:
                 item.setZValue(9_000_000)
+            elif obj.kind == ObjectKind.ZOOM_LENS:
+                item.setZValue(8_900_000)  # a foreground mobject in Manim
             elif obj.id in depth_ranks:
                 item.setZValue(-900_000 + depth_ranks[obj.id])  # above the exact frame (-1 000 000)
             else:
                 item.setZValue(obj.z_index * 10_000 + index)
             item.content_hidden = self._exact_item is not None
         self._sync_groups(scene, known)
+        self._render_lens_views()
         for object_id in [object_id for object_id in self._items if object_id not in known]:
             self._scene.removeItem(self._items.pop(object_id))
         self._apply_selection(selected)

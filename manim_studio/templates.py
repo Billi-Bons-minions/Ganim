@@ -355,6 +355,33 @@ def complex_map() -> Scene:
     return scene
 
 
+def zoom_lens() -> Scene:
+    """Local linearity: the lens zooms into a graph and its tangent until they look the same."""
+    scene = create_scene(tr("template.lens.name"))
+    axes = _add(
+        scene,
+        create_object(ObjectKind.AXES, tr("kind.axes") + " 1", -2.4, -0.4, x_min=-3.0, x_max=3.0, y_min=-2.0, y_max=2.0, x_length=7.5, y_length=6.0, x_label="x", y_label="y"),
+    )
+    graph = _add(scene, create_object(ObjectKind.FUNCTION_GRAPH, "f", expression="sin(2x) + x^2/4", axes_id=axes.id, x_min=-3.0, x_max=3.0))
+    tangent = _add(scene, create_object(ObjectKind.TANGENT, tr("kind.tangent") + " 1", graph_id=graph.id, x_value=0.5, width=3.0))
+    # thin lines: the lens magnifies the line widths as well (like a real magnifying glass)
+    graph.stroke_width = tangent.stroke_width = 2.0
+    from manim_studio.model.geometry import axes_to_scene
+    from manim_studio.model.graphs import graph_function
+
+    # the lens looks at the point of contact (scene coordinates of x = 0.5 on the axes)
+    x0, y0 = axes_to_scene(axes, 0.5, graph_function(scene, graph)(0.5))
+    lens = _add(scene, create_object(ObjectKind.ZOOM_LENS, tr("kind.zoom_lens"), x0, y0, zoom=3.0, display_x=4.7, display_y=0.7, display_width=3.6, display_height=3.6))
+    lens.stroke_width = 1.5
+    caption = _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " 1", 4.7, -2.0, text=tr("template.lens.caption"), font_size=28.0, alignment="center"))
+    _play(scene, create_animation(AnimationKind.CREATE, axes.id), create_animation(AnimationKind.CREATE, graph.id, run_time=1.5))
+    _play(scene, create_animation(AnimationKind.CREATE, tangent.id))
+    _play(scene, create_animation(AnimationKind.FADE_IN, lens.id, run_time=1.5))
+    _play(scene, create_animation(AnimationKind.SCALE, lens.id, run_time=3.0, factor=0.4), create_animation(AnimationKind.WRITE, caption.id))
+    scene.steps.append(create_wait_step(1.5))
+    return scene
+
+
 def venn_diagram() -> Scene:
     """Two sets: their intersection follows a moving circle, then A without B."""
     scene = create_scene(tr("template.venn.name"))
@@ -401,4 +428,5 @@ BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("tangent", "graph", moving_tangent),
     BuiltinTemplate("venn", "a_fade_in", venn_diagram),
     BuiltinTemplate("complex_map", "a_apply_complex", complex_map),
+    BuiltinTemplate("lens", "zoom_in", zoom_lens),
 )

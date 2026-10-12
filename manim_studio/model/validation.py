@@ -138,6 +138,14 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
             add(ERROR, "angle_lines_missing")
         elif angle_geometry(scene, obj, refresh_attached_states(scene, {line.id: initial_state(scene, line) for line in lines})) is None:
             add(WARNING, "angle_parallel")
+    if obj.kind == ObjectKind.ZOOM_LENS:
+        from manim_studio.model.lenses import lens_of
+        from manim_studio.model.three_d import is_3d
+
+        if is_3d(scene):
+            add(ERROR, "lens_needs_2d")
+        elif lens_of(scene) is not obj:
+            add(ERROR, "lens_duplicate")
     if obj.kind == ObjectKind.BOOLEAN_SHAPE:
         from manim_studio.model.booleans import operands, start_bounds
 
@@ -462,6 +470,10 @@ def _step_issues(scene: Scene, index: int, step: Step) -> list[Issue]:
             issues.append(Issue(ERROR, "transform_conflict" if target_id in transformed else "animation_conflict", scene.id, target_id, index))
         for target_id in sorted(parameter_conflicts(scene, step.animations) - simultaneous_conflicts(step.animations)):
             issues.append(Issue(ERROR, "parameter_conflict", scene.id, target_id, index))
+        from manim_studio.model.conflicts import lens_conflicts
+
+        for target_id in sorted(lens_conflicts(scene, step.animations) - simultaneous_conflicts(step.animations)):
+            issues.append(Issue(ERROR, "animation_conflict", scene.id, target_id, index))
     return issues
 
 

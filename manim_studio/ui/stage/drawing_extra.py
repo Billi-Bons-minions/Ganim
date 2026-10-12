@@ -224,6 +224,38 @@ def boolean_primitives(scene: Scene, obj: SceneObject, state: ObjectState, resou
     return [_shape_primitive(path, obj, state)]
 
 
+def lens_primitives(scene: Scene, obj: SceneObject, state: ObjectState) -> list[Primitive]:
+    """The lens frame and its display, which shows the framed part of the stage magnified (``ZoomedScene``)."""
+    from manim_studio.model.lenses import lens_geometry
+
+    lens = lens_geometry(obj, state.scale)
+    pen = _pen(state.stroke_color, obj.stroke_width, 1.0, 1.0)
+    frame = QPainterPath()
+    frame.addRect(QRectF(pt(-lens.frame_width / 2, lens.frame_height / 2), pt(lens.frame_width / 2, -lens.frame_height / 2)))
+    # the display lies where it is in the scene, also while the frame moves
+    dx, dy = lens.display_x - state.x, lens.display_y - state.y
+    display = QRectF(pt(dx - lens.display_width / 2, dy + lens.display_height / 2), pt(dx + lens.display_width / 2, dy - lens.display_height / 2))
+    source = QRectF(pt(state.x - lens.frame_width / 2, state.y + lens.frame_height / 2), pt(state.x + lens.frame_width / 2, state.y - lens.frame_height / 2))
+    background = QPainterPath()
+    background.addRect(display)
+    border = QPainterPath()
+    border.addRect(display)
+    # the zoomed camera also sees the inner half of its own frame: magnified, it lines the display
+    magnified = pen.widthF() / 2 * lens.display_width / max(lens.frame_width, 1e-6)
+    inner = QPainterPath()
+    inner.addRect(display.adjusted(magnified / 2, magnified / 2, -magnified / 2, -magnified / 2))
+    lining = QPen(pen)
+    lining.setWidthF(magnified)
+    lining.setJoinStyle(Qt.PenJoinStyle.MiterJoin)
+    return [
+        Primitive(path=background, brush=QBrush(_color(scene.background_color))),
+        Primitive(rect=display, view_source=source),
+        Primitive(path=inner, pen=lining),
+        Primitive(path=border, pen=pen),
+        Primitive(path=frame, pen=pen),
+    ]
+
+
 def sector_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
     points = arc_points(param_float(obj.params, "radius", 1.5), param_float(obj.params, "start_angle", 0.0), param_float(obj.params, "angle", 90.0))
     return [_shape_primitive(_polygon([(0.0, 0.0)] + points), obj, state)]
@@ -717,6 +749,8 @@ def extra_drawing(scene: Scene, obj: SceneObject, state: ObjectState, resources:
         return angle_primitives(obj, state), False
     if kind == ObjectKind.BOOLEAN_SHAPE:
         return boolean_primitives(scene, obj, state, resources), False
+    if kind == ObjectKind.ZOOM_LENS:
+        return lens_primitives(scene, obj, state), False
     if kind == ObjectKind.TRACE:
         return trace_primitives(obj, state), False
     if kind == ObjectKind.VECTOR_FIELD:

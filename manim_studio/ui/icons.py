@@ -146,6 +146,18 @@ def _tool_label(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill:
     p.drawText(QRectF(m * 0.5, m * 0.2, s - m, s * 0.5), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, "m=1")
 
 
+def _zoom_lens(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    # a small frame and the big display it is shown in
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    p.setPen(QPen(QColor("#F7D96F"), w))
+    p.drawRect(QRectF(m, s * 0.6, s * 0.22, s * 0.22))
+    p.drawRect(QRectF(s * 0.45, m, s * 0.5 - m, s * 0.5 - m))
+    pen = QPen(neutral, w * 0.6)
+    pen.setStyle(Qt.PenStyle.DashLine)
+    p.setPen(pen)
+    p.drawLine(QPointF(m + s * 0.22, s * 0.6), QPointF(s * 0.45, s * 0.5 - m))
+
+
 def _trace(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
     path = QPainterPath(QPointF(m, s - m))
     path.cubicTo(QPointF(s * 0.3, s * 0.2), QPointF(s * 0.6, s * 0.9), QPointF(s * 0.78, s * 0.3))
@@ -517,6 +529,7 @@ _EXTRA_DRAWERS = {
     ObjectKind.ANGLE: _angle,
     ObjectKind.BOOLEAN_SHAPE: _boolean_shape,
     ObjectKind.TOOL_LABEL: _tool_label,
+    ObjectKind.ZOOM_LENS: _zoom_lens,
     ObjectKind.TRACE: _trace,
     ObjectKind.VECTOR_FIELD: _vector_field,
     ObjectKind.SOLID: _solid,

@@ -34,6 +34,14 @@ def parameter_conflicts(scene: Scene, animations: list[Animation]) -> set[str]:
     return found
 
 
+def lens_conflicts(scene: Scene, animations: list[Animation]) -> set[str]:
+    """The zoom lens pops out and fades with its own code, so it takes one animation per step."""
+    from manim_studio.model.types import ObjectKind
+
+    lenses = [anim.target_id for anim in animations if (obj := scene.object_by_id(anim.target_id)) is not None and obj.kind == ObjectKind.ZOOM_LENS]
+    return {object_id for object_id in lenses if lenses.count(object_id) > 1}
+
+
 def step_conflicts(scene: Scene, animations: list[Animation]) -> set[str]:
     """All objects whose animations cannot run together in one step."""
-    return simultaneous_conflicts(animations) | parameter_conflicts(scene, animations)
+    return simultaneous_conflicts(animations) | parameter_conflicts(scene, animations) | lens_conflicts(scene, animations)

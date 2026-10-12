@@ -70,7 +70,7 @@ CATEGORIES: tuple[tuple[str, tuple[ObjectKind, ...]], ...] = (
         ),
     ),
     ("three_d", (ObjectKind.AXES_3D, ObjectKind.SURFACE, ObjectKind.CURVE_3D, ObjectKind.SOLID, ObjectKind.VECTOR_3D)),
-    ("media", (ObjectKind.IMAGE, ObjectKind.CAMERA)),
+    ("media", (ObjectKind.IMAGE, ObjectKind.CAMERA, ObjectKind.ZOOM_LENS)),
 )
 
 LIBRARY_ORDER: tuple[ObjectKind, ...] = tuple(kind for _, kinds in CATEGORIES for kind in kinds)

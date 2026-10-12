@@ -101,6 +101,11 @@ def base_size(scene: Scene, obj: SceneObject) -> tuple[float, float]:
     if kind == ObjectKind.ANGLE:
         radius = param_float(p, "radius", 0.6)
         return 2 * radius, 2 * radius
+    if kind == ObjectKind.ZOOM_LENS:
+        from manim_studio.model.lenses import lens_geometry
+
+        lens = lens_geometry(obj)
+        return lens.frame_width, lens.frame_height
     if kind == ObjectKind.BOOLEAN_SHAPE:
         from manim_studio.model.booleans import start_bounds
 

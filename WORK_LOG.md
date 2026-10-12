@@ -450,3 +450,11 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
 - Die Bühne richtete die Schriftgröße nach der Höhe der Großbuchstaben aus (an Noto Serif geeicht). Pango richtet sie aber nach dem Geviert (em) aus: Manims `Text` hat ein em von Schriftgröße/72 Einheiten, gemessen gleich für Noto, DejaVu und Liberation Serif und Sans. Bei anderen Schriften war der Text dadurch bis zu 9 % zu breit oder zu schmal (auf dem CI-Rechner mit DejaVu Serif 2,5 %).
 - Zeilenabstand: Manim setzt mehrzeilige Texte mit Schriftgröße/96 · (1 + Zeilenabstand), Standard 0,3, ebenfalls für jede Schrift gleich. Die Bühne nahm den Zeilenabstand der Schrift; Zeilen lagen dadurch rund 40 % zu weit auseinander.
 - Tests vergleichen Breite und Höhe ein- und mehrzeiliger Texte mit Manim für drei Schriften.
+## 7. Zoom-Lupe (ZoomedScene)
+- **Was:** Neue Objektart *Lupe (Zoom)* (Bibliothek „Medien“): Rahmen = magnifizierter Bereich (Position des Objekts), Anzeige mit eigener Lage und Größe, Vergrößerung. Animationen: *Einblenden* (die Anzeige springt aus dem Rahmen, wie `get_zoomed_display_pop_out_animation`), *Bewegen*, *Skalieren* (zoomt), *Ausblenden*. Vorlage *Lupe: lokal linear*.
+- **Entscheidungen:**
+  - Die Szene wird zur `ZoomedScene`; die Lupe ist `self.zoomed_camera.frame`, eingerichtet in `construct` (nicht über `__init__`). So funktioniert sie auch im Gesamtvideo; Manim rechnet die Auflösung der Lupe in jedem Bild aus der Anzeigegröße.
+  - Höchstens eine Lupe pro Szene (Manim hat nur eine Zoomkamera), nur in 2D; das Hinzufügen einer zweiten wählt die vorhandene aus.
+  - Einblenden und Bewegen der Lupe in einem Schritt lassen sich nicht kombinieren (eigener Code fürs Herausspringen); die Lupe bekommt dann einen eigenen Schritt.
+- **Bühne:** Der Rahmen und eine Anzeige, die den gerahmten Teil der Bühne wirklich vergrößert zeigt (gerendert nach jeder Änderung, nicht beim Zeichnen: Qt kann eine Szene nicht in sich selbst zeichnen). Wie bei Manim sieht die Zoomkamera die innere Hälfte ihres eigenen Rahmens, vergrößert als breiter Rand der Anzeige. Bildvergleich: deckungsgleich bis auf Kantenglättung.
+- **Hinweis:** Manim vergrößert auch Strichbreiten; bei starker Vergrößerung werden Linien breit. Die Vorlage nimmt deshalb dünne Linien.

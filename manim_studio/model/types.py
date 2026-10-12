@@ -65,6 +65,7 @@ class ObjectKind(str, Enum):
     CURVED_ARROW = "curved_arrow"
     BOOLEAN_SHAPE = "boolean_shape"
     TOOL_LABEL = "tool_label"
+    ZOOM_LENS = "zoom_lens"
 
 
 class AnimationKind(str, Enum):
@@ -315,7 +316,7 @@ HIGHLIGHT_STYLES = ("frame", "background", "underline", "cross")
 #: Kinds that are no mobjects and therefore cannot be members of a group.
 UNGROUPABLE = frozenset({ObjectKind.PARAMETER, ObjectKind.CAMERA})
 #: Kinds that are not added to the Manim scene (the camera is shown on the stage only).
-UNADDED_KINDS = INVISIBLE_KINDS | {ObjectKind.CAMERA}
+UNADDED_KINDS = INVISIBLE_KINDS | {ObjectKind.CAMERA, ObjectKind.ZOOM_LENS}
 #: Animations a camera understands.
 CAMERA_ANIMATIONS = frozenset({AnimationKind.MOVE, AnimationKind.SCALE, AnimationKind.ROTATE, AnimationKind.ORBIT, AnimationKind.AMBIENT_ROTATION})
 

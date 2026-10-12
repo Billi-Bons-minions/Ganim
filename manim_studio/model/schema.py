@@ -675,6 +675,19 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         _TEXT_STYLE,
         (("fill_color", _YELLOW), ("fill_opacity", 1.0)),
     ),
+    ObjectKind.ZOOM_LENS: KindInfo(
+        ObjectKind.ZOOM_LENS,
+        (
+            # the object's position is the middle of the area that is magnified
+            ParamSpec("zoom", ParamType.FLOAT, 4.0, minimum=1.0, maximum=50.0, step=0.5, decimals=1),
+            ParamSpec("display_width", ParamType.FLOAT, 3.0, minimum=0.2, maximum=20.0, step=0.25),
+            ParamSpec("display_height", ParamType.FLOAT, 3.0, minimum=0.2, maximum=20.0, step=0.25),
+            ParamSpec("display_x", ParamType.FLOAT, 5.11, minimum=-50.0, maximum=50.0, step=0.25),
+            ParamSpec("display_y", ParamType.FLOAT, 2.0, minimum=-50.0, maximum=50.0, step=0.25),
+        ),
+        frozenset({"stroke_color", "stroke_width"}),
+        (("stroke_color", _YELLOW), ("stroke_width", 3.0), ("fill_opacity", 0.0)),
+    ),
     ObjectKind.TOOL_LABEL: KindInfo(
         ObjectKind.TOOL_LABEL,
         (
@@ -999,6 +1012,9 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
         {AnimationKind.MOVE, AnimationKind.ROTATE, AnimationKind.SET_VALUE, AnimationKind.ORBIT} | TRANSFORM_ANIMATIONS | MOTION_ANIMATIONS
     ):
         return False  # solids are placed by their 3D axes
+    if obj_kind == ObjectKind.ZOOM_LENS:
+        # Manim's zoomed camera: it pops out, fades out, moves and zooms
+        return anim_kind in (AnimationKind.FADE_IN, AnimationKind.FADE_OUT, AnimationKind.MOVE, AnimationKind.SCALE)
     if obj_kind == ObjectKind.TRACE:
         # a trace starts recording when it appears and can be faded out
         return anim_kind in (AnimationKind.FADE_IN, AnimationKind.FADE_OUT)

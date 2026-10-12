@@ -334,6 +334,8 @@ def _special_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> tupl
         if lines is None or any(line.id not in names for line in lines):
             raise CodegenError("angle_lines_missing", obj.name)
         return angle_code(obj, variable, names[lines[0].id], names[lines[1].id]), False
+    if obj.kind == ObjectKind.ZOOM_LENS:
+        return lens_code(obj, variable), False
     if obj.kind == ObjectKind.BOOLEAN_SHAPE:
         from manim_studio.model.booleans import leaves, operands
 
@@ -341,6 +343,22 @@ def _special_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> tupl
             raise CodegenError("boolean_shapes_missing", obj.name)
         return boolean_code(scene, obj, variable, names), False
     return None
+
+
+def lens_code(obj: SceneObject, variable: str) -> list[str]:
+    """The zoomed camera of a ``ZoomedScene``: its frame is the lens, the display shows it magnified."""
+    from manim_studio.model.lenses import lens_geometry
+
+    lens = lens_geometry(obj)
+    stroke = f"{py_color(obj.stroke_color)}, width={fmt_float(obj.stroke_width)}"
+    return [
+        f"{variable} = self.zoomed_camera.frame",
+        f"{variable}.stretch_to_fit_width({fmt_float(lens.frame_width)}).stretch_to_fit_height({fmt_float(lens.frame_height)})",
+        f"{variable}.move_to({py_point(obj.x, obj.y)}).set_stroke({stroke})",
+        f"self.zoomed_display.stretch_to_fit_width({fmt_float(lens.display_width)}).stretch_to_fit_height({fmt_float(lens.display_height)})",
+        f"self.zoomed_display.move_to({py_point(lens.display_x, lens.display_y)})",
+        f"self.zoomed_display.display_frame.set_stroke({stroke})",
+    ]
 
 
 STUDIO_CAMERA = "studio_camera_frame"

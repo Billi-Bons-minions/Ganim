@@ -360,14 +360,22 @@ def test_portrait_joined_video_with_subtitles_and_sound(tmp_path) -> None:
 
 
 def test_builtin_templates_run_in_manim(tmp_path) -> None:
+    from manim_studio.codegen import CodegenOptions
+    from manim_studio.model.types import ObjectKind
     from manim_studio.templates import BUILTIN_TEMPLATES
 
-    project = make_project(*(template.build() for template in BUILTIN_TEMPLATES))
-    from manim_studio.codegen import CodegenOptions
-
-    script = generate_script(project, CodegenOptions(joined=True))
+    scenes = [template.build() for template in BUILTIN_TEMPLATES]
+    # a zoom lens (ZoomedScene) and 3D scenes cannot share one joined video: the lens scenes run on their own
+    lenses = [scene for scene in scenes if any(obj.kind == ObjectKind.ZOOM_LENS for obj in scene.objects)]
+    script = generate_script(make_project(*(scene for scene in scenes if scene not in lenses)), CodegenOptions(joined=True))
     result = run_manim(tmp_path, script, "AllScenes", "--dry_run")
     assert result.returncode == 0, result.stdout + result.stderr + script
+    assert lenses
+    for scene in lenses:
+        script = generate_script(make_project(scene))
+        name = script.split("class ", 1)[1].split("(", 1)[0]
+        result = run_manim(tmp_path, script, name, "--dry_run")
+        assert result.returncode == 0, result.stdout + result.stderr + script
 
 
 def test_three_d_scene_renders(tmp_path) -> None:

@@ -140,6 +140,11 @@ class EditorController(QObject):
             return existing_camera.id
         if kind == ObjectKind.CAMERA:
             x, y = 0.0, 0.0
+        existing_lens = next((o for o in scene.objects if o.kind == ObjectKind.ZOOM_LENS), None)
+        if kind == ObjectKind.ZOOM_LENS and existing_lens is not None:
+            self.editor.select_objects([existing_lens.id])
+            self.statusMessage.emit(tr("status.lens_exists"))
+            return existing_lens.id
         if kind == ObjectKind.ANGLE and not (params.get("first_line") and params.get("second_line")):
             selected = [i for i in self.editor.selected_objects if (o := scene.object_by_id(i)) is not None and o.kind in LINE_KINDS]
             others = [o.id for o in scene.objects if o.kind in LINE_KINDS and o.id not in selected]

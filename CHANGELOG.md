@@ -30,6 +30,8 @@ All notable changes to Manim Studio are listed here. The format follows
 - 3D solids can move and turn in space (*Move in space* with `move_to` to a point of the 3D axes, *Turn in space* with `Rotate` about the x, y or z axis).
 - The stage shades 3D solids and surfaces like Manim's 3D camera: every face gets Manim's light from the lower left front (a gradient between two corners, lighter towards the light), so the stage looks like the video. The cone's base stays unshaded like in Manim.
 
+- Zoom lens (Manim's `ZoomedScene`): a frame and a display that shows it magnified, on the stage like in the video. It pops out (*Fade in*), moves, zooms (*Scale*) and fades out; one per 2D scene, also in the joined video. Template "Zoom lens: locally linear" (now 18 templates).
+
 ### Fixed
 - Manim's `Union` leaves a hole where two shapes drawn in opposite directions overlap (e.g. a sector and a triangle). Generated scripts unite the two areas themselves (`studio_union`), so the video shows the real union like the stage.
 - The stage draws texts in Manim's default font (Pango's serif font) instead of the interface font, so texts and labels are as wide as in the video.

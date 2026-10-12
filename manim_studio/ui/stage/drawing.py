@@ -69,6 +69,8 @@ class Primitive:
     image: QImage | None = None
     #: where ``image`` is drawn; without an image it only widens the bounds
     rect: QRectF | None = None
+    #: a part of the stage (scene pixels) shown magnified in ``rect`` (the zoom lens's display)
+    view_source: QRectF | None = None
 
 
 @dataclass

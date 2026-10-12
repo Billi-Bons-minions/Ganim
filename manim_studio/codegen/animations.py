@@ -476,6 +476,10 @@ def step_code(
     step: Step, number: int, scene: Scene, names: dict[str, str], helpers: set[str] | None = None, base_dir: str | Path | None = None
 ) -> list[str]:
     """Return the lines of one timeline step (comment + ``self.play``/``self.wait``)."""
+    reused = _reused_after_destroying_exit(step, number, scene, names)
+    if reused:
+        # the exit plays on a copy, so the object is still intact when a later step uses it again
+        names = {**names, **{object_id: f"{names[object_id]}.copy()" for object_id in reused}}
     starts = [anim for anim in step.animations if step.kind == StepKind.PLAY and anim.kind in ENTRANCE_ANIMATIONS and _is_trace(scene, anim.target_id)]
     if not starts:
         lines = _step_lines(step, number, scene, names, helpers, base_dir)
@@ -488,7 +492,8 @@ def step_code(
             lines.append(f"self.wait({fmt_float(max(anim.delay + anim.run_time for anim in starts))})")
     if step.kind == StepKind.PLAY:
         lines += _arrow_fixes(step, scene, names, helpers)
-        lines = _keep_reused_objects(step, number, scene, names, lines)
+    if reused:
+        lines[1:1] = [f"self.remove({names[object_id][: -len('.copy()')]})" for object_id in reused]
     return lines
 
 
@@ -496,18 +501,17 @@ def step_code(
 _DESTROYING = frozenset({AnimationKind.SHRINK_TO_CENTER, AnimationKind.UNCREATE, AnimationKind.UNWRITE}) | REPLACING_TRANSFORMS
 
 
-def _keep_reused_objects(step: Step, number: int, scene: Scene, names: dict[str, str], lines: list[str]) -> list[str]:
-    """Save objects before such an exit and restore them afterwards if a later step uses them again."""
+def _reused_after_destroying_exit(step: Step, number: int, scene: Scene, names: dict[str, str]) -> list[str]:
+    """Objects that leave in this step with an exit that destroys them, but are used again later."""
+    if step.kind != StepKind.PLAY:
+        return []
     later: set[str] = set()
     for future in scene.steps[number:]:
         for anim in future.animations:
             later.add(anim.target_id)
             later.update(str(anim.params[key]) for key in ("target", "path", "partner") if anim.params.get(key))
-    keep = [anim.target_id for anim in step.animations if anim.kind in _DESTROYING and anim.target_id in later and anim.target_id in names]
-    if not keep:
-        return lines
-    variables = list(dict.fromkeys(names[object_id] for object_id in keep))
-    return lines[:1] + [f"{variable}.save_state()" for variable in variables] + lines[1:] + [f"{variable}.restore()" for variable in variables]
+    found = [anim.target_id for anim in step.animations if anim.kind in _DESTROYING and anim.target_id in later and anim.target_id in names]
+    return list(dict.fromkeys(found))
 
 
 def _is_trace(scene: Scene, object_id: str) -> bool:

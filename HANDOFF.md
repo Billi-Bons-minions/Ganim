@@ -105,7 +105,7 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
   - „Kamera zurück auf das ganze Bild“.
 - Fuzzing Runde 4:
   - Duplizieren und Kopieren einer Gruppe übernahm die Mitglieder nicht und erzeugte leere Gruppen. Behoben.
-  - Objekte, die nach Schrumpfen, Entstehen rückwärts, Wegschreiben oder Ersetzen später wieder verwendet werden, werden im Skript per `save_state`/`restore` gesichert. Vorher gab es NaN-Abstürze bzw. falsche Formen.
+  - Objekte, die nach Schrumpfen, Entstehen rückwärts, Wegschreiben oder Ersetzen später wieder verwendet werden, bleiben jetzt intakt: Der Ausgang läuft auf einer Kopie (`self.remove(obj)` + `Animation(obj.copy())`). Vorher gab es NaN-Abstürze bzw. falsche Formen; `save_state`/`restore` reichte nicht, weil `become()` bei Strukturwechsel versagt.
 
 ### Halbfertig
 - (nichts)

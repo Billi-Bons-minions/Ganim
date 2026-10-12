@@ -633,7 +633,7 @@ def test_objects_used_again_after_destroying_exits(tmp_path) -> None:
         play(make_animation(AnimationKind.UNCREATE, "q", run_time=0.2)),
     ]
     script = generate_script(make_project(Scene(id="s", name="Wieder", objects=[line, circle, square], steps=steps)))
-    assert "strich.save_state()" in script and "strich.restore()" in script and "kreis.restore()" in script
-    assert "quadrat.save_state()" not in script  # not used again afterwards
+    assert "self.remove(strich)" in script and "ShrinkToCenter(strich.copy()" in script and "ReplacementTransform(kreis.copy(), quadrat" in script
+    assert "Uncreate(quadrat," in script  # not used again afterwards
     result = run_manim(tmp_path, script, "Wieder", "--dry_run")
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]

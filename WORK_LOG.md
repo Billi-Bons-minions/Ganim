@@ -181,3 +181,35 @@ Ich habe vier Fragen gestellt; ohne Antwort gelten diese Entscheidungen (änderb
 - `pyproject.toml` hat Version 1.0.0, es fehlen Lizenz, Projekt-URLs und Klassifizierer.
 - `examples/` enthält nur ein Erweiterungsbeispiel, keine Beispielprojekte.
 - Kein CI, keine LICENSE, kein CHANGELOG, kein CONTRIBUTING.
+
+## Neue Funktionen (Tagschicht)
+
+### Knoten/Kanten hervorheben (Netzwerke)
+- **Was:** Eine neue Animation färbt einzelne Knoten und Kanten ein (dauerhaft), lässt sie kurz aufleuchten oder aufblitzen. Die Teile werden als Text angegeben, z. B. `A, A-B, B`.
+- **Entscheidungen:**
+  - In ungerichteten Netzen ist `B-A` dieselbe Kante wie `A-B`. Ein Knotenname hat Vorrang vor einer Kanten-Lesart (`A-1` kann ein Knoten sein).
+  - Beim Einfärben bleibt die Beschriftung im Knoten in ihrer Farbe (`set_fill(..., family=False)`). Beim Aufleuchten wird nur der Kreis kurz größer und farbig, statt Manims `Indicate` zu verwenden, das auch den Buchstaben einfärbt.
+  - Aufblitzen: Knoten mit `Flash`, Kanten mit einem Lichtlauf (`ShowPassingFlash`).
+- **Offen:** Der Skript-Import kennt Netzwerke grundsätzlich nicht (war schon vorher so); solche Zeilen werden mit Hinweis übersprungen.
+
+### Lineare Abbildung (ApplyMatrix)
+- **Was:** Eine 2×2-Matrix verformt Gitter, Vektoren, Formen und Texte um den Ursprung (3Blue1Brown-Stil). Dazu gibt es die Vorlage „Lineare Abbildung (Scherung)“.
+- **Entscheidungen:**
+  - Die Bühne speichert die Matrix im Zustand des Objekts und zeichnet sie exakt; späteres Drehen, Skalieren und Bewegen funktionieren weiter (mit Manim per Bildvergleich geprüft).
+  - Nicht erlaubt für Objekte, die Manim in jedem Bild neu zeichnet (Markierungen, Graph-Werkzeuge, Winkel, Spuren, 3D), weil die Verformung dort verloren ginge.
+- **Hinweis:** Vorlagen müssen ohne LaTeX laufen (bestehender Test). Die Matrix steht deshalb in der Vorlage als Text „(x, y) ↦ (x + y, y)“.
+
+### Kopplung (Updater)
+- **Was:** Neuer Abschnitt „Kopplung“ im Eigenschaften-Panel: Ein Objekt folgt einem anderen (z. B. Beschriftung neben einem wandernden Punkt) oder nimmt seine Position aus einer Formel mit Parametern (z. B. `2 cos(w)`, `2 sin(w)`).
+- **Entscheidungen:**
+  - Der Abstand beim Folgen ist der Abstand, den man am Anfang auf der Bühne einstellt. Ziehen an der Startposition ändert ihn.
+  - Für gekoppelte Objekte sind Bewegen, Pfad, Tauschen, Matrix und Verwandeln gesperrt, mit Erklärung, weil der Updater sie überschreiben würde.
+  - Beim Einschalten springt nichts: „Formel“ übernimmt die aktuelle Position als Zahlen, „Folgt“ wählt das nächstgelegene passende Objekt.
+- **Bekannte Grenze:** Während ein gekoppeltes Objekt selbst animiert wird (z. B. Drehen), pausiert Manim seinen Updater. Bewegt sich das Ziel genau in diesem Moment, springt das Objekt danach nach.
+
+### Vorlagen
+- Neu: „Präsentationsfolie“, „Graphentheorie: ein Weg“ (nutzt die Hervorhebung) und „Lineare Abbildung (Scherung)“.
+
+### Werkzeug: Fuzzer
+- `tools/fuzz_sessions.py` spielt zufällige Bearbeitungssitzungen über den echten Controller ab und prüft danach Speichern/Laden, die Bühne, die Codeerzeugung und `manim --dry_run`.
+- Ein Wächter schließt modale Dialoge und protokolliert sie (vorher hing eine Sitzung an einem Dialog).

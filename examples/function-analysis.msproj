@@ -3,12 +3,12 @@
   "version": 1,
   "scenes": [
     {
-      "id": "6a787d988eb5",
+      "id": "f1c6bbf50e1c",
       "name": "Analyze a function",
       "background_color": "#000000",
       "objects": [
         {
-          "id": "c15bfcc8007c",
+          "id": "e8be1e017c06",
           "kind": "axes",
           "name": "Axes 1",
           "x": 0.0,
@@ -39,7 +39,7 @@
           "editor_hidden": false
         },
         {
-          "id": "289423982446",
+          "id": "43ed3bd8e655",
           "kind": "function_graph",
           "name": "f",
           "x": 0.0,
@@ -77,14 +77,14 @@
             "x_max": 5.0,
             "t_min": 0.0,
             "t_max": 6.2832,
-            "axes_id": "c15bfcc8007c",
+            "axes_id": "e8be1e017c06",
             "clip": true
           },
           "locked": false,
           "editor_hidden": false
         },
         {
-          "id": "5f9782e2334c",
+          "id": "db1a823e3029",
           "kind": "graph_markers",
           "name": "Zeros",
           "x": 0.0,
@@ -98,7 +98,7 @@
           "z_index": 0,
           "visibility": "auto",
           "params": {
-            "graph_id": "289423982446",
+            "graph_id": "43ed3bd8e655",
             "feature": "zeros",
             "other_graph_id": null,
             "show_labels": true,
@@ -108,7 +108,7 @@
           "editor_hidden": false
         },
         {
-          "id": "c56d669a3a26",
+          "id": "e86e84fe274a",
           "kind": "graph_markers",
           "name": "Extrema",
           "x": 0.0,
@@ -122,7 +122,7 @@
           "z_index": 0,
           "visibility": "auto",
           "params": {
-            "graph_id": "289423982446",
+            "graph_id": "43ed3bd8e655",
             "feature": "extrema",
             "other_graph_id": null,
             "show_labels": true,
@@ -132,7 +132,7 @@
           "editor_hidden": false
         },
         {
-          "id": "148b2528a56b",
+          "id": "11671dcde33a",
           "kind": "graph_label",
           "name": "Graph label 1",
           "x": 0.0,
@@ -146,7 +146,7 @@
           "z_index": 0,
           "visibility": "auto",
           "params": {
-            "graph_id": "289423982446",
+            "graph_id": "43ed3bd8e655",
             "text": "f(x) = x³/3 − x",
             "use_latex": false,
             "x_value": 2.2,
@@ -159,16 +159,16 @@
       ],
       "steps": [
         {
-          "id": "1e1ee400fb00",
+          "id": "b90cd855261f",
           "kind": "play",
           "wait_time": 1.0,
           "mode": "together",
           "lag_ratio": 0.25,
           "animations": [
             {
-              "id": "1cba74c0de0c",
+              "id": "9698e6bb6f34",
               "kind": "create",
-              "target_id": "c15bfcc8007c",
+              "target_id": "e8be1e017c06",
               "run_time": 1.5,
               "rate_func": "smooth",
               "params": {},
@@ -183,25 +183,25 @@
           "code": ""
         },
         {
-          "id": "68f55766f6fe",
+          "id": "8804fd3ac719",
           "kind": "play",
           "wait_time": 1.0,
           "mode": "together",
           "lag_ratio": 0.25,
           "animations": [
             {
-              "id": "33ea1a9bb958",
+              "id": "ecdabbcdbf16",
               "kind": "create",
-              "target_id": "289423982446",
+              "target_id": "43ed3bd8e655",
               "run_time": 2.0,
               "rate_func": "smooth",
               "params": {},
               "delay": 0.0
             },
             {
-              "id": "3c025146e89e",
+              "id": "c6432e6e73c8",
               "kind": "fade_in",
-              "target_id": "148b2528a56b",
+              "target_id": "11671dcde33a",
               "run_time": 1.0,
               "rate_func": "smooth",
               "params": {
@@ -219,16 +219,16 @@
           "code": ""
         },
         {
-          "id": "87b1d4ae03be",
+          "id": "e3685e48d671",
           "kind": "play",
           "wait_time": 1.0,
           "mode": "together",
           "lag_ratio": 0.25,
           "animations": [
             {
-              "id": "94d0ea1637cd",
+              "id": "5c83b6b03b5b",
               "kind": "fade_in",
-              "target_id": "5f9782e2334c",
+              "target_id": "db1a823e3029",
               "run_time": 1.0,
               "rate_func": "smooth",
               "params": {
@@ -246,16 +246,16 @@
           "code": ""
         },
         {
-          "id": "77064fb472ce",
+          "id": "bcd2f42bc76b",
           "kind": "play",
           "wait_time": 1.0,
           "mode": "together",
           "lag_ratio": 0.25,
           "animations": [
             {
-              "id": "712d3999636c",
+              "id": "416d5f3a3ab3",
               "kind": "fade_in",
-              "target_id": "c56d669a3a26",
+              "target_id": "e86e84fe274a",
               "run_time": 1.0,
               "rate_func": "smooth",
               "params": {
@@ -273,7 +273,7 @@
           "code": ""
         },
         {
-          "id": "19007021fd73",
+          "id": "54bae2838f2e",
           "kind": "wait",
           "wait_time": 1.0,
           "mode": "together",
@@ -289,12 +289,12 @@
       ]
     },
     {
-      "id": "7b40b6dbc756",
+      "id": "1928b0d6ab40",
       "name": "Explore a parameter",
       "background_color": "#000000",
       "objects": [
         {
-          "id": "38baead5519a",
+          "id": "a608be0b66fd",
           "kind": "parameter",
           "name": "a",
           "x": 0.0,
@@ -317,7 +317,7 @@
           "editor_hidden": false
         },
         {
-          "id": "7730d7278aed",
+          "id": "1a05d4a9ad77",
           "kind": "axes",
           "name": "Axes 1",
           "x": 0.0,
@@ -348,7 +348,7 @@
           "editor_hidden": false
         },
         {
-          "id": "73f8c0e64c3a",
+          "id": "3c7249c6a07f",
           "kind": "function_graph",
           "name": "f",
           "x": 0.0,
@@ -386,14 +386,14 @@
             "x_max": 5.0,
             "t_min": 0.0,
             "t_max": 6.2832,
-            "axes_id": "7730d7278aed",
+            "axes_id": "1a05d4a9ad77",
             "clip": true
           },
           "locked": false,
           "editor_hidden": false
         },
         {
-          "id": "b2648476f4fe",
+          "id": "674f3a24ee23",
           "kind": "graph_point",
           "name": "Point on graph 1",
           "x": 0.0,
@@ -407,9 +407,9 @@
           "z_index": 0,
           "visibility": "auto",
           "params": {
-            "graph_id": "73f8c0e64c3a",
+            "graph_id": "3c7249c6a07f",
             "x_value": 1.0,
-            "x_parameter": "38baead5519a",
+            "x_parameter": "a608be0b66fd",
             "show_lines": true,
             "show_label": true,
             "radius": 0.08
@@ -418,7 +418,7 @@
           "editor_hidden": false
         },
         {
-          "id": "673bb09d6009",
+          "id": "8c2835083108",
           "kind": "text",
           "name": "a =",
           "x": -5.9,
@@ -445,7 +445,7 @@
           "editor_hidden": false
         },
         {
-          "id": "4957d52c0fb4",
+          "id": "4d2b1e133512",
           "kind": "decimal_number",
           "name": "Number a",
           "x": -4.65,
@@ -464,7 +464,7 @@
             "font_size": 40.0,
             "show_sign": false,
             "unit": "",
-            "parameter_id": "38baead5519a"
+            "parameter_id": "a608be0b66fd"
           },
           "locked": false,
           "editor_hidden": false
@@ -472,34 +472,34 @@
       ],
       "steps": [
         {
-          "id": "864e2b69e35b",
+          "id": "bba368b69fc5",
           "kind": "play",
           "wait_time": 1.0,
           "mode": "together",
           "lag_ratio": 0.25,
           "animations": [
             {
-              "id": "92c69d1c1fa8",
+              "id": "957362a200ba",
               "kind": "create",
-              "target_id": "7730d7278aed",
+              "target_id": "1a05d4a9ad77",
               "run_time": 1.0,
               "rate_func": "smooth",
               "params": {},
               "delay": 0.0
             },
             {
-              "id": "d864b60625b7",
+              "id": "7298c14b617d",
               "kind": "create",
-              "target_id": "73f8c0e64c3a",
+              "target_id": "3c7249c6a07f",
               "run_time": 1.0,
               "rate_func": "smooth",
               "params": {},
               "delay": 0.0
             },
             {
-              "id": "2729003c0b5e",
+              "id": "aec83fc3b47d",
               "kind": "fade_in",
-              "target_id": "673bb09d6009",
+              "target_id": "8c2835083108",
               "run_time": 1.0,
               "rate_func": "smooth",
               "params": {
@@ -509,9 +509,9 @@
               "delay": 0.0
             },
             {
-              "id": "0b5764d84321",
+              "id": "15ab34dd5384",
               "kind": "fade_in",
-              "target_id": "4957d52c0fb4",
+              "target_id": "4d2b1e133512",
               "run_time": 1.0,
               "rate_func": "smooth",
               "params": {
@@ -529,16 +529,16 @@
           "code": ""
         },
         {
-          "id": "85f7c4c3e4d3",
+          "id": "d389ae2f2f46",
           "kind": "play",
           "wait_time": 1.0,
           "mode": "together",
           "lag_ratio": 0.25,
           "animations": [
             {
-              "id": "fd6b04443da4",
+              "id": "26e153405566",
               "kind": "fade_in",
-              "target_id": "b2648476f4fe",
+              "target_id": "674f3a24ee23",
               "run_time": 1.0,
               "rate_func": "smooth",
               "params": {
@@ -556,16 +556,16 @@
           "code": ""
         },
         {
-          "id": "17d8e529e5ff",
+          "id": "2e54b3b1285f",
           "kind": "play",
           "wait_time": 1.0,
           "mode": "together",
           "lag_ratio": 0.25,
           "animations": [
             {
-              "id": "0c166954613f",
+              "id": "0546c2e01fbf",
               "kind": "set_value",
-              "target_id": "38baead5519a",
+              "target_id": "a608be0b66fd",
               "run_time": 3.0,
               "rate_func": "smooth",
               "params": {
@@ -582,16 +582,16 @@
           "code": ""
         },
         {
-          "id": "9585e8d397d7",
+          "id": "0cf144d42008",
           "kind": "play",
           "wait_time": 1.0,
           "mode": "together",
           "lag_ratio": 0.25,
           "animations": [
             {
-              "id": "f933127c4554",
+              "id": "1cef5f855dd0",
               "kind": "set_value",
-              "target_id": "38baead5519a",
+              "target_id": "a608be0b66fd",
               "run_time": 2.0,
               "rate_func": "smooth",
               "params": {
@@ -600,6 +600,397 @@
               "delay": 0.0
             }
           ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        }
+      ]
+    },
+    {
+      "id": "526a7779816e",
+      "name": "From secant to tangent",
+      "background_color": "#000000",
+      "objects": [
+        {
+          "id": "188d14c202f0",
+          "kind": "parameter",
+          "name": "h",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "symbol": "h",
+            "value": 2.0,
+            "minimum": 0.0,
+            "maximum": 2.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "7130db1a9139",
+          "kind": "axes",
+          "name": "Axes 1",
+          "x": 0.0,
+          "y": -0.6,
+          "rotation": 0.0,
+          "stroke_color": "#FFFFFF",
+          "fill_color": "#58C4DD",
+          "stroke_width": 2.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "x_min": -1.0,
+            "x_max": 4.0,
+            "x_step": 1.0,
+            "x_length": 8.0,
+            "y_min": -1.0,
+            "y_max": 5.0,
+            "y_step": 1.0,
+            "y_length": 5.5,
+            "show_numbers": false,
+            "tips": true,
+            "x_label": "x",
+            "y_label": "y"
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "1d79c6e37992",
+          "kind": "function_graph",
+          "name": "f",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#F7D96F",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "curve": "function",
+            "expression": "x^2/2",
+            "derive_from": null,
+            "derive_order": "1",
+            "pieces": [
+              [
+                "x^2",
+                "-5",
+                "1"
+              ],
+              [
+                "2 - x",
+                "1",
+                "5"
+              ]
+            ],
+            "x_expression": "2cos(t)",
+            "y_expression": "sin(2t)",
+            "r_expression": "2sin(3t)",
+            "implicit_expression": "x^2 + y^2 - 4",
+            "x_min": -5.0,
+            "x_max": 5.0,
+            "t_min": 0.0,
+            "t_max": 6.2832,
+            "axes_id": "7130db1a9139",
+            "clip": true
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "9017cc29ac1c",
+          "kind": "secant",
+          "name": "Secant 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#9CDCEB",
+          "fill_color": "#58C4DD",
+          "stroke_width": 3.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "graph_id": "1d79c6e37992",
+            "x_value": 1.0,
+            "x_parameter": null,
+            "h": 1.0,
+            "h_parameter": "188d14c202f0",
+            "extend": 1.0,
+            "show_triangle": true,
+            "radius": 0.07
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "744b8f819ec4",
+          "kind": "tangent",
+          "name": "Tangent 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#FF862F",
+          "fill_color": "#58C4DD",
+          "stroke_width": 3.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "graph_id": "1d79c6e37992",
+            "x_value": 1.0,
+            "x_parameter": null,
+            "width": 4.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "5e3bbf2e0b72",
+          "kind": "text",
+          "name": "Text 1",
+          "x": 0.0,
+          "y": 3.4,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FFFFFF",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "text": "h → 0: the secant becomes the tangent",
+            "font_size": 36.0,
+            "font": "",
+            "bold": false,
+            "italic": false,
+            "alignment": "left",
+            "line_spacing": 0.0,
+            "colored_words": []
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "f0f8fe8ae800",
+          "kind": "text",
+          "name": "h =",
+          "x": -5.6,
+          "y": 2.2,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#9CDCEB",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "text": "h =",
+            "font_size": 36.0,
+            "font": "",
+            "bold": false,
+            "italic": false,
+            "alignment": "left",
+            "line_spacing": 0.0,
+            "colored_words": []
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "0ed0322bfcb5",
+          "kind": "decimal_number",
+          "name": "Number h",
+          "x": -4.5,
+          "y": 2.2,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#9CDCEB",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "value": 0.0,
+            "decimals": 2,
+            "font_size": 36.0,
+            "show_sign": false,
+            "unit": "",
+            "parameter_id": "188d14c202f0"
+          },
+          "locked": false,
+          "editor_hidden": false
+        }
+      ],
+      "steps": [
+        {
+          "id": "9bffb9ecfc66",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "5bb1a5fb77bf",
+              "kind": "create",
+              "target_id": "7130db1a9139",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "d5fb7fec340f",
+              "kind": "create",
+              "target_id": "1d79c6e37992",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "dbea2a3cb6fa",
+              "kind": "write",
+              "target_id": "5e3bbf2e0b72",
+              "run_time": 1.0,
+              "rate_func": "linear",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "8cb744a85246",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "e611bd5aa33f",
+              "kind": "create",
+              "target_id": "9017cc29ac1c",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "850e91b596ad",
+              "kind": "fade_in",
+              "target_id": "f0f8fe8ae800",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            },
+            {
+              "id": "64923eaf542c",
+              "kind": "fade_in",
+              "target_id": "0ed0322bfcb5",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "1b3aea677027",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "dd4194ad2f82",
+              "kind": "set_value",
+              "target_id": "188d14c202f0",
+              "run_time": 4.0,
+              "rate_func": "smooth",
+              "params": {
+                "value": 0.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "c539192d22fa",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "770c3e422dc9",
+              "kind": "create",
+              "target_id": "744b8f819ec4",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "baefd9441803",
+          "kind": "wait",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [],
           "section": "",
           "subcaption": "",
           "sound": "",

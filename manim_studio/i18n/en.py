@@ -1344,4 +1344,6 @@ STRINGS: dict[str, str] = {
     "prop.secant_tangent": "h = 0: the secant is the tangent, slope m = {slope}",
     "issue.secant_undefined": "There is no secant here (the graph is undefined at x₀ or x₀ + h).",
     "codegen.secant_undefined": "The secant “{detail}” is not defined here.",
+    "template.secant.name": "From secant to tangent",
+    "template.secant.title": "h → 0: the secant becomes the tangent",
 }

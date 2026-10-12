@@ -6,7 +6,7 @@ None of them needs LaTeX.
 | File | What it shows |
 |---|---|
 | `circle-to-square.msproj` | The quickstart: a circle appears, turns into a square, a text is written |
-| `function-analysis.msproj` | Zeros and extrema of a function; a parameter that moves a point along a graph |
+| `function-analysis.msproj` | Zeros and extrema of a function; a parameter that moves a point along a graph; a secant that becomes the tangent |
 | `geometry.msproj` | Pythagorean theorem; conic sections as implicit curves with a parameter |
 | `graph-theory.msproj` | A network whose path from A to F is highlighted step by step |
 | `linear-map.msproj` | A shear (2×2 matrix) applied to the coordinate grid and the basis vectors |

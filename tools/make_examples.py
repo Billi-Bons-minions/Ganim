@@ -120,7 +120,7 @@ def vectors_in_space() -> Project:
 
 EXAMPLES = {
     "circle-to-square.msproj": circle_to_square,
-    "function-analysis.msproj": lambda: from_templates("Function analysis", "analysis", "parameter"),
+    "function-analysis.msproj": lambda: from_templates("Function analysis", "analysis", "parameter", "secant"),
     "geometry.msproj": lambda: from_templates("Geometry", "pythagoras", "conics"),
     "graph-theory.msproj": lambda: from_templates("Graph theory", "network"),
     "linear-map.msproj": lambda: from_templates("Linear map", "linear_map"),

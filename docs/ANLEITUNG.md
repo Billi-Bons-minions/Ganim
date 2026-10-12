@@ -62,7 +62,7 @@ Beim Start prüft Manim Studio im Hintergrund, ob Manim, FFmpeg und LaTeX vorhan
 
 Im Raum gibt es 3D-Achsen, Flächen, Kurven, Körper sowie Pfeile, Strecken und Punkte (Bereich *3D* der Objektbibliothek oder Menü *Einfügen*).
 
-Es geht auch ohne leere Bühne: Im Willkommensdialog gibt es fünf Beispielprojekte, und unter *Szene → Neue Szene aus Vorlage* findest du 13 Vorlagen (z. B. Kurvendiskussion, Satz des Pythagoras, Graphentheorie, lineare Abbildung).
+Es geht auch ohne leere Bühne: Im Willkommensdialog gibt es fünf Beispielprojekte, und unter *Szene → Neue Szene aus Vorlage* findest du 14 Vorlagen (z. B. Kurvendiskussion, von der Sekante zur Tangente, Satz des Pythagoras, Graphentheorie, lineare Abbildung).
 
 ## Wichtige Begriffe
 
@@ -70,6 +70,7 @@ Es geht auch ohne leere Bühne: Im Willkommensdialog gibt es fünf Beispielproje
 - **Sichtbarkeit:** Ein Objekt ist unsichtbar, bis eine Einblend-Animation (Erstellen, Schreiben, Einblenden …) es zeigt. Unsichtbare Objekte zeigt die Bühne als blasse „Geister“.
 - **Bühne und Zeitleiste:** Ist **Start** gewählt, ändert Ziehen die Startposition. Ist ein **Schritt** gewählt, wird Ziehen, Skalieren und Drehen als Animation in diesem Schritt aufgenommen.
 - **Parameter:** Ein Parameter (z. B. `a`) ist ein Regler. Du kannst ihn in allen Formeln verwenden (Graphen, Flächen, Tangenten, Flächen im Raum, Vektorfelder, Positionen) und mit *Wert ändern* animieren.
+- **Werkzeuge am Graphen:** Wähle einen Funktionsgraphen; im Eigenschaften-Panel fügen Knöpfe unter anderem Ableitung, Nullstellen, Extrema, Tangente, Sekante, Punkt, Fläche, Riemann-Summe, Beschriftung oder Wertetabelle hinzu. Koppelst du die Schrittweite *h* einer Sekante an einen Parameter und lässt ihn gegen 0 laufen, wird die Sekante zur Tangente.
 - **Kopplung:** Im Eigenschaften-Panel unter *Kopplung* kann ein Objekt einem anderen folgen (z. B. eine Beschriftung neben einem wandernden Punkt; auch die Kamera kann folgen) oder seine Position aus einer Formel mit Parametern nehmen, etwa `x = 2 cos(w)`, `y = 2 sin(w)`.
 - **Funktionsterme:** erlaubt sind `x`, Zahlen (auch `0,5`), `+ - * / ^`, Klammern, implizite Multiplikation (`2x`, `3sin(x)`), `pi`, `e` und die Funktionen `sin cos tan asin acos atan sinh cosh tanh exp log ln log10 log2 sqrt abs floor ceil sign`.
 

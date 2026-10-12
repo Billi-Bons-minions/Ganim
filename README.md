@@ -18,8 +18,8 @@ All of these clips were made from the built-in templates and the projects in [ex
 
 | | | |
 |---|---|---|
-| ![Analyze a function](docs/images/analysis.gif) | ![Explore a parameter](docs/images/parameter.gif) | ![Graph theory: a path](docs/images/network.gif) |
-| Zeros and extrema of a function | A slider (parameter) moves a point along a graph | Highlighting a path in a network |
+| ![Analyze a function](docs/images/analysis.gif) | ![From secant to tangent](docs/images/secant.gif) | ![Graph theory: a path](docs/images/network.gif) |
+| Zeros and extrema of a function | A parameter h runs to 0: the secant becomes the tangent | Highlighting a path in a network |
 | ![Linear map](docs/images/linear_map.gif) | ![3D solids](docs/images/solids.gif) | ![Vector field](docs/images/flow.gif) |
 | A shear applied to the coordinate grid | 3D solids with a camera move | Stream lines of a vector field |
 | ![Coupled objects](docs/images/coupling.gif) | ![Polar curves](docs/images/polar.gif) | ![Vectors in space](docs/images/vectors.gif) |
@@ -30,7 +30,7 @@ All of these clips were made from the built-in templates and the projects in [ex
 **Objects**
 - Shapes: circle, square, rectangle, triangle, ellipse, polygon, regular polygon, star, arc, sector, ring, line, dashed line, arrow, double arrow, vector, dot, brace, highlight (frame, background, underline, strike-through), angle marks, motion traces
 - Text: text with colored words, Markup text, bullet lists, code blocks with syntax highlighting, tables; with LaTeX also formulas (`MathTex`, `Tex`) with colored parts and matrices
-- Math: number line, number plane (square or polar grid), coordinate system with labels, function graphs (`2x^2 + sin(x)`, piecewise, parametric, polar, implicit `f(x, y) = 0`, derivatives), area under a curve, Riemann rectangles, tangents, points on graphs, zeros/extrema/inflection points/intersections, graph labels, tables of values, data points with regression lines, bar charts (CSV import), vector fields (arrows or stream lines), networks of vertices and edges (Manim's `Graph`/`DiGraph` with several layouts)
+- Math: number line, number plane (square or polar grid), coordinate system with labels, function graphs (`2x^2 + sin(x)`, piecewise, parametric, polar, implicit `f(x, y) = 0`, derivatives), area under a curve, Riemann rectangles, tangents, secants with slope triangle (let h run to 0 and the secant becomes the tangent), points on graphs, zeros/extrema/inflection points/intersections, graph labels, tables of values, data points with regression lines, bar charts (CSV import), vector fields (arrows or stream lines), networks of vertices and edges (Manim's `Graph`/`DiGraph` with several layouts)
 - 3D: 3D axes, surfaces `z = f(x, y)`, 3D curves, solids (sphere, cube, box, cone, cylinder, torus), arrows, lines and points in space, camera orbits and camera moves
 - Images (PNG, JPG, SVG), groups, layers, lock/hide, align and distribute
 
@@ -57,7 +57,7 @@ All of these clips were made from the built-in templates and the projects in [ex
 - Export of the generated Python script; the code view shows it at any time
 
 **More**
-- 13 templates (e.g. title card, function analysis, Pythagorean theorem, orbit, 3D solids, conic sections, presentation slide, graph theory, linear map) and 5 example projects in the welcome dialog
+- 14 templates (e.g. title card, function analysis, secant to tangent, Pythagorean theorem, orbit, 3D solids, conic sections, presentation slide, graph theory, linear map) and 5 example projects in the welcome dialog
 - Interactive tour, hover previews for every animation, a list of all keyboard shortcuts (*F1*)
 - Dark and light theme, adjustable UI scale, German and English
 - Autosave and recovery after a crash, project packages (project and images in one file), your own styles, building blocks and templates

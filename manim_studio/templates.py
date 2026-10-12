@@ -281,6 +281,29 @@ def linear_map() -> Scene:
     return scene
 
 
+def secant_to_tangent() -> Scene:
+    """The derivative as a limit: h runs to 0 and the secant turns into the tangent."""
+    scene = create_scene(tr("template.secant.name"))
+    step = _add(scene, create_object(ObjectKind.PARAMETER, "h", symbol="h", value=2.0, minimum=0.0, maximum=2.0))
+    axes = _add(
+        scene,
+        create_object(ObjectKind.AXES, tr("kind.axes") + " 1", 0.0, -0.6, x_min=-1.0, x_max=4.0, y_min=-1.0, y_max=5.0, x_length=8.0, y_length=5.5, x_label="x", y_label="y"),
+    )
+    graph = _add(scene, create_object(ObjectKind.FUNCTION_GRAPH, "f", expression="x^2/2", axes_id=axes.id))
+    secant = _add(scene, create_object(ObjectKind.SECANT, tr("kind.secant") + " 1", graph_id=graph.id, x_value=1.0, h_parameter=step.id))
+    tangent = _add(scene, create_object(ObjectKind.TANGENT, tr("kind.tangent") + " 1", graph_id=graph.id, x_value=1.0, width=4.0))
+    title = _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " 1", 0.0, 3.4, text=tr("template.secant.title"), font_size=36.0))
+    caption = _add(scene, create_object(ObjectKind.TEXT, "h =", -5.6, 2.2, text="h =", font_size=36.0))
+    number = _add(scene, create_object(ObjectKind.DECIMAL_NUMBER, tr("kind.decimal_number") + " h", -4.5, 2.2, parameter_id=step.id, font_size=36.0))
+    caption.fill_color = number.fill_color = secant.stroke_color
+    _play(scene, create_animation(AnimationKind.CREATE, axes.id), create_animation(AnimationKind.CREATE, graph.id), create_animation(AnimationKind.WRITE, title.id))
+    _play(scene, create_animation(AnimationKind.CREATE, secant.id), create_animation(AnimationKind.FADE_IN, caption.id), create_animation(AnimationKind.FADE_IN, number.id))
+    _play(scene, create_animation(AnimationKind.SET_VALUE, step.id, run_time=4.0, value=0.0))
+    _play(scene, create_animation(AnimationKind.CREATE, tangent.id))
+    scene.steps.append(create_wait_step(1.0))
+    return scene
+
+
 BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("title", "text", title_and_subtitle),
     BuiltinTemplate("analysis", "graph", analyze_function),
@@ -295,4 +318,5 @@ BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("slide", "a_one_by_one", presentation_slide),
     BuiltinTemplate("network", "a_network_parts", shortest_path),
     BuiltinTemplate("linear_map", "a_apply_matrix", linear_map),
+    BuiltinTemplate("secant", "graph", secant_to_tangent),
 )

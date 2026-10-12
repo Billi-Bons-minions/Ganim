@@ -31,6 +31,29 @@ def origin_shift(low: float, high: float) -> float:
     return 0.0
 
 
+def _arange(start: float, stop: float, step: float) -> list[float]:
+    """``numpy.arange``: ``ceil((stop - start) / step)`` values from ``start``."""
+    count = math.ceil((stop - start) / step)
+    return [start + index * step for index in range(max(0, min(count, 2000)))]
+
+
+def tick_values(low: float, high: float, step: float, tip: bool, exclude_origin: bool = False) -> list[float]:
+    """Where Manim's ``NumberLine.get_tick_range`` puts ticks (and numbers).
+
+    With a tip the last value is left out (the tip sits there). A range that contains 0
+    is counted from 0 in both directions; a range that does not starts at ``low``.
+    """
+    if step <= 0 or high <= low:
+        return []
+    end = high if tip else high + 1e-6
+    if low < end < 0 or end > low > 0:
+        return _arange(low, end, step)
+    start = step if exclude_origin else 0.0
+    negative = [-value for value in _arange(start, abs(low) + 1e-6, step)]
+    positive = _arange(start, end, step)
+    return sorted(set(negative) | set(positive))
+
+
 def rotate_point(x: float, y: float, degrees: float) -> Point:
     """Rotate a point counter-clockwise around the origin."""
     radians = math.radians(degrees)

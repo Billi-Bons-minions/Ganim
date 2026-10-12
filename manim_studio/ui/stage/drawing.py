@@ -16,6 +16,7 @@ from PySide6.QtGui import (
     QBrush,
     QColor,
     QFont,
+    QFontInfo,
     QFontMetricsF,
     QImage,
     QPainter,
@@ -36,6 +37,7 @@ from manim_studio.model.geometry import (
     origin_shift,
     param_float,
     polar_grid,
+    tick_values,
 )
 from manim_studio.model.latex import colored_parts, colorize
 from manim_studio.model.schema import is_vector_image_path
@@ -169,9 +171,24 @@ def _arrow_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
 # --- text ------------------------------------------------------------------------
 
 
+_MANIM_FAMILY: list[str] = []
+
+
+def manim_text_font() -> QFont:
+    """The font Manim's ``Text`` uses without ``font=``: Pango's default, a serif font (e.g. Noto Serif, Times).
+
+    The interface font (sans serif) would make texts on the stage narrower than in the video.
+    """
+    if not _MANIM_FAMILY:
+        font = QFont("serif")
+        font.setStyleHint(QFont.StyleHint.Serif)
+        _MANIM_FAMILY.append(QFontInfo(font).family())
+    return QFont(_MANIM_FAMILY[0])
+
+
 def text_font(obj: SceneObject, font_size: float) -> QFont:
     """Return a Qt font whose cap height matches Manim's ``Text`` at ``font_size``."""
-    font = QFont(str(obj.params.get("font") or QFont().family()))
+    font = QFont(str(obj.params.get("font"))) if obj.params.get("font") else manim_text_font()
     font.setBold(bool(obj.params.get("bold")))
     font.setItalic(bool(obj.params.get("italic")))
     font.setPixelSize(100)
@@ -318,17 +335,17 @@ def _axis_lines(layout: AxesLayout) -> QPainterPath:
     return path
 
 
-def _axis_ticks(layout: AxesLayout, x_step: float, y_step: float) -> QPainterPath:
+def _axis_ticks(layout: AxesLayout, x_step: float, y_step: float, tips: bool) -> QPainterPath:
     path = QPainterPath()
     ox, oy = origin_shift(layout.x_min, layout.x_max), origin_shift(layout.y_min, layout.y_max)
     size = AXES_TICK_SIZE
-    for xv in _ticks(layout.x_min, layout.x_max, x_step):
+    for xv in tick_values(layout.x_min, layout.x_max, x_step, tips):
         if abs(xv - ox) < 1e-9:
             continue
         lx, ly = layout.to_local(xv, oy)
         path.moveTo(pt(lx, ly - size))
         path.lineTo(pt(lx, ly + size))
-    for yv in _ticks(layout.y_min, layout.y_max, y_step):
+    for yv in tick_values(layout.y_min, layout.y_max, y_step, tips):
         if abs(yv - oy) < 1e-9:
             continue
         lx, ly = layout.to_local(ox, yv)
@@ -351,19 +368,19 @@ def _label_text(value: float) -> str:
     return str(int(round(value))) if abs(value - round(value)) < 1e-9 else f"{value:g}"
 
 
-def _axis_labels(layout: AxesLayout, x_step: float, y_step: float) -> QPainterPath:
-    font = QFont()
+def _axis_labels(layout: AxesLayout, x_step: float, y_step: float, tips: bool) -> QPainterPath:
+    font = manim_text_font()
     font.setPixelSize(max(1, round(TEXT_CAP_HEIGHT_PER_POINT * AXIS_LABEL_SIZE * PX / 0.7)))
     metrics = QFontMetricsF(font)
     path = QPainterPath()
     ox, oy = origin_shift(layout.x_min, layout.x_max), origin_shift(layout.y_min, layout.y_max)
-    for xv in _ticks(layout.x_min, layout.x_max, x_step):
+    for xv in tick_values(layout.x_min, layout.x_max, x_step, tips):
         if abs(xv) < 1e-9:
             continue
         anchor = _local_pt(layout, xv, oy)
         text = _label_text(xv)
         path.addText(QPointF(anchor.x() - metrics.horizontalAdvance(text) / 2, anchor.y() + 0.25 * PX + metrics.capHeight()), font, text)
-    for yv in _ticks(layout.y_min, layout.y_max, y_step):
+    for yv in tick_values(layout.y_min, layout.y_max, y_step, tips):
         if abs(yv) < 1e-9:
             continue
         anchor = _local_pt(layout, ox, yv)
@@ -376,11 +393,12 @@ def _axes_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
     layout = axes_layout(obj)
     x_step, y_step = param_float(obj.params, "x_step", 1.0), param_float(obj.params, "y_step", 1.0)
     pen = _pen(state.stroke_color, obj.stroke_width, 1.0, state.scale)
-    primitives = [Primitive(path=_axis_lines(layout), pen=pen), Primitive(path=_axis_ticks(layout, x_step, y_step), pen=pen)]
-    if obj.params.get("tips", True):
+    tips = bool(obj.params.get("tips", True))
+    primitives = [Primitive(path=_axis_lines(layout), pen=pen), Primitive(path=_axis_ticks(layout, x_step, y_step, tips), pen=pen)]
+    if tips:
         primitives.append(Primitive(path=_axis_tips(layout), brush=QBrush(_color(state.stroke_color))))
     if obj.params.get("show_numbers"):
-        primitives.append(Primitive(path=_axis_labels(layout, x_step, y_step), brush=QBrush(QColor("#FFFFFF"))))
+        primitives.append(Primitive(path=_axis_labels(layout, x_step, y_step, tips), brush=QBrush(QColor("#FFFFFF"))))
     from manim_studio.ui.stage.drawing_graph import axis_label_primitives
 
     return primitives + axis_label_primitives(obj, state, layout)

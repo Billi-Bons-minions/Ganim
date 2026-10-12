@@ -25,7 +25,7 @@ from PySide6.QtGui import (
 from manim_studio.model.curved import curved_bounds, curved_parts
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.extents import base_size, highlight_box, rotated_extent
-from manim_studio.model.geometry import param_float
+from manim_studio.model.geometry import param_float, tick_values
 from manim_studio.model.graphs import number_value
 from manim_studio.model.groups import bounds_of, is_group, leaves
 from manim_studio.model.state import ObjectState, initial_state
@@ -41,6 +41,7 @@ from manim_studio.ui.stage.drawing import (
     _polygon,
     _shape_primitive,
     _stroke_primitive,
+    manim_text_font,
     text_font,
 )
 
@@ -53,7 +54,7 @@ def pt(x: float, y: float) -> QPointF:
 
 
 def _label_font(points: float) -> QFont:
-    font = QFont()
+    font = manim_text_font()
     font.setPixelSize(max(1, round(TEXT_CAP_HEIGHT_PER_POINT * points * PX / 0.7)))
     return font
 
@@ -116,9 +117,7 @@ def number_line_primitives(obj: SceneObject, state: ObjectState) -> list[Primiti
     labels = QPainterPath()
     font = _label_font(NUMBER_LABEL_SIZE)
     metrics = QFontMetricsF(font)
-    count = int(round(span / step))
-    for index in range(min(count, 400) + 1):
-        value = low + index * step
+    for value in tick_values(low, high, step, bool(tip))[:401]:
         x = to_x(value)
         ticks.moveTo(pt(x, -0.1))
         ticks.lineTo(pt(x, 0.1))

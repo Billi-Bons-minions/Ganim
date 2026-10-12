@@ -16,6 +16,7 @@ from manim_studio.ui.stage.drawing import (
     Primitive,
     _color,
     _pen,
+    manim_text_font,
     pt,
 )
 
@@ -26,7 +27,7 @@ TICK = 0.1
 
 
 def _font(points: float) -> QFont:
-    font = QFont()
+    font = manim_text_font()
     font.setPixelSize(max(1, round(TEXT_CAP_HEIGHT_PER_POINT * points * PX / 0.7)))
     return font
 

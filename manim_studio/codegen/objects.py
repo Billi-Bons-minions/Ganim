@@ -28,6 +28,7 @@ from manim_studio.codegen.objects_extra import (
     bullet_list_code,
     group_code,
     highlight_code,
+    network_code,
     trace_code,
     vector_field_code,
 )
@@ -330,6 +331,8 @@ def object_code(
             lines, place = special
         elif obj.kind == ObjectKind.AXES_3D:
             lines, place = assign(variable, axes_3d_code(obj)), True
+        elif obj.kind == ObjectKind.NETWORK:
+            lines, place = network_code(obj, variable), False
         elif obj.kind == ObjectKind.BULLET_LIST:
             lines, place = bullet_list_code(obj, variable), True
         elif obj.kind == ObjectKind.SOLID:

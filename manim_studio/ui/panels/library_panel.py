@@ -45,6 +45,7 @@ CATEGORIES: tuple[tuple[str, tuple[ObjectKind, ...]], ...] = (
             ObjectKind.NUMBER_PLANE,
             ObjectKind.FUNCTION_GRAPH,
             ObjectKind.VECTOR_FIELD,
+            ObjectKind.NETWORK,
             ObjectKind.NUMBER_LINE,
             ObjectKind.DECIMAL_NUMBER,
             ObjectKind.MATRIX,

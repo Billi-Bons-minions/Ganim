@@ -91,6 +91,17 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
 
         if not is_3d(scene):
             add(ERROR, "camera_rotation_2d")
+    if obj.kind == ObjectKind.NETWORK:
+        from manim_studio.model.networks import is_tree, network_edges, network_vertices, unknown_vertices
+
+        vertices = network_vertices(obj)
+        if not vertices:
+            add(ERROR, "network_empty")
+        missing = unknown_vertices(obj)
+        if missing:
+            add(ERROR, "network_unknown_vertex", ", ".join(missing))
+        elif vertices and params.get("layout") == "tree" and not is_tree(vertices, network_edges(obj)):
+            add(WARNING, "network_not_tree")
     if obj.kind == ObjectKind.VECTOR_FIELD:
         for key in ("x_expression", "y_expression"):
             _expression_issue_names(scene, str(params.get(key, "")), "x", ("y",), add)

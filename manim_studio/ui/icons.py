@@ -170,6 +170,17 @@ def _bullet_list(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill
         p.drawLine(QPointF(m + s * 0.22, y), QPointF(s - m - s * 0.1 * row, y))
 
 
+def _network(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    points = [QPointF(s * 0.5, m + s * 0.05), QPointF(m + s * 0.05, s * 0.55), QPointF(s - m - s * 0.05, s * 0.55), QPointF(s * 0.5, s - m - s * 0.05)]
+    p.setPen(QPen(neutral, w * 0.8))
+    for a, b in ((0, 1), (0, 2), (1, 3), (2, 3), (1, 2)):
+        p.drawLine(points[a], points[b])
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QColor("#58C4DD"))
+    for point in points:
+        p.drawEllipse(point, s * 0.1, s * 0.1)
+
+
 def _polygon(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
     p.drawPolygon(QPolygonF([QPointF(m, s * 0.7), QPointF(s * 0.32, m), QPointF(s - m, s * 0.35), QPointF(s * 0.7, s - m)]))
 
@@ -435,6 +446,7 @@ _EXTRA_DRAWERS = {
     ObjectKind.VECTOR_FIELD: _vector_field,
     ObjectKind.SOLID: _solid,
     ObjectKind.BULLET_LIST: _bullet_list,
+    ObjectKind.NETWORK: _network,
     ObjectKind.POLYGON: _polygon,
     ObjectKind.REGULAR_POLYGON: _regular_polygon,
     ObjectKind.STAR: _star,

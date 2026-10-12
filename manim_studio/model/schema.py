@@ -323,6 +323,23 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         _LINE_STYLE,
         (("stroke_color", "#F7D96F"),),
     ),
+    ObjectKind.NETWORK: KindInfo(
+        ObjectKind.NETWORK,
+        (
+            ParamSpec("vertices", ParamType.TEXT, "A, B, C, D"),
+            ParamSpec("edges", ParamType.TEXT, "A-B\nB-C\nC-D\nD-A\nA-C"),
+            ParamSpec("directed", ParamType.BOOL, False),
+            ParamSpec("layout", ParamType.CHOICE, "circular", choices=("circular", "spring", "kamada_kawai", "shell", "spiral", "tree")),
+            ParamSpec("seed", ParamType.INT, 1, minimum=0, maximum=9999, visible_when=("layout", ("spring",))),
+            ParamSpec("layout_scale", ParamType.FLOAT, 2.0, minimum=0.2, maximum=20.0, step=0.1, scalable=True),
+            ParamSpec("radius", ParamType.FLOAT, 0.3, minimum=0.02, maximum=5.0, step=0.05, scalable=True),
+            ParamSpec("labels", ParamType.BOOL, True),
+            _font_size(28.0, key="label_size"),
+            ParamSpec("label_color", ParamType.COLOR, "#000000", visible_when=("labels", (True,))),
+        ),
+        _SHAPE_STYLE,
+        (("stroke_color", _WHITE), ("stroke_width", 3.0), ("fill_color", "#58C4DD"), ("fill_opacity", 1.0)),
+    ),
     ObjectKind.BULLET_LIST: KindInfo(
         ObjectKind.BULLET_LIST,
         (

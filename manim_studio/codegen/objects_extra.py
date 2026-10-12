@@ -322,6 +322,32 @@ def vector_field_code(obj: SceneObject, variable: str, x_code: str, y_code: str,
     return lines
 
 
+def network_code(obj: SceneObject, variable: str) -> list[str]:
+    """``Graph``/``DiGraph`` with the positions computed by the app (absolute, so no ``move_to``)."""
+    from manim_studio.model.networks import network_edges, network_layout, network_vertices
+
+    vertices = network_vertices(obj)
+    edges = [edge for edge in network_edges(obj) if edge[0] in vertices and edge[1] in vertices]
+    layout = network_layout(obj)
+    cls = "DiGraph" if obj.params.get("directed") else "Graph"
+    lines = [f"{variable} = {cls}("]
+    lines.append(f"    [{', '.join(py_str(v) for v in vertices)}],")
+    lines.append(f"    [{', '.join(f'({py_str(a)}, {py_str(b)})' for a, b in edges)}],")
+    positions = ", ".join(f"{py_str(v)}: {py_point(obj.x + layout[v][0], obj.y + layout[v][1])}" for v in vertices)
+    lines.append(f"    layout={{{positions}}},")
+    if obj.params.get("labels", True):
+        size = fmt_float(_f(obj, "label_size", 28.0))
+        color = py_color(str(obj.params.get("label_color", "#000000")))
+        lines.append(f"    labels={{v: Text(v, font_size={size}, color={color}) for v in [{', '.join(py_str(v) for v in vertices)}]}},")
+    lines.append(f'    vertex_config={{"fill_color": {py_color(obj.fill_color)}, "radius": {fmt_float(_f(obj, "radius", 0.3))}}},')
+    edge = f'"stroke_color": {py_color(obj.stroke_color)}, "stroke_width": {fmt_float(obj.stroke_width)}'
+    if obj.params.get("directed"):
+        edge += ', "tip_config": {"tip_length": 0.2, "tip_width": 0.2}'
+    lines.append(f"    edge_config={{{edge}}},")
+    lines.append(")")
+    return lines
+
+
 def bullet_list_code(obj: SceneObject, variable: str) -> list[str]:
     """``VGroup`` of ``Text`` lines arranged like a bulleted list."""
     from manim_studio.model.lists import list_lines

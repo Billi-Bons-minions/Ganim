@@ -78,6 +78,15 @@ def base_size(scene: Scene, obj: SceneObject) -> tuple[float, float]:
     """Return the estimated width and height of an unrotated, unscaled object."""
     p = obj.params
     kind = obj.kind
+    if kind == ObjectKind.NETWORK:
+        from manim_studio.model.networks import network_layout
+
+        points = list(network_layout(obj).values())
+        radius = param_float(p, "radius", 0.3)
+        if not points:
+            return 2 * radius, 2 * radius
+        xs, ys = [x for x, _ in points], [y for _, y in points]
+        return max(xs) - min(xs) + 2 * radius, max(ys) - min(ys) + 2 * radius
     if kind == ObjectKind.BULLET_LIST:
         from manim_studio.model.lists import list_lines
 

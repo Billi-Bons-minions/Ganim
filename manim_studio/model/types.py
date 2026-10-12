@@ -59,6 +59,7 @@ class ObjectKind(str, Enum):
     VECTOR_FIELD = "vector_field"
     SOLID = "solid"
     BULLET_LIST = "bullet_list"
+    NETWORK = "network"
 
 
 class AnimationKind(str, Enum):

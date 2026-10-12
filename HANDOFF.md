@@ -106,6 +106,10 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
 - Fuzzing Runde 4:
   - Duplizieren und Kopieren einer Gruppe übernahm die Mitglieder nicht und erzeugte leere Gruppen. Behoben.
   - Objekte, die nach Schrumpfen, Entstehen rückwärts, Wegschreiben oder Ersetzen später wieder verwendet werden, bleiben jetzt intakt: Der Ausgang läuft auf einer Kopie (`self.remove(obj)` + `Animation(obj.copy())`). Vorher gab es NaN-Abstürze bzw. falsche Formen; `save_state`/`restore` reichte nicht, weil `become()` bei Strukturwechsel versagt.
+- Neue Objektart „Netzwerk (Graph)“:
+  - Knoten und Kanten als Text eingeben, gerichtet oder ungerichtet, mit Text-Labels ohne LaTeX.
+  - Layouts: Kreis, Federmodell, Kamada-Kawai, Schalen, Spirale, Baum.
+  - Die Positionen berechnet die App (networkx) und gibt sie explizit an Manim weiter, daher sind Bühne und Video identisch.
 
 ### Halbfertig
 - (nichts)

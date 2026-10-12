@@ -637,3 +637,16 @@ def test_objects_used_again_after_destroying_exits(tmp_path) -> None:
     assert "Uncreate(quadrat," in script  # not used again afterwards
     result = run_manim(tmp_path, script, "Wieder", "--dry_run")
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+
+
+def test_networks_render(tmp_path) -> None:
+    plain = make_object(ObjectKind.NETWORK, "Netz", "n", -3.0, 0.0)
+    directed = make_object(ObjectKind.NETWORK, "Pfeile", "d", 3.0, 0.0, vertices="1,2,3", edges="1->2\n2->3", directed=True, layout="spring", labels=False)
+    tree = make_object(ObjectKind.NETWORK, "Baum", "t", 0.0, 2.0, vertices="R,A,B", edges="R-A\nR-B", layout="tree", layout_scale=1.0)
+    steps = [
+        play(make_animation(AnimationKind.CREATE, "n", run_time=0.3), make_animation(AnimationKind.CREATE, "d", run_time=0.3)),
+        play(make_animation(AnimationKind.INDICATE, "n", run_time=0.3), make_animation(AnimationKind.FADE_IN, "t", run_time=0.3)),
+        play(make_animation(AnimationKind.MOVE, "d", x=2.0, y=-1.0, run_time=0.3)),
+    ]
+    result = run_manim(tmp_path, generate_script(make_project(Scene(id="s", name="Netze", objects=[plain, directed, tree], steps=steps))), "Netze", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]

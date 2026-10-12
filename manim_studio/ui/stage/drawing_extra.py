@@ -278,6 +278,64 @@ def highlight_primitives(scene: Scene, obj: SceneObject, state: ObjectState) -> 
     return [_shape_primitive(path, obj, state)]
 
 
+def network_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
+    """Edges (arrows for directed networks), vertices and their labels around the object's position."""
+    from manim_studio.model.networks import network_edges, network_layout, network_vertices
+
+    layout = network_layout(obj)
+    if not layout:
+        return []
+    radius = param_float(obj.params, "radius", 0.3)
+    labels = bool(obj.params.get("labels", True))
+    font = text_font(obj, param_float(obj.params, "label_size", 28.0))
+    radii = {vertex: radius for vertex in network_vertices(obj)}
+
+    def local(point: tuple[float, float]) -> QPointF:
+        return QPointF(point[0] * PX, -point[1] * PX)
+
+    edges = QPainterPath()
+    tips = QPainterPath()
+    directed = bool(obj.params.get("directed"))
+    for a, b in network_edges(obj):
+        if a not in layout or b not in layout:
+            continue
+        (ax, ay), (bx, by) = layout[a], layout[b]
+        length = math.hypot(bx - ax, by - ay)
+        if length < 1e-9:
+            continue
+        ux, uy = (bx - ax) / length, (by - ay) / length
+        start = (ax + ux * radii[a], ay + uy * radii[a])
+        end = (bx - ux * radii[b], by - uy * radii[b])
+        if directed:
+            tip = 0.2
+            base = (end[0] - ux * tip, end[1] - uy * tip)
+            edges.moveTo(local(start))
+            edges.lineTo(local(base))
+            tips.addPolygon(QPolygonF([local(end), local((base[0] - uy * tip / 2, base[1] + ux * tip / 2)), local((base[0] + uy * tip / 2, base[1] - ux * tip / 2))]))
+            tips.closeSubpath()
+        else:
+            edges.moveTo(local(start))
+            edges.lineTo(local(end))
+    primitives = [Primitive(path=edges, pen=_pen(state.stroke_color, obj.stroke_width, obj.stroke_opacity, state.scale))]
+    if directed:
+        primitives.append(Primitive(path=tips, brush=QBrush(_color(state.stroke_color, obj.stroke_opacity))))
+    dots = QPainterPath()
+    for vertex, point in layout.items():
+        dots.addEllipse(local(point), radii[vertex] * PX, radii[vertex] * PX)
+    primitives.append(Primitive(path=dots, brush=QBrush(_color(state.fill_color, obj.fill_opacity))))
+    if labels:
+        text_path_all = QPainterPath()
+        for vertex, point in layout.items():
+            text = QPainterPath()
+            text.addText(QPointF(0, 0), font, vertex)
+            bounds = text.boundingRect()
+            center = local(point)
+            text.translate(center.x() - bounds.center().x(), center.y() - bounds.center().y())
+            text_path_all.addPath(text)
+        primitives.append(Primitive(path=text_path_all, brush=QBrush(_color(str(obj.params.get("label_color", "#000000")), 1.0))))
+    return primitives
+
+
 def list_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
     """Lines stacked like ``arrange(DOWN, aligned_edge=LEFT, buff=...)``."""
     from manim_studio.model.lists import list_lines
@@ -585,6 +643,8 @@ def extra_drawing(scene: Scene, obj: SceneObject, state: ObjectState, resources:
         return field_primitives(scene, obj, state, resources), False
     if kind == ObjectKind.BULLET_LIST:
         return list_primitives(obj, state), True
+    if kind == ObjectKind.NETWORK:
+        return network_primitives(obj, state), False
     if kind == ObjectKind.GROUP:
         return [], False
     return None

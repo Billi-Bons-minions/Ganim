@@ -1058,7 +1058,9 @@ def parameter_users(scene: Scene, obj: SceneObject, _seen: frozenset[str] = froz
             expression = implicit_expression(scene, obj)
             if expression is not None:
                 used |= {by_symbol[symbol] for symbol in expression.used_parameters() if symbol in by_symbol}
-    formula = number_formula(scene, obj)
+    from manim_studio.model.latex_term import result_term
+
+    formula = number_formula(scene, obj) or result_term(scene, obj)
     if formula is not None:
         used |= {by_symbol[symbol] for symbol in formula.used_parameters() if symbol in by_symbol}
     if obj.kind == ObjectKind.VECTOR_FIELD:

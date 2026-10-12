@@ -39,7 +39,7 @@ from manim_studio.model.angles import ANGLE_LINE_KEYS, angle_lines
 from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.fields import field_expressions
-from manim_studio.model.geometry import polar_grid
+from manim_studio.model.geometry import param_float, polar_grid
 from manim_studio.model.latex import colored_parts, colorize
 from manim_studio.model.schema import is_vector_image_path
 from manim_studio.model.three_d import THREE_D_KINDS, is_3d
@@ -133,8 +133,12 @@ def _text(obj: SceneObject) -> list[str]:
     return call("Text", [py_str(str(obj.params.get("text", "")))], kwargs, 2)
 
 
-def _math_tex(obj: SceneObject) -> list[str]:
+def _math_tex(obj: SceneObject, scene=None) -> list[str]:
     latex = str(obj.params.get("latex", ""))
+    if scene is not None:
+        from manim_studio.model.latex_term import shown_latex
+
+        latex = shown_latex(scene, obj) or latex  # "= result" with the start values
     kwargs = [("font_size", fmt_float(_p(obj, "font_size"))), ("color", py_color(obj.fill_color))]
     parts = colored_parts(obj.params)
     if parts:
@@ -380,7 +384,7 @@ def object_code(
         elif obj.kind == ObjectKind.MATH_TEX:
             if colored_parts(obj.params):
                 helpers.add(COLOR_TEX)
-            lines, place = assign(variable, _math_tex(obj)), True
+            lines, place = assign(variable, _math_tex(obj, scene)), True
         elif obj.kind == ObjectKind.IMAGE:
             lines, place = assign(variable, image_code(obj, base_dir)), True
         else:
@@ -393,6 +397,17 @@ def object_code(
         if obj.kind == ObjectKind.NUMBER_PLANE:
             lines += polar_grid_line(obj, variable)
         parameter = scene.object_by_id(obj.params.get("parameter_id")) if obj.kind == ObjectKind.DECIMAL_NUMBER else None
+        from manim_studio.model.latex_term import result_term
+
+        term = result_term(scene, obj)
+        if term is not None and graphs.parameter_users(scene, obj):
+            # recompute "= result" in every frame; become() keeps the formula where it is
+            code = term.to_numpy(renames(scene, names), pad_variable=False)
+            decimals = int(param_float(obj.params, "result_decimals", 2.0))
+            source = py_str(str(obj.params.get("latex", "")) + " = ", prefer_raw=True)
+            kwargs = f"font_size={fmt_float(_p(obj, 'font_size'))}, color={py_color(obj.fill_color)}"
+            text = f'{source} + f"{{({code}):.{decimals}f}}"'
+            lines.append(f"{variable}.add_updater(lambda mob: mob.become(MathTex({text}, {kwargs}).move_to(mob.get_center())), call_updater=True)")
         formula = graphs.number_formula(scene, obj)
         if formula is not None:
             # the number shows a formula of parameters, recomputed in every frame

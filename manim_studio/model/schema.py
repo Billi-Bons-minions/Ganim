@@ -201,6 +201,9 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
             ParamSpec("latex", ParamType.LATEX, r"e^{i\pi} + 1 = 0"),
             ParamSpec("font_size", ParamType.FLOAT, 48.0, minimum=1.0, maximum=500.0, step=1.0, decimals=1, scalable=True),
             ParamSpec("colored_parts", ParamType.WORD_COLORS, []),
+            # "= result" computed from the formula, with the current parameter values
+            ParamSpec("show_result", ParamType.BOOL, False),
+            ParamSpec("result_decimals", ParamType.INT, 2, minimum=0, maximum=6, visible_when=("show_result", (True,))),
         ),
         _TEXT_STYLE,
         (("fill_color", _WHITE), ("fill_opacity", 1.0)),

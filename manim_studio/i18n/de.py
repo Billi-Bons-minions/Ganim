@@ -1383,4 +1383,7 @@ STRINGS: dict[str, str] = {
     "param.u_max": "u bis",
     "param.v_min": "v von",
     "param.v_max": "v bis",
+    "param.show_result": "Ergebnis ausrechnen (= …)",
+    "param.result_decimals": "Nachkommastellen des Ergebnisses",
+    "issue.formula_not_computable": "Diese Formel lässt sich nicht ausrechnen. Erlaubt sind Zahlen, Parameter, + − · / ^, \\frac, \\sqrt, \\pi sowie sin, cos, tan, ln, log, exp – kein x und kein „=“.",
 }

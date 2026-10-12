@@ -278,8 +278,10 @@ def tex_image_primitives(
     return [Primitive(path=text_path(source or " ", font), brush=QBrush(color))]
 
 
-def _math_tex_primitives(obj: SceneObject, state: ObjectState, resources: StageResources) -> list[Primitive]:
-    latex = str(obj.params.get("latex", ""))
+def _math_tex_primitives(obj: SceneObject, state: ObjectState, resources: StageResources, scene: Scene | None = None) -> list[Primitive]:
+    from manim_studio.model.latex_term import shown_latex
+
+    latex = (shown_latex(scene, obj, resources.values) if scene is not None else None) or str(obj.params.get("latex", ""))
     parts = colored_parts(obj.params)
     if not parts:
         return tex_image_primitives(obj, state, resources, latex, "align*")
@@ -503,7 +505,7 @@ def _shape_drawing(obj: SceneObject, state: ObjectState, scene: Scene, resources
     if kind == ObjectKind.TEXT:
         return _text_primitives(obj, state), True
     if kind == ObjectKind.MATH_TEX:
-        return _math_tex_primitives(obj, state, resources), True
+        return _math_tex_primitives(obj, state, resources, scene), True
     if kind == ObjectKind.AXES:
         return _axes_primitives(obj, state), False
     if kind == ObjectKind.NUMBER_PLANE:

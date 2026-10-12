@@ -1383,4 +1383,7 @@ STRINGS: dict[str, str] = {
     "param.u_max": "u to",
     "param.v_min": "v from",
     "param.v_max": "v to",
+    "param.show_result": "Compute result (= …)",
+    "param.result_decimals": "Decimal places of the result",
+    "issue.formula_not_computable": "This formula cannot be computed. Allowed are numbers, parameters, + − · / ^, \\frac, \\sqrt, \\pi and sin, cos, tan, ln, log, exp – no x and no “=”.",
 }

@@ -81,6 +81,11 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
         add(ERROR, "latex_empty")
     if obj.kind in LATEX_KINDS and not latex_available:
         add(ERROR, "latex_unavailable")
+    if obj.kind == ObjectKind.MATH_TEX and params.get("show_result"):
+        from manim_studio.model.latex_term import result_term
+
+        if result_term(scene, obj) is None:
+            add(ERROR, "formula_not_computable")
     if obj.kind == ObjectKind.DECIMAL_NUMBER:
         error = graphs.number_formula_error(scene, obj)
         if error == "only_parameters":

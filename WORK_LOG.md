@@ -345,3 +345,12 @@ Jede Funktion ist mit einem Vergleich Bühne ↔ Manim-Bild und mit echten Manim
 - Die Bühne zeichnet Parameterflächen Feld für Feld von hinten nach vorn (ein Torus hat ein Loch und überlappt sich selbst). Form und Lage stimmen mit Manim überein (Bildvergleich mit einem Torus).
 - Grenze: Manim schattiert 3D-Flächen nach einer Lichtquelle; die Bühne zeichnet sie einfarbig. Das gilt für alle 3D-Objekte.
 
+### 4. Formel rechnet ihr Ergebnis aus
+- Wunsch: Beim Einfügen einer Formel soll man den Inhalt ausrechnen lassen können, auch mit Parametern.
+- Umgesetzt als Option **Ergebnis ausrechnen** an der Formel (plus Nachkommastellen). Das LaTeX wird in einen Rechenterm übersetzt (`model/latex_term.py`: `\frac`, `\cdot`, `\times`, `\div`, `\sqrt`, `^`, `\pi`, sin/cos/tan/ln/log/exp, `\left`/`\right`) und als „= 3.50“ angehängt.
+- Mit Parametern rechnet im Skript ein Updater in jedem Bild neu (`become(MathTex(...))`, die Formel bleibt an ihrem Platz). Auf der Bühne wird mit denselben Werten gerechnet.
+- Grenzen:
+  - Nicht ausrechenbare Formeln (mit x, mit „=“, Integrale …) werden vor dem Rendern gemeldet.
+  - Bei einem live gerechneten Ergebnis entfallen eingefärbte Teile.
+  - LaTeX setzt für jeden neuen Wert die Formel neu; lange Animationen mit Parametern rendern dadurch langsamer.
+

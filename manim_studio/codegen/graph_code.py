@@ -34,6 +34,7 @@ STUDIO_LINES = "studio_lines_to_point"
 STUDIO_TERM = "studio_term"
 STUDIO_INTEGRAL = "studio_integral"
 STUDIO_BESIDE = "studio_beside"
+STUDIO_LABEL_TEXT = "studio_label_text"
 POINT_LABEL_SIZE = 24.0
 AXIS_LABEL_SIZE = 28.0
 SMALL_BUFF = 0.1
@@ -93,6 +94,11 @@ def is_dynamic(scene: Scene, obj: SceneObject) -> bool:
         return _graph_uses_parameters(scene, obj)
     if obj.kind not in GRAPH_TOOL_KINDS or obj.kind == ObjectKind.GRAPH_MARKERS:
         return False
+    if obj.kind == ObjectKind.TOOL_LABEL:
+        from manim_studio.model.tool_labels import label_tool
+
+        tool = label_tool(scene, obj)
+        return tool is not None and is_dynamic(scene, tool)
     if any(scene.object_by_id(obj.params.get(key)) is not None for key in ("x_parameter", "h_parameter")):
         return True
     graph = scene.object_by_id(obj.params.get("graph_id"))
@@ -386,6 +392,107 @@ def _live_label(obj: SceneObject, name: str, axes_variable: str, x_code: str, y_
     return f"{STUDIO_BESIDE}({_label_text(obj, text)}, {axes_variable}, {x_code}, {y_code}, slope, side)"
 
 
+def _placed_label(label_code: str, placement: str, axes_variable: str, x: str, y: str, slope: str = "0", side: str = "1", buff: str = "0") -> str:
+    """A value label next to its line, at the corner of its point or in the middle of its area."""
+    from manim_studio.model.tool_labels import BESIDE, CORNER
+
+    if placement == BESIDE:
+        return f"{STUDIO_BESIDE}({label_code}, {axes_variable}, {x}, {y}, {slope}, {side})"
+    if placement == CORNER:
+        return f"{label_code}.next_to({axes_variable}.c2p({x}, {y}), UR, buff={buff})"
+    return f"{label_code}.move_to({axes_variable}.c2p({x}, {y}))"
+
+
+def tool_label_code(scene: Scene, obj: SceneObject, names: dict[str, str], variable: str, dynamic: bool) -> tuple[list[str], str]:
+    """Return ``(definition lines, expression)`` of a value label (``model/tool_labels.py``)."""
+    from manim_studio.model.tool_labels import BESIDE, CENTER, CORNER, SMALL_BUFF, area_bounds, function_name, label_content, label_tool, tool_label
+
+    tool = label_tool(scene, obj)
+    content = label_content(scene, obj)
+    if tool is None or content is None:
+        raise CodegenError("tool_label_tool_missing", obj.name)
+    graph, _graph_variable, axes_variable = _tool_parts(scene, tool, names)
+    style = f"font_size={fmt_float(param_float(obj.params, 'font_size', 24.0))}, color={py_color(obj.fill_color)}, fill_opacity={fmt_float(obj.fill_opacity)}"
+    if not dynamic:
+        label = tool_label(scene, obj)
+        if label is None:
+            raise CodegenError("tool_label_undefined", obj.name)
+        numbers = [fmt_float(value) for value in (label.x, label.y, label.slope)]
+        text = f"Text({py_str(label.text)}, {style})"
+        return [], _placed_label(text, label.placement, axes_variable, *numbers, str(label.side), fmt_float(label.buff)) + _shift_code(obj)
+    rename = renames(scene, names)
+    function_code = pieces_code(_function_pieces(scene, graph), rename)
+    decimals = int(param_float(obj.params, "decimals", 2.0))
+    lines = ["", f"def {variable}_build():", f"{INDENT}curve = lambda x: {function_code}"]
+    if tool.kind == ObjectKind.TANGENT:
+        lines += [
+            f"{INDENT}x0 = {_x_code(scene, tool, names)}",
+            f"{INDENT}y0 = curve(x0)",
+            f"{INDENT}slope = (lambda x: {_slope_code(scene, graph, rename)})(x0)",
+            *_side_lines(obj, "x0", "y0"),
+        ]
+        first, second, name, x, y = "slope", "y0 - slope * x0", '"t"', "x0", "y0"
+    elif tool.kind == ObjectKind.SECANT:
+        lines += [
+            f"{INDENT}x0 = {_x_code(scene, tool, names)}",
+            f"{INDENT}dx = {_h_code(scene, tool, names)}",
+            f"{INDENT}y0 = curve(x0)",
+            f"{INDENT}if abs(dx) < {graphs.SECANT_MIN_H!r}:",
+            f"{INDENT * 2}x1, y1 = x0, y0",
+            f"{INDENT * 2}slope = (lambda x: {_slope_code(scene, graph, rename)})(x0)",
+            f"{INDENT}else:",
+            f"{INDENT * 2}x1, y1 = x0 + dx, curve(x0 + dx)",
+            f"{INDENT * 2}slope = (y1 - y0) / dx",
+            f"{INDENT}xm, ym = (x0 + x1) / 2, (y0 + y1) / 2",
+            *_side_lines(obj, "xm", "ym"),
+        ]
+        first, second, name, x, y = "slope", "ym - slope * xm", '"s"', "xm", "ym"
+    elif tool.kind == ObjectKind.GRAPH_POINT:
+        lines += [f"{INDENT}x0 = {_x_code(scene, tool, names)}", f"{INDENT}y0 = curve(x0)"]
+        first, second, name, x, y = "x0", "y0", py_str(function_name(graph)), "x0", "y0"
+    else:
+        bounds = area_bounds(scene, tool)
+        if bounds is None:
+            raise CodegenError("tool_label_undefined", obj.name)
+        low, high, _graph = bounds
+        lines.append(f"{INDENT}lower = lambda x: {_lower_code(scene, tool, graph, rename)}")
+        integrand = "np.abs(curve(x) - lower(x))" if content == "area" else "curve(x) - lower(x)"
+        sign = "-" if content == "integral" and tool.params.get("mode") == "above" else ""
+        lines += [
+            f"{INDENT}value = {sign}{STUDIO_INTEGRAL}(lambda x: {integrand}, {fmt_float(low)}, {fmt_float(high)})",
+            f"{INDENT}xm = {fmt_float((low + high) / 2)}",
+            f"{INDENT}ym = (curve(xm) + lower(xm)) / 2",
+        ]
+        first, second, name, x, y = "value", "0", py_str(function_name(graph)), "xm", "ym"
+    placement = BESIDE if tool.kind in (ObjectKind.TANGENT, ObjectKind.SECANT) else CORNER if tool.kind == ObjectKind.GRAPH_POINT else CENTER
+    text = f"Text({STUDIO_LABEL_TEXT}({py_str(content)}, {decimals}, {first}, {second}, {name}), {style})"
+    buff = fmt_float(param_float(tool.params, "radius", 0.08) + SMALL_BUFF)
+    lines.append(f"{INDENT}return {_placed_label(text, placement, axes_variable, x, y, 'slope', 'side', buff)}{_shift_code(obj)}")
+    return lines + [""], f"always_redraw({variable}_build)"
+
+
+def _shift_code(obj: SceneObject) -> str:
+    from manim_studio.model.tool_labels import label_shift
+
+    dx, dy = label_shift(obj)
+    return f".shift(np.array([{fmt_float(dx)}, {fmt_float(dy)}, 0.0]))" if (dx, dy) != (0.0, 0.0) else ""
+
+
+def _lower_code(scene: Scene, area: SceneObject, graph: SceneObject, rename: dict[str, str]) -> str:
+    """The lower boundary of an area as code in x (another graph, an edge of the axes or the x-axis)."""
+    axes = bound_axes(scene, graph)
+    assert axes is not None
+    mode = area.params.get("mode", "under")
+    if mode == "between":
+        other = scene.object_by_id(area.params.get("other_graph_id"))
+        if other is None or not graphs.is_function_curve(other):
+            raise CodegenError("other_graph_missing", area.name)
+        return pieces_code(_function_pieces(scene, other), rename)
+    if mode in ("above", "below"):
+        return f"{fmt_float(param_float(axes.params, 'y_max' if mode == 'above' else 'y_min', 0.0))} + 0 * x"
+    return f"{fmt_float(graphs.baseline(axes))} + 0 * x"
+
+
 def _h_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> str:
     parameter = scene.object_by_id(obj.params.get("h_parameter"))
     if parameter is not None and parameter.kind == ObjectKind.PARAMETER and parameter.id in names:
@@ -579,9 +686,11 @@ def graph_object_code(scene: Scene, obj: SceneObject, names: dict[str, str], hel
     code = "\n".join(lines)
     if f"{STUDIO_LINES}(" in code:
         helpers.update((STUDIO_LINES, STUDIO_DASHED))
-    for name in (STUDIO_DASHED, STUDIO_TERM, STUDIO_BESIDE):
+    for name in (STUDIO_DASHED, STUDIO_TERM, STUDIO_BESIDE, STUDIO_INTEGRAL, STUDIO_LABEL_TEXT):
         if f"{name}(" in code:
             helpers.add(name)
+    if STUDIO_LABEL_TEXT in helpers:
+        helpers.add(STUDIO_TERM)  # studio_label_text writes the terms of lines with it
     return lines, placement
 
 
@@ -596,6 +705,9 @@ def _tool_code(scene: Scene, obj: SceneObject, names: dict[str, str], variable: 
         return definition + _assign(variable, expression.split("\n")), False
     if obj.kind == ObjectKind.GRAPH_MARKERS:
         return _assign(variable, markers_code(scene, obj, names).split("\n")), False
+    if obj.kind == ObjectKind.TOOL_LABEL:
+        definition, expression = tool_label_code(scene, obj, names, variable, dynamic)
+        return definition + _assign(variable, expression.split("\n")), False
     builders = {ObjectKind.GRAPH_AREA: area_code, ObjectKind.RIEMANN: riemann_code, ObjectKind.GRAPH_LABEL: label_code}
     return _assign(variable, _wrap_dynamic(builders[obj.kind](scene, obj, names), dynamic)), False
 
@@ -650,6 +762,24 @@ STUDIO_TERM_SOURCE = '''def studio_term(name, slope, intercept, decimals, style)
     sign = "−" if intercept < 0 and float(b) != 0 else "+"
     left = "y" if style == "equation" else f"{name}(x)"
     return f"{left} = {m}x {sign} {b}"'''
+
+#: Text of a value label; ``tool_labels.label_text`` (stage) does the same.
+STUDIO_LABEL_TEXT_SOURCE = '''def studio_label_text(content, decimals, first, second, name):
+    """Text of a value label: the term of a line, a point's coordinates or value, an area or integral."""
+
+    def number(value):
+        text = f"{abs(value):.{decimals}f}"
+        return ("−" if value < 0 and float(text) != 0 else "") + text
+
+    if content in ("term", "equation", "slope"):
+        return studio_term(name, first, second, decimals, content)
+    if content == "coordinates":
+        return f"({number(first)} | {number(second)})"
+    if content == "function_value":
+        return f"{name}({number(first)}) = {number(second)}"
+    if content == "area":
+        return f"A = {number(abs(first))}"
+    return f"∫ {name}(x) dx = {number(first)}"'''
 
 #: Places such a label next to its line, like the stage does.
 STUDIO_BESIDE_SOURCE = '''def studio_beside(label, axes, x, y, slope, side, buff=0.15):

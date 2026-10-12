@@ -53,6 +53,7 @@ from manim_studio.model.stage_edits import COLOR, MOVE, ROTATE, SCALE, is_record
 from manim_studio.model.state import first_reference, states_after, visible_at_start
 from manim_studio.model.types import (
     GRAPH_TOOL_KINDS,
+    LABELED_TOOL_KINDS,
     LINE_KINDS,
     RATE_FUNCTIONS,
     REFERENCE_PARAMS,
@@ -620,6 +621,13 @@ class PropertiesPanel(QScrollArea):
             for spec in info.params:
                 self._object_param_row(form, object_id, spec)
             form.note(lambda: self._analysis_note(object_id))
+        if kind in LABELED_TOOL_KINDS:
+            button = QToolButton()
+            button.setText(tr("tool_label.add"))
+            button.setToolTip(tr("tool_label.add_tip"))
+            button.setProperty("variant", "button")
+            button.clicked.connect(lambda _checked=False: self.controller.add_tool_label(object_id))
+            form.layout.addRow(button)
         if info.style:
             form.section(tr("section.style"))
             form.header_widget(self._style_button([object_id]))

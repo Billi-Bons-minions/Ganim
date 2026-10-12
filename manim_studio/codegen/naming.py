@@ -26,6 +26,7 @@ HELPER_FUNCTIONS = frozenset(
         "studio_term",
         "studio_integral",
         "studio_beside",
+        "studio_label_text",
         "studio_shape",
         "studio_camera_frame",
         "studio_angle",

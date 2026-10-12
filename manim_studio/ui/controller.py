@@ -49,7 +49,7 @@ from manim_studio.model.stage_edits import (
     would_create,
 )
 from manim_studio.model.state import START, states_after
-from manim_studio.model.types import GRAPH_TOOL_KINDS, LINE_KINDS, ON_3D_AXES, REFERENCE_PARAMS, UNADDED_KINDS, UNGROUPABLE, AnimationKind, ObjectKind, StepKind
+from manim_studio.model.types import GRAPH_TOOL_KINDS, LABELED_TOOL_KINDS, LINE_KINDS, ON_3D_AXES, REFERENCE_PARAMS, UNADDED_KINDS, UNGROUPABLE, AnimationKind, ObjectKind, StepKind
 from manim_studio.ui.document import ProjectDocument
 from manim_studio.ui.editor_state import INSPECT_ANIMATION, INSPECT_STEP, EditorState
 from manim_studio.ui.settings import AppSettings
@@ -115,9 +115,16 @@ class EditorController(QObject):
         return relative_asset_path(path, self.document.base_dir)
 
     def add_object(
-        self, kind: ObjectKind, x: float | None = None, y: float | None = None, name: str | None = None, attributes: dict | None = None, **params
+        self,
+        kind: ObjectKind,
+        x: float | None = None,
+        y: float | None = None,
+        name: str | None = None,
+        attributes: dict | None = None,
+        also: Callable[[Scene], None] | None = None,
+        **params,
     ) -> str | None:
-        """Create an object of ``kind`` (at the given position or a free spot)."""
+        """Create an object of ``kind`` (at the given position or a free spot); ``also`` changes the scene in the same undo step."""
         if kind == ObjectKind.IMAGE:
             path = self._choose_image()
             if path is None:
@@ -141,6 +148,12 @@ class EditorController(QObject):
                 self.statusMessage.emit(tr("status.angle_needs_lines"))
                 return None
             params["first_line"], params["second_line"] = lines
+        if kind == ObjectKind.TOOL_LABEL and not params.get("tool_id"):
+            tool = next((o for o in (scene.object_by_id(i) for i in self.editor.selected_objects) if o is not None and o.kind in LABELED_TOOL_KINDS), None)
+            if tool is None:
+                self.statusMessage.emit(tr("status.tool_label_needs_tool"))
+                return None
+            return self.add_tool_label(tool.id)
         if kind == ObjectKind.BOOLEAN_SHAPE and not (params.get("first_shape") and params.get("second_shape")):
             from manim_studio.model.booleans import OPERAND_KINDS
 
@@ -176,6 +189,8 @@ class EditorController(QObject):
             ops.add_object(s, obj)
             if obj.kind == ObjectKind.HIGHLIGHT:
                 ops.place_highlight(s, obj.id)
+            if also is not None:
+                also(s)
 
         self._edit(tr("undo.add_object", name=name), mutate)
         if hosts:
@@ -201,7 +216,7 @@ class EditorController(QObject):
             first.x, second.x = obj.x - 0.7, obj.x + 0.7
             second.stroke_color = second.fill_color = "#FC6255"
             obj.params["first_shape"], obj.params["second_shape"] = first.id, second.id
-        elif obj.kind in GRAPH_TOOL_KINDS and not obj.params.get("graph_id"):
+        elif obj.kind in GRAPH_TOOL_KINDS and obj.kind != ObjectKind.TOOL_LABEL and not obj.params.get("graph_id"):
             axes = [o for o in self.scene().objects if o.kind in (ObjectKind.AXES, ObjectKind.NUMBER_PLANE)]
             axes_id = axes[-1].id if axes else new(ObjectKind.AXES).id
             obj.params["graph_id"] = new(ObjectKind.FUNCTION_GRAPH, axes_id=axes_id).id
@@ -225,7 +240,7 @@ class EditorController(QObject):
             axes = [o for o in scene.objects if o.kind == ObjectKind.AXES_3D]
             if axes:
                 obj.params["axes_id"] = axes[-1].id
-        if obj.kind not in GRAPH_TOOL_KINDS or obj.params.get("graph_id"):
+        if obj.kind not in GRAPH_TOOL_KINDS or obj.kind == ObjectKind.TOOL_LABEL or obj.params.get("graph_id"):
             return
         candidates = self._function_graphs()
         selected = [o for o in candidates if o.id in self.editor.selected_objects]
@@ -246,6 +261,32 @@ class EditorController(QObject):
             params.setdefault("x_min", max(low, -1.0 if kind == ObjectKind.GRAPH_AREA else 0.0))
             params.setdefault("x_max", min(high, 2.0 if kind == ObjectKind.GRAPH_AREA else 3.0))
         return self.add_object(kind, 0.0, 0.0, name=name, graph_id=graph_id, **params)
+
+    def add_tool_label(self, tool_id: str) -> str | None:
+        """A value label for a tangent, secant, point or area; it takes over the tool's own label."""
+        tool = self.scene().object_by_id(tool_id)
+        if tool is None or tool.kind not in LABELED_TOOL_KINDS:
+            return None
+        params: dict = {"tool_id": tool_id}
+        if tool.kind in (ObjectKind.TANGENT, ObjectKind.SECANT):
+            color = tool.stroke_color
+            own = str(tool.params.get("label", "none"))
+            if own != "none":
+                params.update(content=own, label_side=tool.params.get("label_side", "auto"), decimals=tool.params.get("decimals", 2))
+        else:
+            color = tool.fill_color if tool.kind == ObjectKind.GRAPH_POINT else "#FFFFFF"
+            if tool.kind == ObjectKind.GRAPH_POINT and tool.params.get("show_label"):
+                params["content"] = "coordinates"
+
+        def hide_own_label(scene: Scene) -> None:
+            # the separate label replaces the tool's own one
+            if tool.kind in (ObjectKind.TANGENT, ObjectKind.SECANT):
+                ops.set_object_param(scene, tool_id, "label", "none")
+            elif tool.kind == ObjectKind.GRAPH_POINT:
+                ops.set_object_param(scene, tool_id, "show_label", False)
+
+        name = tr("tool_label.name", tool=tool.name)
+        return self.add_object(ObjectKind.TOOL_LABEL, 0.0, 0.0, name=name, attributes={"fill_color": color}, also=hide_own_label, **params)
 
     def add_derivative(self, graph_id: str, order: int = 1) -> str | None:
         """Add the graph of the derivative of a function graph."""

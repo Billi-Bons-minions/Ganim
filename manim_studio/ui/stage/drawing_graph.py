@@ -121,6 +121,8 @@ def tool_primitives(scene: Scene, obj: SceneObject, state: ObjectState, values: 
         return _secant_primitives(scene, obj, state, values, axes, offset), False
     if kind == ObjectKind.GRAPH_POINT:
         return _graph_point_primitives(scene, obj, state, values, axes, offset), False
+    if kind == ObjectKind.TOOL_LABEL:
+        return _tool_label_primitives(scene, obj, state, values, axes, offset), False
     if kind == ObjectKind.GRAPH_MARKERS:
         # Computed for the start values, exactly like the generated script.
         return _marker_primitives(scene, obj, state, None, axes, offset), False
@@ -171,6 +173,33 @@ def _line_label_primitives(scene: Scene, obj: SceneObject, state: ObjectState, v
     center = pt(px + distance * nx - offset[0], py + distance * ny - offset[1])
     path.translate(center.x() - bounds.center().x(), center.y() - bounds.center().y())
     return [Primitive(path=path, brush=QBrush(_color(state.stroke_color, obj.stroke_opacity)))]
+
+
+def _tool_label_primitives(scene: Scene, obj: SceneObject, state: ObjectState, values, axes: SceneObject, offset: Point) -> list[Primitive]:
+    """A value label placed like the script: beside its line, at its point's corner or in its area."""
+    from manim_studio.model.tool_labels import BESIDE, CORNER, label_shift, tool_label
+
+    label = tool_label(scene, obj, values)
+    if label is None:
+        return []
+    size = param_float(obj.params, "font_size", 24.0)
+    px, py = axes_to_scene(axes, label.x, label.y)
+    dx, dy = label_shift(obj)
+    if label.placement == CORNER:
+        return [_text_near(label.text, pt(px + dx - offset[0], py + dy - offset[1]), (1.0, 1.0), label.buff, size, obj, state)]
+    path = text_path(label.text, text_font(obj, size))
+    bounds = path.boundingRect()
+    if label.placement == BESIDE:
+        qx, qy = axes_to_scene(axes, label.x + 1, label.y + label.slope)
+        length = math.hypot(qx - px, qy - py)
+        if not math.isfinite(length) or length == 0:
+            return []
+        nx, ny = label.side * -(qy - py) / length, label.side * (qx - px) / length
+        distance = abs(nx) * bounds.width() / PX / 2 + abs(ny) * bounds.height() / PX / 2 + graphs.LINE_LABEL_BUFF
+        px, py = px + distance * nx, py + distance * ny
+    center = pt(px + dx - offset[0], py + dy - offset[1])
+    path.translate(center.x() - bounds.center().x(), center.y() - bounds.center().y())
+    return [Primitive(path=path, brush=QBrush(_color(state.fill_color, obj.fill_opacity)))]
 
 
 def _graph_point_primitives(scene: Scene, obj: SceneObject, state: ObjectState, values, axes: SceneObject, offset: Point) -> list[Primitive]:

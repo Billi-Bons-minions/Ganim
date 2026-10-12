@@ -48,6 +48,7 @@ from manim_studio.model.types import (
     CURVE_POLAR,
     FUNCTION_CURVES,
     GRAPH_TOOL_KINDS,
+    LABELED_TOOL_KINDS,
     ON_3D_AXES,
     ObjectKind,
 )
@@ -455,7 +456,12 @@ def graph_scene_segments(scene: Scene, graph: SceneObject, values: Values | None
 
 
 def tool_graph(scene: Scene, obj: SceneObject) -> SceneObject | None:
-    """Return the function graph a tool is drawn on (only if it lies on axes)."""
+    """Return the function graph a tool is drawn on (only if it lies on axes); a value label uses its tool's graph."""
+    if obj.kind == ObjectKind.TOOL_LABEL:
+        tool = scene.object_by_id(obj.params.get("tool_id"))
+        if tool is None or tool.id == obj.id or tool.kind not in LABELED_TOOL_KINDS:
+            return None
+        return tool_graph(scene, tool)
     graph = scene.object_by_id(obj.params.get("graph_id"))
     if graph is None or graph.id == obj.id or bound_axes(scene, graph) is None:
         return None
@@ -473,7 +479,7 @@ def tool_x(scene: Scene, obj: SceneObject, values: Values | None) -> float:
     return param_float(obj.params, "x_value", 0.0)
 
 
-def _baseline(axes: SceneObject) -> float:
+def baseline(axes: SceneObject) -> float:
     return origin_shift(param_float(axes.params, "y_min", -3.0), param_float(axes.params, "y_max", 3.0))
 
 
@@ -512,7 +518,7 @@ def area_polygon(scene: Scene, obj: SceneObject, values: Values | None = None) -
     if mode in ("above", "below"):
         edge = param_float(axes.params, "y_max" if mode == "above" else "y_min", 3.0 if mode == "above" else -3.0)
         return top + [(top[-1][0], edge), (top[0][0], edge)]
-    base = _baseline(axes)
+    base = baseline(axes)
     return [(top[0][0], base)] + top + [(top[-1][0], base)]
 
 
@@ -537,7 +543,7 @@ def riemann_rectangles(scene: Scene, obj: SceneObject, values: Values | None = N
     if dx <= 0 or high <= low or (high - low) / dx > 2000:
         return []
     offset = {"left": 0.0, "center": 0.5, "right": 1.0}.get(str(obj.params.get("sample", "left")), 0.0)
-    base = _baseline(axes)
+    base = baseline(axes)
     rectangles = []
     count = math.ceil((high - low) / dx - 1e-9)
     for index in range(count):
@@ -893,6 +899,11 @@ def tool_axes_points(scene: Scene, obj: SceneObject, values: Values | None = Non
         return [point] if point is not None else []
     if kind == ObjectKind.GRAPH_MARKERS:
         return [(point.x, point.y) for point in marker_points(scene, obj, values)]
+    if kind == ObjectKind.TOOL_LABEL:
+        from manim_studio.model.tool_labels import estimated_center
+
+        center = estimated_center(scene, obj, values)
+        return [center] if center is not None else []
     if kind == ObjectKind.GRAPH_LABEL:
         anchor = label_anchor(scene, obj, values)
         if anchor is None:
@@ -964,7 +975,7 @@ def area_value(scene: Scene, obj: SceneObject, values: Values | None = None) -> 
         edge = param_float(axes.params, "y_max" if mode == "above" else "y_min", 0.0)
         lower = lambda x: edge  # noqa: E731
     else:
-        base = _baseline(axes)
+        base = baseline(axes)
         lower = lambda x: base  # noqa: E731
     samples = 2000
     step = (high - low) / samples
@@ -1124,7 +1135,7 @@ def parameter_users(scene: Scene, obj: SceneObject, _seen: frozenset[str] = froz
             except ExpressionError:
                 continue
             used |= {by_symbol[symbol] for symbol in expression.used_parameters() if symbol in by_symbol}
-    for key in ("graph_id", "other_graph_id", "derive_from"):
+    for key in ("graph_id", "other_graph_id", "derive_from", "tool_id"):
         reference = scene.object_by_id(obj.params.get(key))
         if reference is not None:
             used |= parameter_users(scene, reference, seen)

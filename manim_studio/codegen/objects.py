@@ -458,6 +458,8 @@ def dependencies(scene: Scene, obj: SceneObject) -> list[str]:
         result += [str(obj.params.get(key)) for key in ANGLE_LINE_KEYS if obj.params.get(key)]
     if obj.kind == ObjectKind.BOOLEAN_SHAPE:
         result += [str(obj.params.get(key)) for key in ("first_shape", "second_shape") if obj.params.get(key)]
+    if obj.kind == ObjectKind.TOOL_LABEL and obj.params.get("tool_id"):
+        result.append(str(obj.params.get("tool_id")))
     if obj.kind == ObjectKind.GROUP:
         result += [str(member) for member in obj.params.get("members", [])]
     for key in ("graph_id", "other_graph_id"):

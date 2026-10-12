@@ -299,6 +299,16 @@ def _graph_issues(scene: Scene, obj: SceneObject, add) -> None:
 
 def _tool_issues(scene: Scene, obj: SceneObject, add) -> None:
     params = obj.params
+    if obj.kind == ObjectKind.TOOL_LABEL:
+        from manim_studio.model.tool_labels import content_fits, label_tool, tool_label
+
+        if label_tool(scene, obj) is None:
+            add(ERROR, "tool_label_tool_missing")
+        elif graphs.tool_graph(scene, obj) is None or tool_label(scene, obj) is None:
+            add(ERROR, "tool_label_undefined")
+        elif not content_fits(scene, obj):
+            add(WARNING, "tool_label_content")
+        return
     graph = scene.object_by_id(params.get("graph_id"))
     if graph is None:
         add(ERROR, "graph_missing")

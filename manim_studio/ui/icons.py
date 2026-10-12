@@ -135,6 +135,17 @@ def _boolean_shape(p: QPainter, s: float, m: float, w: float, stroke: QColor, fi
     p.drawPath(right)
 
 
+def _tool_label(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.setPen(QPen(QColor("#FF862F"), w))
+    p.drawLine(QPointF(m, s * 0.82), QPointF(s - m, s * 0.42))
+    font = QFont()
+    font.setPixelSize(max(6, round(s * 0.36)))
+    font.setBold(True)
+    p.setFont(font)
+    p.setPen(QPen(QColor("#F7D96F"), 1))
+    p.drawText(QRectF(m * 0.5, m * 0.2, s - m, s * 0.5), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, "m=1")
+
+
 def _trace(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
     path = QPainterPath(QPointF(m, s - m))
     path.cubicTo(QPointF(s * 0.3, s * 0.2), QPointF(s * 0.6, s * 0.9), QPointF(s * 0.78, s * 0.3))
@@ -505,6 +516,7 @@ _EXTRA_DRAWERS = {
     ObjectKind.HIGHLIGHT: _highlight,
     ObjectKind.ANGLE: _angle,
     ObjectKind.BOOLEAN_SHAPE: _boolean_shape,
+    ObjectKind.TOOL_LABEL: _tool_label,
     ObjectKind.TRACE: _trace,
     ObjectKind.VECTOR_FIELD: _vector_field,
     ObjectKind.SOLID: _solid,

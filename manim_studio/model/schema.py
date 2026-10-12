@@ -673,6 +673,21 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         _TEXT_STYLE,
         (("fill_color", _YELLOW), ("fill_opacity", 1.0)),
     ),
+    ObjectKind.TOOL_LABEL: KindInfo(
+        ObjectKind.TOOL_LABEL,
+        (
+            ParamSpec("tool_id", ParamType.OBJECT_REF, None, ref_kinds=(ObjectKind.TANGENT, ObjectKind.SECANT, ObjectKind.GRAPH_POINT, ObjectKind.GRAPH_AREA)),
+            ParamSpec("content", ParamType.CHOICE, "auto", choices=("auto", "term", "equation", "slope", "coordinates", "function_value", "area", "integral")),
+            ParamSpec("decimals", ParamType.INT, 2, minimum=0, maximum=6),
+            ParamSpec("label_side", ParamType.CHOICE, "auto", choices=("auto", "above", "below")),
+            _font_size(24.0),
+            # moves the label away from its automatic place (scene units), e.g. off an axis
+            ParamSpec("shift_x", ParamType.FLOAT, 0.0, minimum=-50.0, maximum=50.0, step=0.1),
+            ParamSpec("shift_y", ParamType.FLOAT, 0.0, minimum=-50.0, maximum=50.0, step=0.1),
+        ),
+        _TEXT_STYLE,
+        (("fill_color", _YELLOW), ("fill_opacity", 1.0)),
+    ),
     ObjectKind.DATA_PLOT: KindInfo(
         ObjectKind.DATA_PLOT,
         (
@@ -953,7 +968,7 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
 
         if obj_kind in ATTACHABLE_KINDS:
             return False
-    if obj_kind in (ObjectKind.HIGHLIGHT, ObjectKind.ANGLE, ObjectKind.VECTOR_FIELD, ObjectKind.BOOLEAN_SHAPE) and anim_kind in _NOT_FOR_HIGHLIGHTS:
+    if obj_kind in (ObjectKind.HIGHLIGHT, ObjectKind.ANGLE, ObjectKind.VECTOR_FIELD, ObjectKind.BOOLEAN_SHAPE, ObjectKind.TOOL_LABEL) and anim_kind in _NOT_FOR_HIGHLIGHTS:
         return False
     if obj_kind in (ObjectKind.SOLID, ObjectKind.VECTOR_3D) and anim_kind in (
         {AnimationKind.MOVE, AnimationKind.ROTATE, AnimationKind.SET_VALUE, AnimationKind.ORBIT} | TRANSFORM_ANIMATIONS | MOTION_ANIMATIONS

@@ -20,6 +20,8 @@ All notable changes to Manim Studio are listed here. The format follows
 
 - Formulas of numbers, positions and computed results can use values of function graphs: a graph named `f` can be called as `f(a)`, also with parameters inside `f` and for derivatives. Term errors in the validation list are now explained in words.
 
+- Value labels: the term, equation or slope of a tangent or secant, the coordinates or function value of a point and the area or integral of an area as an object of its own. It follows its tool (live with parameters) but can appear later, be highlighted or disappear on its own, and it can be shifted away from its automatic place. Button *Value as a separate label* on these tools; the template "A tangent slides along the graph" now writes its term after the tangent appears.
+
 ### Fixed
 - Manim's `Union` leaves a hole where two shapes drawn in opposite directions overlap (e.g. a sector and a triangle). Generated scripts unite the two areas themselves (`studio_union`), so the video shows the real union like the stage.
 - The stage draws texts in Manim's default font (Pango's serif font) instead of the interface font, so texts and labels are as wide as in the video.

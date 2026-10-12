@@ -101,6 +101,7 @@ def dependent_objects(scene: Scene, object_ids: Iterable[str]) -> set[str]:
                 (obj.kind in GRAPH_TOOL_KINDS and params.get("graph_id"))
                 or (obj.kind in (ObjectKind.HIGHLIGHT, ObjectKind.TRACE) and params.get("target"))
                 or (obj.kind == ObjectKind.ANGLE and next((params.get(key) for key in ("first_line", "second_line") if params.get(key) in removed | found), None))
+                or (obj.kind == ObjectKind.TOOL_LABEL and params.get("tool_id"))
                 or (obj.kind == ObjectKind.BOOLEAN_SHAPE and next((params.get(key) for key in ("first_shape", "second_shape") if params.get(key) in removed | found), None))
                 or ((obj.kind == ObjectKind.DATA_PLOT or obj.kind in ON_3D_AXES) and params.get("axes_id"))
                 or (obj.kind == ObjectKind.FUNCTION_GRAPH and params.get("curve") in (CURVE_DERIVATIVE, CURVE_ANTIDERIVATIVE) and params.get("derive_from"))

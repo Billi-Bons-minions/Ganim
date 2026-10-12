@@ -100,7 +100,7 @@ def clone_step(step: Step) -> Step:
 
 
 #: Object parameters that name other objects.
-OBJECT_REFERENCE_KEYS = ("axes_id", "target", "graph_id", "other_graph_id", "parameter_id", "derive_from", "x_parameter", "first_line", "second_line", "attach_target", "h_parameter", "first_shape", "second_shape")
+OBJECT_REFERENCE_KEYS = ("axes_id", "target", "graph_id", "other_graph_id", "parameter_id", "derive_from", "x_parameter", "first_line", "second_line", "attach_target", "h_parameter", "first_shape", "second_shape", "tool_id")
 #: Animation parameters that name other objects.
 ANIMATION_REFERENCE_KEYS = ("target", "path", "partner")
 

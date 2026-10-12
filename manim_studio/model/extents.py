@@ -195,6 +195,11 @@ def _graph_size(scene: Scene, obj: SceneObject) -> tuple[float, float]:
         raw = data_points(obj) + graphs.regression_points(obj)
         points = [list(axes_to_scene(axes, x, y)) for x, y in raw] if axes is not None else [list(p) for p in raw]
         return _points_size(points) if len(points) > 1 else (0.3, 0.3)
+    if obj.kind == ObjectKind.TOOL_LABEL:
+        from manim_studio.model.tool_labels import tool_label
+
+        label = tool_label(scene, obj)
+        return _text_size(label.text if label is not None else "?", param_float(obj.params, "font_size", 24.0))
     if obj.kind in GRAPH_TOOL_KINDS:
         graph = graphs.tool_graph(scene, obj)
         axes = bound_axes(scene, graph) if graph is not None else None

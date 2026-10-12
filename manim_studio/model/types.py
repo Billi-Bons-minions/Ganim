@@ -64,6 +64,7 @@ class ObjectKind(str, Enum):
     SECANT = "secant"
     CURVED_ARROW = "curved_arrow"
     BOOLEAN_SHAPE = "boolean_shape"
+    TOOL_LABEL = "tool_label"
 
 
 class AnimationKind(str, Enum):
@@ -295,8 +296,11 @@ GRAPH_TOOL_KINDS = frozenset(
         ObjectKind.GRAPH_POINT,
         ObjectKind.GRAPH_MARKERS,
         ObjectKind.GRAPH_LABEL,
+        ObjectKind.TOOL_LABEL,
     }
 )
+#: Graph tools a separate value label can belong to (see ``model/tool_labels.py``).
+LABELED_TOOL_KINDS = frozenset({ObjectKind.TANGENT, ObjectKind.SECANT, ObjectKind.GRAPH_POINT, ObjectKind.GRAPH_AREA})
 
 #: Kinds that are not drawn and never added to the Manim scene.
 INVISIBLE_KINDS = frozenset({ObjectKind.GROUP, ObjectKind.PARAMETER})

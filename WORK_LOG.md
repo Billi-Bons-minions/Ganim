@@ -213,3 +213,62 @@ Ich habe vier Fragen gestellt; ohne Antwort gelten diese Entscheidungen (änderb
 ### Werkzeug: Fuzzer
 - `tools/fuzz_sessions.py` spielt zufällige Bearbeitungssitzungen über den echten Controller ab und prüft danach Speichern/Laden, die Bühne, die Codeerzeugung und `manim --dry_run`.
 - Ein Wächter schließt modale Dialoge und protokolliert sie (vorher hing eine Sitzung an einem Dialog).
+
+## Release-Vorbereitung (Tagschicht)
+
+### Entscheidungen
+- **Version 0.9.0:** erste öffentliche Vorabversion. Die einzige Quelle ist `manim_studio.__version__`; `pyproject.toml` liest sie von dort.
+- **MIT-Lizenz:** Alle Abhängigkeiten erlauben MIT für den App-Code (Manim MIT, numpy/networkx/PyAV BSD). PySide6 steht unter LGPL-3.0; das ist als Bibliothek unproblematisch. Bei gebündelten Apps gelten für PySide6 die LGPL-Pflichten (steht im README).
+- **README auf Englisch**, dazu eine deutsche Anleitung in `docs/ANLEITUNG.md` (Installation, erste Animation, Begriffe, Kürzel, Fehlerbehebung).
+- **Installation:** `pip install git+https://github.com/Billi-Bons-minions/Ganim`. In frischen Umgebungen geprüft (venv mit Python 3.13; Start über `manim-studio`).
+- **Python 3.10 bis 3.13** und Manim 0.19 bis 0.22. Zwei Funde dabei:
+  - PySide6 6.12 stürzt unter Python < 3.12 ab („deallocating None“, ein PySide-Fehler, nachgestellt in 3 Zeilen). Dort wird jetzt PySide6 < 6.12 installiert.
+  - Manim 0.19 schreibt bei PNG eine Bildfolge. Der PNG-Export nutzt jetzt `-s`.
+- **CI:** Lint plus alle Tests inkl. echter Manim-Läufe unter Python 3.10 (ohne LaTeX) und 3.13 (mit LaTeX). Der erste Lauf fand einen echten Fehler: Eine Zahl mit Einheit braucht LaTeX. Das wird jetzt vor dem Rendern erklärt.
+- **App-Bündel (PyInstaller):** Nur experimentell und nur als manuell startbarer Workflow (`bundle.yml`). Das gebündelte Programm beantwortet die internen Aufrufe `-m manim` und `-c` selbst. Unter Linux geprüft (Start, Systemprüfung, Rendern); **Windows und macOS sind ungetestet**. Der Workflow rendert nach dem Bau eine Testszene, sodass ein Lauf das zeigt.
+
+### Was ich nicht gemacht habe (deine Freigabe)
+- Kein Tag, kein GitHub-Release, kein PyPI. Repo-Einstellungen (Beschreibung, Topics) habe ich nicht angefasst.
+
+---
+
+# Zusammenfassung der Tagschicht (12.10.)
+
+## Fertig und getestet
+- **Bestandsaufnahme:** Das Repo war vollständig, und alle 354 Tests waren grün. Die App startet, alle Vorlagen rendern, die Fehlerfälle (Manim fehlt, LaTeX fehlt, kaputte Formel) melden sich verständlich.
+- **Korrekturen:**
+  - Punktbeschriftungen überlappen nicht mehr.
+  - Die Sprache folgt beim ersten Start dem System.
+  - LaTeX-Fehler nennen die Formel.
+  - Lange Titel und Namen im Eigenschaften-Panel werden richtig angezeigt.
+  - Doppeltes „+ +“ in der Zeitleiste ist weg.
+  - Die Testsuite braucht 4 statt 10 Minuten.
+- **Neue Funktionen**, jeweils mit Bühne = Video geprüft und mit echten Manim-Tests:
+  - Knoten/Kanten eines Netzwerks hervorheben
+  - Lineare Abbildung (`ApplyMatrix`)
+  - Kopplung (Updater): Objekte folgen einem Objekt oder einer Formel; auch die 2D-Kamera kann folgen
+  - 3D-Pfeile, -Strecken und -Punkte
+  - Drei neue Vorlagen (jetzt 13)
+- **Fuzzing:** Neuer Fuzzer `tools/fuzz_sessions.py`.
+  - Runde 5 (49 Sitzungen) fand einen Absturz: Zahlen bzw. Graphen, die von einem Parameter abhängen, während der Parameter sich im selben Schritt ändert. Behoben, plus neue Regel `model/conflicts.py`.
+  - Runde 6: siehe unten.
+- **Release-ready:** Version 0.9.0, LICENSE, README mit echten Renderings, deutsche Anleitung, CHANGELOG, CONTRIBUTING, CI (grün), `examples/` mit 7 Projekten, `.gitignore`.
+- **Stand am Ende:** 390 Tests grün unter Python 3.13 (Manim 0.22, mit LaTeX) und Python 3.10 (Manim 0.19, ohne LaTeX).
+
+## Nicht fertig / bekannte Grenzen
+- **App-Bündel** für Windows/macOS ungetestet (siehe oben). Ohne Bündel braucht man Python zur Installation.
+- **Skript-Import:** kennt Netzwerke und 3D-Vektoren nicht (Zeilen werden mit Hinweis übersprungen).
+- **Kopplung:** Wird ein gekoppeltes Objekt selbst animiert, pausiert Manim dessen Updater für diese Zeit.
+- **Polarkoordinaten-Gitter und nichtlineare Abbildungen** (`ApplyComplexFunction`) habe ich bewusst nicht angefangen. Sie würden die Zuordnung von Graphen zu Gittern an vielen Stellen ändern.
+- Ältere Punkte aus der Nacht gelten weiter (Rest-Schweif bei verblassenden Spuren, sehr detaillierte Transforms können lange dauern).
+
+## Deine Entscheidungen
+1. **Freigabe:**
+   - Soll ich einen Tag `v0.9.0` und ein GitHub-Release anlegen? Oder willst du gleich `1.0.0`? Dann nur `__version__` und CHANGELOG ändern.
+2. **PyPI:**
+   - Soll das Paket auf PyPI? Dann ginge `pip install manim-studio`.
+   - Vorher prüfen, ob der Name `manim-studio` dort frei ist; sonst einen anderen wählen (z. B. `ganim`).
+3. **App-Bündel:** Bitte einmal *Actions → App bundles (experimental) → Run workflow* starten. Wenn Windows/macOS grün sind, können wir sie als Downloads anbieten.
+4. **Lizenzinhaber:** In der LICENSE steht „Billi-Bons-minions“. Möchtest du einen echten Namen?
+5. **E-Mail in Commits:** Die Commits der Nacht tragen deine Gmail-Adresse und sind öffentlich (siehe oben). Für künftige Commits kannst du die GitHub-noreply-Adresse setzen.
+6. **Repo-Einstellungen auf GitHub** (macht nur du): Beschreibung, Website, Topics (z. B. manim, animation, math, education), Issues aktivieren.

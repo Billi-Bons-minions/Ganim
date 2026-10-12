@@ -86,6 +86,37 @@ def axes_layout(obj: SceneObject) -> AxesLayout:
     return AxesLayout(x_min, x_max, y_min, y_max, x_length, y_length, offset)
 
 
+@dataclass(frozen=True)
+class PolarGrid:
+    """Circles and rays of a polar grid around the origin of a number plane (axes units)."""
+
+    radius_max: float
+    radius_step: float
+    divisions: int
+    unit: float
+
+
+def polar_grid(obj: SceneObject) -> PolarGrid | None:
+    """The polar grid of a number plane, reaching into all corners of its rectangle."""
+    if obj.kind != ObjectKind.NUMBER_PLANE or obj.params.get("grid") != "polar":
+        return None
+    layout = axes_layout(obj)
+    step = abs(param_float(obj.params, "x_step", 1.0)) or 1.0
+    corner = max(math.hypot(x, y) for x in (layout.x_min, layout.x_max) for y in (layout.y_min, layout.y_max))
+    radius = math.ceil(corner / step - 1e-9) * step
+    unit = layout.x_length / ((layout.x_max - layout.x_min) or 1.0)
+    divisions = max(2, int(obj.params.get("azimuth_divisions", 12)))
+    return PolarGrid(radius, step, divisions, unit)
+
+
+def polar_units_match(obj: SceneObject) -> bool:
+    """A polar grid needs the same scale on both axes (otherwise its circles would not fit the coordinates)."""
+    layout = axes_layout(obj)
+    unit_x = layout.x_length / ((layout.x_max - layout.x_min) or 1.0)
+    unit_y = layout.y_length / ((layout.y_max - layout.y_min) or 1.0)
+    return abs(unit_x - unit_y) < 1e-6 * max(unit_x, unit_y, 1.0)
+
+
 def local_to_scene(obj: SceneObject, local: Point) -> Point:
     """Place a local point using the object's position and rotation."""
     rx, ry = rotate_point(local[0], local[1], obj.rotation)

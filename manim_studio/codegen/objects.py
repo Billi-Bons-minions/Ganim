@@ -39,6 +39,7 @@ from manim_studio.model.angles import ANGLE_LINE_KEYS, angle_lines
 from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.fields import field_expressions
+from manim_studio.model.geometry import polar_grid
 from manim_studio.model.latex import colored_parts, colorize
 from manim_studio.model.schema import is_vector_image_path
 from manim_studio.model.three_d import THREE_D_KINDS, is_3d
@@ -169,13 +170,39 @@ def _axes(obj: SceneObject) -> list[str]:
     return call("Axes", [], kwargs, 2)
 
 
-def _number_plane(obj: SceneObject) -> list[str]:
-    style = (
+def _grid_style(obj: SceneObject, opacity: float | None = None) -> str:
+    return (
         f'{{"stroke_color": {py_color(obj.stroke_color)}, '
         f'"stroke_width": {fmt_float(obj.stroke_width)}, '
-        f'"stroke_opacity": {fmt_float(obj.stroke_opacity)}}}'
+        f'"stroke_opacity": {fmt_float(obj.stroke_opacity if opacity is None else opacity)}}}'
     )
-    return call("NumberPlane", [], _axis_ranges(obj) + [("background_line_style", style)], 2)
+
+
+def _number_plane(obj: SceneObject) -> list[str]:
+    # with a polar grid the square lines are hidden; the circles and rays come from polar_grid_line()
+    opacity = 0.0 if polar_grid(obj) is not None else None
+    return call("NumberPlane", [], _axis_ranges(obj) + [("background_line_style", _grid_style(obj, opacity))], 2)
+
+
+def polar_grid_line(obj: SceneObject, variable: str) -> list[str]:
+    """Circles and rays behind a number plane, around its origin and in its scale (``PolarPlane``)."""
+    grid = polar_grid(obj)
+    if grid is None:
+        return []
+    polar = call(
+        "PolarPlane",
+        [],
+        [
+            ("radius_max", fmt_float(grid.radius_max)),
+            ("size", fmt_float(round(2 * grid.radius_max * grid.unit, 6))),
+            ("radius_step", fmt_float(grid.radius_step)),
+            ("azimuth_step", str(grid.divisions)),
+            ("background_line_style", _grid_style(obj)),
+            ("radius_config", '{"stroke_width": 0}'),
+        ],
+        2,
+    )
+    return [f"{variable}.add_to_back(", *(f"    {line}" for line in polar[:-1]), f"    {polar[-1]}.move_to({variable}.c2p(0, 0))", ")"]
 
 
 def _image_path(obj: SceneObject, base_dir: str | Path | None) -> str:
@@ -363,6 +390,8 @@ def object_code(
             lines += _placement(obj, variable)
         if obj.kind == ObjectKind.AXES:
             lines += axis_label_lines(obj, variable)
+        if obj.kind == ObjectKind.NUMBER_PLANE:
+            lines += polar_grid_line(obj, variable)
         parameter = scene.object_by_id(obj.params.get("parameter_id")) if obj.kind == ObjectKind.DECIMAL_NUMBER else None
         if parameter is not None and parameter.kind == ObjectKind.PARAMETER and parameter.id in names:
             lines.append(f"{variable}.add_updater(lambda number: number.set_value({names[parameter.id]}.get_value()), call_updater=True)")

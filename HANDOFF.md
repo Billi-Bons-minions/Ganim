@@ -130,5 +130,5 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
 ### Als Nächstes
 - Freigabe durch den Nutzer: Tag/Release v0.9.0, ggf. PyPI (siehe WORK_LOG.md, offene Entscheidungen).
 - Bundle-Workflow einmal von Hand starten und Windows/macOS prüfen.
-- Ideen: Polar-/komplexe Ebene, Skript-Import für Netzwerke, nichtlineare Abbildungen (`ApplyComplexFunction`).
+- Ideen: komplexe Ebene (Beschriftung braucht LaTeX), Skript-Import für Netzwerke, nichtlineare Abbildungen (`ApplyComplexFunction`).
 - Testlauf: Die volle Suite braucht ca. 4 Minuten (387 Tests, davon rund 35 echte Manim-Läufe).

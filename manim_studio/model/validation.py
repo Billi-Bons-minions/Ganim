@@ -134,6 +134,11 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
             add(ERROR, "group_empty")
         elif obj.id in groups.ancestors(scene, obj.id):
             add(ERROR, "group_cycle")
+    if obj.kind == ObjectKind.NUMBER_PLANE and params.get("grid") == "polar":
+        from manim_studio.model.geometry import polar_units_match
+
+        if not polar_units_match(obj):
+            add(ERROR, "polar_grid_units")
     if obj.kind in (ObjectKind.AXES, ObjectKind.NUMBER_PLANE):
         for axis in ("x", "y"):
             if float(params.get(f"{axis}_min", 0)) >= float(params.get(f"{axis}_max", 1)):

@@ -35,6 +35,7 @@ from manim_studio.model.geometry import (
     axes_layout,
     origin_shift,
     param_float,
+    polar_grid,
 )
 from manim_studio.model.latex import colored_parts, colorize
 from manim_studio.model.schema import is_vector_image_path
@@ -386,12 +387,26 @@ def _number_plane_primitives(obj: SceneObject, state: ObjectState) -> list[Primi
     layout = axes_layout(obj)
     x_step, y_step = param_float(obj.params, "x_step", 1.0), param_float(obj.params, "y_step", 1.0)
     grid = QPainterPath()
-    for xv in _ticks(layout.x_min, layout.x_max, x_step):
-        grid.moveTo(_local_pt(layout, xv, layout.y_min))
-        grid.lineTo(_local_pt(layout, xv, layout.y_max))
-    for yv in _ticks(layout.y_min, layout.y_max, y_step):
-        grid.moveTo(_local_pt(layout, layout.x_min, yv))
-        grid.lineTo(_local_pt(layout, layout.x_max, yv))
+    polar = polar_grid(obj)
+    if polar is not None:
+        # circles and rays around the origin, like Manim's PolarPlane behind the plane
+        origin = _local_pt(layout, 0.0, 0.0)
+        steps = round(polar.radius_max / polar.radius_step)
+        for k in range(1, steps + 1):
+            radius = k * polar.radius_step * polar.unit * PX
+            grid.addEllipse(origin, radius, radius)
+        reach = polar.radius_max * polar.unit * PX
+        for k in range(polar.divisions):
+            angle = 2 * math.pi * k / polar.divisions
+            grid.moveTo(origin)
+            grid.lineTo(QPointF(origin.x() + reach * math.cos(angle), origin.y() - reach * math.sin(angle)))
+    else:
+        for xv in _ticks(layout.x_min, layout.x_max, x_step):
+            grid.moveTo(_local_pt(layout, xv, layout.y_min))
+            grid.lineTo(_local_pt(layout, xv, layout.y_max))
+        for yv in _ticks(layout.y_min, layout.y_max, y_step):
+            grid.moveTo(_local_pt(layout, layout.x_min, yv))
+            grid.lineTo(_local_pt(layout, layout.x_max, yv))
     grid_pen = _pen(state.stroke_color, obj.stroke_width, obj.stroke_opacity, state.scale)
     axis_pen = _pen("#FFFFFF", 2.0, 1.0, state.scale)
     frame = QPainterPath()

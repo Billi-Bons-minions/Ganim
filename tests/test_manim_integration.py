@@ -720,3 +720,11 @@ def test_vectors_in_space_render(tmp_path) -> None:
     )
     result = run_manim(tmp_path, generate_script(make_project(scene)), "Raumvektoren")
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_polar_grid_renders(tmp_path) -> None:
+    plane = make_object(ObjectKind.NUMBER_PLANE, "Ebene", "e", grid="polar")
+    rose = make_object(ObjectKind.FUNCTION_GRAPH, "Rose", "r", curve="polar", r_expression="3 cos(2t)", axes_id="e")
+    scene = Scene(id="s", name="Polar", objects=[plane, rose], steps=[play(make_animation(AnimationKind.CREATE, "e")), play(make_animation(AnimationKind.CREATE, "r"))])
+    result = run_manim(tmp_path, generate_script(make_project(scene)), "Polar")
+    assert result.returncode == 0, result.stdout + result.stderr

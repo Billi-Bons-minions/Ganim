@@ -1328,4 +1328,9 @@ STRINGS: dict[str, str] = {
     "graph_action.value_table_tip": "Legt eine Tabelle mit x und f(x) an runden Stellen an (Werte zum jetzigen Stand).",
     "graph.value_table_name": "Wertetabelle {name}",
     "status.value_table_impossible": "Für diesen Graphen lässt sich keine Wertetabelle berechnen.",
+    "param.grid": "Gitter",
+    "choice.grid.cartesian": "Kästchen",
+    "choice.grid.polar": "Polar (Kreise und Strahlen)",
+    "param.azimuth_divisions": "Strahlen",
+    "issue.polar_grid_units": "Ein Polar-Gitter braucht auf beiden Achsen denselben Maßstab (Breite/x-Bereich = Höhe/y-Bereich).",
 }

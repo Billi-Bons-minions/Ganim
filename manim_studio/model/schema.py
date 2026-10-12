@@ -219,7 +219,12 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
     ),
     ObjectKind.NUMBER_PLANE: KindInfo(
         ObjectKind.NUMBER_PLANE,
-        _range_params("x", -7.0, 7.0, 1.0, 14.0) + _range_params("y", -4.0, 4.0, 1.0, 8.0),
+        _range_params("x", -7.0, 7.0, 1.0, 14.0)
+        + _range_params("y", -4.0, 4.0, 1.0, 8.0)
+        + (
+            ParamSpec("grid", ParamType.CHOICE, "cartesian", choices=("cartesian", "polar")),
+            ParamSpec("azimuth_divisions", ParamType.INT, 12, minimum=2, maximum=72, visible_when=("grid", ("polar",))),
+        ),
         frozenset({"stroke_color", "stroke_width", "stroke_opacity"}),
         (("stroke_color", "#29ABCA"), ("stroke_width", 2.0)),
     ),

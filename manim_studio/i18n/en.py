@@ -1328,4 +1328,9 @@ STRINGS: dict[str, str] = {
     "graph_action.value_table_tip": "Adds a table with x and f(x) at round values (values as they are now).",
     "graph.value_table_name": "Table of values {name}",
     "status.value_table_impossible": "No table of values can be computed for this graph.",
+    "param.grid": "Grid",
+    "choice.grid.cartesian": "Squares",
+    "choice.grid.polar": "Polar (circles and rays)",
+    "param.azimuth_divisions": "Rays",
+    "issue.polar_grid_units": "A polar grid needs the same scale on both axes (width/x range = height/y range).",
 }

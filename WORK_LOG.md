@@ -259,7 +259,8 @@ Ich habe vier Fragen gestellt; ohne Antwort gelten diese Entscheidungen (änderb
 - **App-Bündel** für Windows/macOS ungetestet (siehe oben). Ohne Bündel braucht man Python zur Installation.
 - **Skript-Import:** kennt Netzwerke und 3D-Vektoren nicht (Zeilen werden mit Hinweis übersprungen).
 - **Kopplung:** Wird ein gekoppeltes Objekt selbst animiert, pausiert Manim dessen Updater für diese Zeit.
-- **Polarkoordinaten-Gitter und nichtlineare Abbildungen** (`ApplyComplexFunction`) habe ich bewusst nicht angefangen. Sie würden die Zuordnung von Graphen zu Gittern an vielen Stellen ändern.
+- **Nichtlineare Abbildungen** (`ApplyComplexFunction`) habe ich bewusst nicht angefangen (Bühne müsste Formen punktweise verbiegen).
+- **Polar-Gitter** gibt es jetzt als Option des Koordinatengitters. Das kartesische Koordinatensystem bleibt dabei erhalten, damit Graphen exakt bleiben. Grenze: Bei unsymmetrischen Bereichen (z. B. x von −2 bis 10) passt eine *Bewegen*-Animation des Gitters nicht genau zur Bühne, weil Manim die Mitte inklusive der Kreise berechnet.
 - Ältere Punkte aus der Nacht gelten weiter (Rest-Schweif bei verblassenden Spuren, sehr detaillierte Transforms können lange dauern).
 
 ## Deine Entscheidungen

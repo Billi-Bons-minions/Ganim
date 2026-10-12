@@ -262,3 +262,20 @@ def test_table_of_values_in_the_app(window) -> None:
     table = controller.add_value_table(graph)
     obj = window.editor.scene().object_by_id(table)
     assert obj.kind == ObjectKind.TABLE and obj.params["rows"][0][0] == "x" and axes
+
+
+def test_polar_grid_behind_a_number_plane() -> None:
+    from manim_studio.model.geometry import polar_grid
+
+    plane = make_object(ObjectKind.NUMBER_PLANE, "Ebene", "e", grid="polar", azimuth_divisions=8)
+    rose = make_object(ObjectKind.FUNCTION_GRAPH, "Rose", "r", curve="polar", r_expression="3 cos(2t)", axes_id="e")
+    scene = Scene(id="s", name="S", objects=[plane, rose])
+    grid = polar_grid(plane)
+    assert grid is not None and grid.radius_max == 9.0 and grid.divisions == 8 and grid.unit == pytest.approx(1.0)  # circles reach the corners (7, 4)
+    assert not has_errors(validate_scene(scene))
+    code = generate_script(make_project(scene))
+    assert '"stroke_opacity": 0.0' in code and "PolarPlane(" in code and "azimuth_step=8" in code and ").move_to(ebene.c2p(0, 0))" in code
+    plane.params["y_length"] = 4.0  # different scales on the axes: circles would not fit
+    assert "polar_grid_units" in {issue.code for issue in validate_scene(scene)}
+    plane.params["grid"] = "cartesian"
+    assert polar_grid(plane) is None and "PolarPlane" not in generate_script(make_project(scene))

@@ -393,7 +393,12 @@ def object_code(
         if obj.kind == ObjectKind.NUMBER_PLANE:
             lines += polar_grid_line(obj, variable)
         parameter = scene.object_by_id(obj.params.get("parameter_id")) if obj.kind == ObjectKind.DECIMAL_NUMBER else None
-        if parameter is not None and parameter.kind == ObjectKind.PARAMETER and parameter.id in names:
+        formula = graphs.number_formula(scene, obj)
+        if formula is not None:
+            # the number shows a formula of parameters, recomputed in every frame
+            code = formula.to_numpy(renames(scene, names), pad_variable=False)
+            lines.append(f"{variable}.add_updater(lambda mob: mob.set_value({code}), call_updater=True)")
+        elif parameter is not None and parameter.kind == ObjectKind.PARAMETER and parameter.id in names:
             lines.append(f"{variable}.add_updater(lambda mob: mob.set_value({names[parameter.id]}.get_value()), call_updater=True)")
     except LiteralError as error:
         raise CodegenError("value_invalid", f"{obj.name}: {error}") from None

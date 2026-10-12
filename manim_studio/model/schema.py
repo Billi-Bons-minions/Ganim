@@ -506,6 +506,8 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
             ParamSpec("show_sign", ParamType.BOOL, False),
             ParamSpec("unit", ParamType.STRING, ""),
             ParamSpec("parameter_id", ParamType.OBJECT_REF, None, ref_kinds=(ObjectKind.PARAMETER,), optional=True),
+            # a formula of parameters, e.g. a^2/2; when set it is shown instead of the value or parameter
+            ParamSpec("formula", ParamType.EXPRESSION, ""),
         ),
         _TEXT_STYLE,
         (("fill_color", _WHITE), ("fill_opacity", 1.0)),
@@ -937,6 +939,8 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
     if obj_kind == ObjectKind.GROUP and anim_kind in (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM):
         return False
     if anim_kind == AnimationKind.SET_VALUE:
+        if obj_kind == ObjectKind.DECIMAL_NUMBER and (params.get("parameter_id") or str(params.get("formula", "")).strip()):
+            return False  # its updater shows the parameter or formula and would undo the change
         return obj_kind in (ObjectKind.PARAMETER, ObjectKind.DECIMAL_NUMBER)
     if obj_kind == ObjectKind.PARAMETER:
         return False

@@ -482,7 +482,10 @@ class PropertiesPanel(QScrollArea):
         edit = DebouncedLineEdit()
         if spec.type == ParamType.EXPRESSION:
             edit.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
-            edit.setPlaceholderText("2x^2 + sin(x)" if spec.variable == "x" else f"2cos({spec.variable})")
+            if spec.key in ("formula", "attach_x", "attach_y"):
+                edit.setPlaceholderText("a^2 / 2")  # only numbers and parameters
+            else:
+                edit.setPlaceholderText("2x^2 + sin(x)" if spec.variable == "x" else f"2cos({spec.variable})")
         edit.committed.connect(commit)
         return edit, lambda value: _set_line(edit, value or "")
 

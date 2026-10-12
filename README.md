@@ -42,7 +42,7 @@ All of these clips were made from the built-in templates and the projects in [ex
 - Disappear: Fade out, Uncreate, Unwrite, Shrink to center
 - Steps play their animations together, staggered or one after another. A 2D camera can move and zoom, and **objects can be coupled** (Manim updaters): a label can follow a moving dot, the camera can follow an object, and a position can come from a formula like `x = 2 cos(w)`, `y = 2 sin(w)` driven by a parameter.
 
-**Parameters (ValueTracker)**: sliders such as `a` can be used in every formula (graphs, areas, tangents, surfaces, vector fields, positions) and animated with *Change value*. The stage updates live.
+**Parameters (ValueTracker)**: sliders such as `a` can be used in every formula (graphs, areas, tangents, surfaces, vector fields, positions) and animated with *Change value*. A number on screen can show a parameter or a formula of parameters (e.g. `a^2/2`). The stage updates live.
 
 **Stage and timeline**
 - The stage uses Manim's coordinates and shows every moment of the animation: press *Space* to play it on the stage without rendering

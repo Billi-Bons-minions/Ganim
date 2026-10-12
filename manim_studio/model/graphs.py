@@ -26,7 +26,7 @@ from manim_studio.model.analysis import (
 )
 from manim_studio.model.calculus import derivative
 from manim_studio.model.entities import Scene, SceneObject
-from manim_studio.model.expression import Expression, ExpressionError, evaluate_number, is_valid_name, parse_expression
+from manim_studio.model.expression import Expression, ExpressionError, check_expression, evaluate_number, is_valid_name, parse_expression
 from manim_studio.model.geometry import (
     GRAPH_SAMPLES,
     GRAPH_VALUE_LIMIT,
@@ -948,6 +948,49 @@ def _expression_texts(obj: SceneObject) -> list[tuple[str, str]]:
     return texts
 
 
+def number_formula(scene: Scene, obj: SceneObject) -> Expression | None:
+    """The formula a number shows (made of parameters only), or ``None`` if there is none or it is invalid."""
+    text = str(obj.params.get("formula", "")).strip()
+    if obj.kind != ObjectKind.DECIMAL_NUMBER or not text:
+        return None
+    from manim_studio.model.attach import FORMULA_VARIABLE
+
+    symbols = parameter_symbols(scene)
+    try:
+        expression = parse_expression(text, FORMULA_VARIABLE, symbols)
+    except ExpressionError:
+        return None
+    return None if expression.mentions_variable() and FORMULA_VARIABLE not in symbols else expression
+
+
+def number_formula_error(scene: Scene, obj: SceneObject) -> str | None:
+    """Why the formula of a number cannot be used (``None`` if it is fine or empty)."""
+    text = str(obj.params.get("formula", "")).strip()
+    if obj.kind != ObjectKind.DECIMAL_NUMBER or not text:
+        return None
+    from manim_studio.model.attach import FORMULA_VARIABLE
+
+    error = check_expression(text, FORMULA_VARIABLE, parameter_symbols(scene))
+    if error is not None:
+        return error.code + (f": {error.detail}" if error.detail else "")
+    return None if number_formula(scene, obj) is not None else "only_parameters"
+
+
+def number_value(scene: Scene, obj: SceneObject, values: Values | None, fallback: float) -> float:
+    """What a number shows: its formula, else its parameter, else ``fallback`` (its own value)."""
+    formula = number_formula(scene, obj)
+    values = scene_values(scene, values)
+    if formula is not None:
+        try:
+            return formula.evaluate(0.0, values)
+        except (ArithmeticError, ValueError):
+            return math.nan
+    parameter = scene.object_by_id(obj.params.get("parameter_id"))
+    if parameter is not None and parameter.kind == ObjectKind.PARAMETER:
+        return float(values.get(parameter_symbol(parameter), param_float(parameter.params, "value", 0.0)))
+    return fallback
+
+
 def parameter_users(scene: Scene, obj: SceneObject, _seen: frozenset[str] = frozenset()) -> set[str]:
     """Return the ids of the parameters an object depends on (directly or through its graph)."""
     if obj.id in _seen:
@@ -968,6 +1011,9 @@ def parameter_users(scene: Scene, obj: SceneObject, _seen: frozenset[str] = froz
             expression = implicit_expression(scene, obj)
             if expression is not None:
                 used |= {by_symbol[symbol] for symbol in expression.used_parameters() if symbol in by_symbol}
+    formula = number_formula(scene, obj)
+    if formula is not None:
+        used |= {by_symbol[symbol] for symbol in formula.used_parameters() if symbol in by_symbol}
     if obj.kind == ObjectKind.VECTOR_FIELD:
         from manim_studio.model.fields import field_users
 

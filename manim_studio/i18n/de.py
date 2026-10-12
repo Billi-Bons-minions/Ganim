@@ -1365,4 +1365,6 @@ STRINGS: dict[str, str] = {
     "choice.label_side.above": "Über der Linie",
     "choice.label_side.below": "Unter der Linie",
     "template.tangent.name": "Tangente wandert am Graphen",
+    "param.formula": "Formel (statt des Werts)",
+    "issue.number_formula_only_parameters": "Die Formel einer Zahl darf nur Zahlen und Parameter enthalten (kein x).",
 }

@@ -80,6 +80,12 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
         add(ERROR, "latex_empty")
     if obj.kind in LATEX_KINDS and not latex_available:
         add(ERROR, "latex_unavailable")
+    if obj.kind == ObjectKind.DECIMAL_NUMBER:
+        error = graphs.number_formula_error(scene, obj)
+        if error == "only_parameters":
+            add(ERROR, "number_formula_only_parameters")
+        elif error is not None:
+            add(ERROR, "expression_invalid", error)
     if obj.kind == ObjectKind.DECIMAL_NUMBER and str(params.get("unit", "")).strip() and not latex_available:
         add(ERROR, "unit_needs_latex")  # Manim always typesets the unit with MathTex
     if obj.kind == ObjectKind.POLYGON and len(params.get("points", [])) < 3:

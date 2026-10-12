@@ -1365,4 +1365,6 @@ STRINGS: dict[str, str] = {
     "choice.label_side.above": "Above the line",
     "choice.label_side.below": "Below the line",
     "template.tangent.name": "A tangent slides along the graph",
+    "param.formula": "Formula (instead of the value)",
+    "issue.number_formula_only_parameters": "The formula of a number may only contain numbers and parameters (no x).",
 }

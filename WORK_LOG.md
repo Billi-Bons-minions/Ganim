@@ -326,3 +326,12 @@ Jede Funktion ist mit einem Vergleich Bühne ↔ Manim-Bild und mit echten Manim
 
 **Offen:** Die Beschriftung gehört zur Tangente (gleiche Farbe, erscheint und verschwindet mit ihr). Eine eigene Animation nur für die Beschriftung, z. B. erst später einblenden, geht noch nicht.
 
+## Weitere Punkte nach der Rückmeldung (je ein Commit, erst wenn fertig)
+
+### 1. Zahl zeigt eine Formel aus Parametern
+- Die Zahl (DecimalNumber) hat das Feld **Formel**. Ist es gefüllt, zeigt sie live deren Wert, z. B. `a^2/2` oder `sin(a) + 1`. Im Skript wird das ein Updater mit `set_value(...)`, auf der Bühne wird mit denselben Parameterwerten gerechnet.
+- Entscheidung: Die Formel hat Vorrang vor „Parameter“ und „Wert“. Sie darf nur Zahlen und Parameter enthalten (kein x). Fehler werden vor dem Rendern gemeldet.
+- „Wert ändern“ ist für Zahlen gesperrt, die einem Parameter oder einer Formel folgen. Der Updater würde die Änderung sofort wieder überschreiben.
+- Getestet mit einem echten Manim-Lauf unter 0.19 und 0.22: a läuft auf 3, die Zahl zeigt 4.5.
+- Offen: Funktionswerte eines Graphen wie `f(a)` gehen in der Formel noch nicht; dafür müsste der Formel-Parser Graphen als Funktionen kennen.
+

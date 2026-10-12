@@ -100,3 +100,46 @@ und den Punkten, die du prüfen solltest. Neueste Einträge unten.
 7. Implizite Kurven f(x, y) = 0.
 8. Mehr Vorlagen und Beispielszenen.
 9. Wenn Zeit bleibt: Netzwerk-Graph, Aufzählungslisten, Kamera-Zoom auf ein Objekt.
+
+## Phase 2: Umsetzung (Entscheidungen)
+
+Alle Features sind mit echten Manim-Läufen getestet. Wo die Bühne etwas nachzeichnet, habe ich sie per Bildvergleich gegen Manim geprüft.
+
+### Markierung (Rahmen, Hintergrund, Unterstreichen, Durchstreichen)
+- **Entscheidung:** Die Markierung folgt ihrem Ziel immer (`always_redraw`).
+- **Folge:** Deshalb sind Bewegen/Skalieren/Farbe als Animation der Markierung selbst nicht erlaubt. Man bewegt das Ziel.
+
+### Spur (TracedPath)
+- **Entscheidung:** „Einblenden“ einer Spur wird im Skript zu `self.add(spur)`.
+- **Warum:** `FadeIn` auf TracedPath stürzt in Manim 0.22 ab.
+
+### „Kopie verwandeln“
+- **Entscheidung:** Erzeugt `ReplacementTransform(quelle.copy(), ziel)` statt `TransformFromCopy`.
+- **Warum:** Gleiches Bild, aber Manims TransformFromCopy formt das Ziel um und macht z. B. Pfeile unbrauchbar.
+
+### Kamera
+- **2D:** Drehen der Kamera ist verboten, weil Manims MovingCamera das Bild nur verzerrt.
+- **3D:**
+  - Kamerafahrten gehen über einen unsichtbaren Steuerrahmen (`studio_camera_frame`).
+  - Der verbundene Export mit 3D-Szenen nutzt `ThreeDScene` und setzt für 2D-Teile die Draufsicht.
+
+### Abhängige Objekte (wie GeoGebra)
+- Fehlende Hosts werden beim Einfügen angelegt.
+- Beim Löschen des Hosts wird mitgelöscht.
+- Beim Einfügen in eine andere Szene kommen fehlende Hosts mit.
+
+### Gleichzeitige Animationen
+- **Regel:** Pro Objekt nur kombinierbare Animationen im selben Schritt (`types.simultaneous_conflicts`).
+- **Folge:** Sonst kommt die neue Animation automatisch in einen eigenen Schritt.
+
+### Vektorfelder
+- Pfeile mit Parametern nutzen `always_redraw`.
+- Stromlinien nehmen den Parameterwert beim Start (`always_redraw` wäre dafür zu langsam).
+
+### 3D-Körper
+- Platzierung in Koordinaten der 3D-Achsen; Größen in Szenen-Einheiten (wie Manim).
+- Bewegen und Drehen sind als Animation nicht erlaubt; Skalieren und Farbe gehen.
+
+### Offene Punkte
+- **Spuren mit „Verblassen“:** Bleibt das Objekt stehen, bleibt in Manim ein kurzer Rest-Schweif sichtbar. Das ist Manims Verhalten.
+- **Riesige Transforms:** Ein Transform eines sehr detaillierten Objekts, etwa einer 3D-Fläche in Achsen, kann in Manim minutenlang dauern. Das wird nicht abgefangen.

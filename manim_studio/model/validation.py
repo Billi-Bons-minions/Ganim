@@ -83,6 +83,11 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
             add(ERROR, "radii_invalid")
     if obj.kind in (ObjectKind.TABLE, ObjectKind.MATRIX) and not any(params.get("rows", [])):
         add(ERROR, "table_empty")
+    if obj.kind == ObjectKind.CAMERA and round(obj.rotation, 6) != 0:
+        from manim_studio.model.three_d import is_3d
+
+        if not is_3d(scene):
+            add(ERROR, "camera_rotation_2d")
     if obj.kind == ObjectKind.HIGHLIGHT:
         target = scene.object_by_id(obj.params.get("target"))
         if target is None or target.id == obj.id or target.kind in UNGROUPABLE or target.kind == ObjectKind.HIGHLIGHT:
@@ -251,8 +256,8 @@ def _animation_issues(scene: Scene, step_index: int, anim: Animation) -> list[Is
 
         if anim.kind == AnimationKind.ORBIT and not is_3d(scene):
             add(ERROR, "orbit_needs_3d", object_id=target.id)
-        elif anim.kind != AnimationKind.ORBIT and is_3d(scene):
-            add(ERROR, "camera_3d_orbit_only", object_id=target.id)
+        elif anim.kind == AnimationKind.ROTATE and not is_3d(scene):
+            add(ERROR, "camera_rotation_2d", object_id=target.id)
     if anim.kind in (AnimationKind.MOVE_ALONG_PATH, AnimationKind.SWAP):
         key = REFERENCE_PARAMS[anim.kind]
         other = scene.object_by_id(anim.params.get(key))

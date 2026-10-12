@@ -469,3 +469,23 @@ def test_highlights_follow_their_target_in_manim(tmp_path) -> None:
     )
     result = run_manim(tmp_path, generate_script(make_project(scene)), "Markieren", "--dry_run")
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+
+
+def test_camera_flights_in_3d_scenes(tmp_path) -> None:
+    axes = make_object(ObjectKind.AXES_3D, "Achsen", "ax")
+    surface = make_object(ObjectKind.SURFACE, "Flaeche", "s", axes_id="ax", expression="sin(x) cos(y)", resolution=6)
+    label = make_object(ObjectKind.TEXT, "Titel", "t", 0.0, 3.2, text="3D")
+    camera = make_object(ObjectKind.CAMERA, "Kamera", "cam", phi=65.0, theta=-40.0)
+    steps = [
+        play(make_animation(AnimationKind.MOVE, "cam", "m", x=1.0, y=0.5, run_time=0.4), make_animation(AnimationKind.SCALE, "cam", "z", factor=0.6, run_time=0.4)),
+        play(make_animation(AnimationKind.ROTATE, "cam", "r", angle=25.0, run_time=0.4)),
+        play(make_animation(AnimationKind.ORBIT, "cam", "o", phi=75.0, theta=20.0, run_time=0.4)),
+    ]
+    scene = Scene(id="r", name="Flug", objects=[axes, surface, label, camera], steps=steps)
+    from manim_studio.model.validation import has_errors, validate_scene
+
+    assert not has_errors(validate_scene(scene))
+    script = generate_script(make_project(scene))
+    assert "camera_frame = studio_camera_frame(self)" in script and "camera_frame.animate(" in script
+    result = run_manim(tmp_path, script, "Flug", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]

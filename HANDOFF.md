@@ -65,6 +65,9 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
   - Wird mit dem Ziel gelöscht.
 - Kleine Bildschirme: Anordnen-Buttons und Zeitleisten-Texte klappen ein, sodass das Fenster ab etwa 1280 px Breite vollständig nutzbar ist.
 - `self.add(...)` im Skript folgt jetzt der Ebenenreihenfolge.
+- 3D-Szenen: Kamerafahrten (Bewegen, Zoom, Rollen) funktionieren jetzt über einen unsichtbaren Steuerrahmen (`studio_camera_frame`). Vorher war nur Umkreisen erlaubt.
+- 2D-Szenen: Kamera-Drehen wird verständlich abgelehnt, weil Manims 2D-Kamera das Bild nur verzerrt hätte.
+- Verschachtelte Gruppen bleiben nach dem Löschen ihrer Mitglieder nicht mehr leer zurück.
 
 ### Halbfertig
 - (nichts)

@@ -58,9 +58,9 @@ def test_three_d_code() -> None:
 def test_three_d_checks() -> None:
     scene = space_scene()
     scene.objects[1].params["axes_id"] = None
-    scene.steps.append(play(make_animation(AnimationKind.MOVE, "cam", "m", x=1.0, y=0.0)))
+    scene.steps.append(play(make_animation(AnimationKind.MOVE, "cam", "m", x=1.0, y=0.0), make_animation(AnimationKind.ROTATE, "cam", "r", angle=20.0)))
     codes = {issue.code for issue in validate_scene(scene)}
-    assert {"axes_3d_missing", "camera_3d_orbit_only"} <= codes
-    flat = Scene(id="f", name="F", objects=[make_object(ObjectKind.CAMERA, "K", "c")], steps=[play(make_animation(AnimationKind.ORBIT, "c"))])
-    assert "orbit_needs_3d" in {issue.code for issue in validate_scene(flat)}
+    assert "axes_3d_missing" in codes and "camera_rotation_2d" not in codes
+    flat = Scene(id="f", name="F", objects=[make_object(ObjectKind.CAMERA, "K", "c")], steps=[play(make_animation(AnimationKind.ORBIT, "c"), make_animation(AnimationKind.ROTATE, "c", "r"))])
+    assert {"orbit_needs_3d", "camera_rotation_2d"} <= {issue.code for issue in validate_scene(flat)}
     assert math.isfinite(project([(0.0, 0.0, 100.0)], View())[0][0])

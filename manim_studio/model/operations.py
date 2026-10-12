@@ -120,9 +120,17 @@ def remove_objects(scene: Scene, object_ids: Iterable[str]) -> None:
                 obj.params[key] = None
         if isinstance(obj.params.get("members"), list):
             obj.params["members"] = [member for member in obj.params["members"] if member not in ids]
-    empty_groups = [obj.id for obj in scene.objects if obj.kind.value == "group" and not obj.params.get("members")]
-    if empty_groups:
-        scene.objects = [obj for obj in scene.objects if obj.id not in empty_groups]
+    # a group that lost all members goes too (repeated: its parent group may become empty as well)
+    empty_groups: list[str] = []
+    while True:
+        empty = [obj.id for obj in scene.objects if obj.kind.value == "group" and not obj.params.get("members")]
+        if not empty:
+            break
+        empty_groups += empty
+        scene.objects = [obj for obj in scene.objects if obj.id not in empty]
+        for obj in scene.objects:
+            if isinstance(obj.params.get("members"), list):
+                obj.params["members"] = [member for member in obj.params["members"] if member not in empty]
     for step in scene.steps:
         step.animations = [
             anim

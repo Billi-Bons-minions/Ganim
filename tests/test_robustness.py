@@ -162,3 +162,22 @@ def test_toolbars_fold_on_small_screens(window, qapp) -> None:
     window.resize(2200, 1000)
     qapp.processEvents()
     assert not window.arrange_tools.is_compact() and window.timeline.visible_add_step_button() is window.timeline.add_step_button
+
+
+def test_nested_groups_disappear_with_their_last_member(window) -> None:
+    controller = window.controller
+    a = controller.add_object(ObjectKind.CIRCLE, -2.0, 0.0)
+    b = controller.add_object(ObjectKind.SQUARE, 0.0, 0.0)
+    c = controller.add_object(ObjectKind.TRIANGLE, 2.0, 0.0)
+    window.editor.select_objects([a, b])
+    controller.group_selection()
+    inner = window.editor.selected_objects[0]
+    window.editor.select_objects([inner, c])
+    controller.group_selection()
+    outer = window.editor.selected_objects[0]
+    scene = window.editor.scene()
+    scene_copy_ids = [obj.id for obj in scene.objects]
+    assert inner in scene_copy_ids and outer in scene_copy_ids
+    controller.delete_objects([a, b, c])
+    assert window.editor.scene().objects == []
+    assert not has_errors(validate_scene(window.editor.scene()))

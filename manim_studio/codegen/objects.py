@@ -246,6 +246,27 @@ def _special_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> tupl
     return None
 
 
+STUDIO_CAMERA = "studio_camera_frame"
+STUDIO_CAMERA_SOURCE = '''def studio_camera_frame(scene):
+    """A frame that steers the 3D camera like the camera frame of a 2D scene.
+
+    Moving, scaling and rotating this (invisible) rectangle moves, zooms and
+    rolls the camera.
+    """
+    frame = Rectangle(width=config.frame_width, height=config.frame_height, stroke_opacity=0, fill_opacity=0)
+    camera = scene.renderer.camera
+
+    def follow(_dt):
+        right, left = frame.get_vertices()[0], frame.get_vertices()[1]
+        camera.frame_center = frame.get_center()
+        camera.set_zoom(config.frame_width / max(np.linalg.norm(right - left), 1e-6))
+        camera.set_gamma(-angle_of_vector(right - left))
+
+    scene.add(frame)
+    scene.add_updater(follow)
+    return frame'''
+
+
 def camera_code(obj: SceneObject, variable: str) -> list[str]:
     """Initial position, zoom and rotation of the camera frame."""
     lines = []
@@ -268,7 +289,13 @@ def object_code(
     try:
         special = _special_code(scene, obj, names) or graph_object_code(scene, obj, names, helpers)
         if obj.kind == ObjectKind.CAMERA:
-            return [] if is_3d(scene) else camera_code(obj, variable)
+            if is_3d(scene):
+                # the 3D camera has no frame: a helper frame steers its center, zoom and roll
+                helpers.add(STUDIO_CAMERA)
+                return [f"{variable} = {STUDIO_CAMERA}(self)"] + camera_code(obj, variable)
+            if round(obj.rotation, 6) != 0:
+                raise CodegenError("camera_rotation_2d", obj.name)
+            return camera_code(obj, variable)
         if special is not None:
             lines, place = special
         elif obj.kind == ObjectKind.AXES_3D:

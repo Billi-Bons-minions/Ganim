@@ -8,6 +8,7 @@ import re
 import unicodedata
 
 from manim_studio.model.entities import Project, Scene
+from manim_studio.model.three_d import is_3d
 from manim_studio.model.types import RATE_FUNCTIONS, ObjectKind
 
 _TRANSLITERATION = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss"})
@@ -97,6 +98,8 @@ def _make_unique(candidate: str, used: set[str], separator: str) -> str:
 
 #: Code that refers to the camera frame of a ``MovingCameraScene``.
 CAMERA_FRAME = "self.camera.frame"
+#: Variable of the helper frame that steers the camera of a ``ThreeDScene``.
+CAMERA_FRAME_3D = "camera_frame"
 #: Default width of the camera frame (Manim's ``frame_width``).
 DEFAULT_FRAME_WIDTH = 8.0 * 16.0 / 9.0
 
@@ -107,7 +110,8 @@ def variable_names(scene: Scene) -> dict[str, str]:
     names: dict[str, str] = {}
     for obj in scene.objects:
         if obj.kind == ObjectKind.CAMERA:
-            names[obj.id] = CAMERA_FRAME
+            names[obj.id] = CAMERA_FRAME_3D if is_3d(scene) else CAMERA_FRAME
+            used.add(names[obj.id])
             continue
         name = _make_unique(to_variable_name(obj.name), used, "_")
         used.add(name)

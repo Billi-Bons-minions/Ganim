@@ -6,7 +6,7 @@ from manim_studio.model.entities import Animation, Scene, SceneObject
 from manim_studio.model.factory import create_animation
 from manim_studio.model.schema import animation_allowed
 from manim_studio.model.state import ObjectState, states_after
-from manim_studio.model.types import REFERENCE_PARAMS, TRANSFORM_ANIMATIONS, UNADDED_KINDS, AnimationKind
+from manim_studio.model.types import REFERENCE_PARAMS, TRANSFORM_ANIMATIONS, UNADDED_KINDS, AnimationKind, ObjectKind
 
 
 def reference_candidates(scene: Scene, kind: AnimationKind, object_id: str) -> list[SceneObject]:
@@ -32,6 +32,11 @@ def allowed_for_objects(scene: Scene, kind: AnimationKind, object_ids: list[str]
         return False
     if kind in REFERENCE_PARAMS and not reference_candidates(scene, kind, object_ids[0]):
         return False
+    if kind == AnimationKind.ROTATE and any(obj is not None and obj.kind == ObjectKind.CAMERA for obj in objects):
+        from manim_studio.model.three_d import is_3d
+
+        if not is_3d(scene):
+            return False  # Manim's 2D camera cannot turn the picture
     return all(animation_allowed(kind, obj.kind, obj.params) for obj in objects if obj is not None)
 
 

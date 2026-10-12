@@ -1102,7 +1102,6 @@ STRINGS: dict[str, str] = {
     "library.category.three_d": "3D",
     "issue.axes_3d_missing": "Es sind keine 3D-Achsen gewählt.",
     "issue.orbit_needs_3d": "„Kamera schwenken“ braucht eine 3D-Szene (3D-Achsen, Fläche oder 3D-Kurve).",
-    "issue.camera_3d_orbit_only": "In 3D-Szenen kann die Kamera nur geschwenkt werden.",
     "codegen.axes_3d_missing": "„{detail}“ braucht 3D-Achsen.",
     "menu.plugins": "Erweiterungen",
     "plugins.title": "Erweiterungen",
@@ -1166,4 +1165,7 @@ STRINGS: dict[str, str] = {
     "codegen.highlight_target_missing": "„{detail}“ markiert kein Objekt.",
     "lock.attached": "„{name}“ hängt an einem anderen Objekt und folgt ihm automatisch. Bewege stattdessen das markierte Objekt.",
     "status.highlight_needs_target": "Wähle zuerst das Objekt aus, das markiert werden soll – dann „Markierung“ anklicken.",
+    "issue.camera_rotation_2d": "In 2D-Szenen kann Manims Kamera das Bild nicht drehen. Drehen geht nur in 3D-Szenen – hier bitte Verschieben oder Zoomen verwenden.",
+    "codegen.camera_rotation_2d": "„{detail}“: Manims 2D-Kamera kann das Bild nicht drehen (nur in 3D-Szenen möglich).",
+    "lock.camera_rotation_2d": "Die Kamera lässt sich nur in 3D-Szenen drehen. In 2D kannst du sie verschieben und zoomen.",
 }

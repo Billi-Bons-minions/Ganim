@@ -1102,7 +1102,6 @@ STRINGS: dict[str, str] = {
     "library.category.three_d": "3D",
     "issue.axes_3d_missing": "No 3D axes are chosen.",
     "issue.orbit_needs_3d": "“Orbit camera” needs a 3D scene (3D axes, surface or 3D curve).",
-    "issue.camera_3d_orbit_only": "In 3D scenes the camera can only orbit.",
     "codegen.axes_3d_missing": "“{detail}” needs 3D axes.",
     "menu.plugins": "Extensions",
     "plugins.title": "Extensions",
@@ -1166,4 +1165,7 @@ STRINGS: dict[str, str] = {
     "codegen.highlight_target_missing": "“{detail}” does not mark any object.",
     "lock.attached": "“{name}” is attached to another object and follows it automatically. Move the marked object instead.",
     "status.highlight_needs_target": "First select the object to highlight – then click “Highlight”.",
+    "issue.camera_rotation_2d": "In 2D scenes Manim's camera cannot rotate the picture. Rotating only works in 3D scenes – please move or zoom instead.",
+    "codegen.camera_rotation_2d": "“{detail}”: Manim's 2D camera cannot rotate the picture (only possible in 3D scenes).",
+    "lock.camera_rotation_2d": "The camera can only be rotated in 3D scenes. In 2D you can move and zoom it.",
 }

@@ -13,6 +13,7 @@ from manim_studio.codegen.three_d_code import orbit_call
 from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import STEP_LAGGED, STEP_SEQUENCE, Animation, Scene, Step
 from manim_studio.model.schema import ARROW_KINDS, animation_allowed
+from manim_studio.model.three_d import is_3d
 from manim_studio.model.types import (
     LINE_KINDS,
     MODIFIER_ANIMATIONS,
@@ -116,6 +117,8 @@ def _check_allowed(anim: Animation, scene: Scene, names: dict[str, str]) -> None
     target = scene.object_by_id(anim.target_id)
     if target is not None and not animation_allowed(anim.kind, target.kind, target.params):
         raise CodegenError("animation_incompatible", names.get(anim.target_id, ""))
+    if target is not None and target.kind == ObjectKind.CAMERA and anim.kind == AnimationKind.ROTATE and not is_3d(scene):
+        raise CodegenError("camera_rotation_2d", target.name)
 
 
 def _extra_arguments(anim: Animation, scene: Scene, names: dict[str, str]) -> list[str]:

@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -38,3 +39,17 @@ def test_example_renders(example, tmp_path) -> None:
         capture_output=True, text=True, timeout=300, cwd=tmp_path, env=dict(os.environ, COLUMNS="200"),
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("path", sorted((Path(__file__).resolve().parent.parent / "examples").glob("*.msproj")), ids=lambda path: path.name)
+def test_example_project_files_open_and_generate(path) -> None:
+    """The projects in examples/ load, have no errors (without LaTeX) and become a script."""
+    from manim_studio.codegen import generate_script
+    from manim_studio.model.serialization import load_project
+    from manim_studio.model.validation import has_errors, validate_scene
+
+    project = load_project(path)
+    assert project.scenes
+    for scene in project.scenes:
+        assert not has_errors(validate_scene(scene, latex_available=False)), scene.name
+    assert "class " in generate_script(project)

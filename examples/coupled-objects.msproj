@@ -1,0 +1,297 @@
+{
+  "format": "manim-studio-project",
+  "version": 1,
+  "scenes": [
+    {
+      "id": "b58010b343ec",
+      "name": "Coupled objects",
+      "background_color": "#000000",
+      "objects": [
+        {
+          "id": "efa001366b46",
+          "kind": "parameter",
+          "name": "w",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "symbol": "w",
+            "value": 0.0,
+            "minimum": 0.0,
+            "maximum": 7.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "369104578db2",
+          "kind": "circle",
+          "name": "Orbit",
+          "x": 2.5,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#888888",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "radius": 2.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "7e67e77023d9",
+          "kind": "dot",
+          "name": "P",
+          "x": -5.0,
+          "y": -2.5,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FC6255",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "radius": 0.12
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "a04912f8ff4c",
+          "kind": "text",
+          "name": "Label P",
+          "x": -5.0,
+          "y": -2.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FFFFFF",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "text": "P",
+            "font_size": 36.0,
+            "font": "",
+            "bold": false,
+            "italic": false,
+            "alignment": "left",
+            "line_spacing": 0.0,
+            "colored_words": [],
+            "attach": "follow",
+            "attach_target": "7e67e77023d9"
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "4313c9b150b6",
+          "kind": "dot",
+          "name": "Q",
+          "x": 4.5,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#83C167",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "radius": 0.12,
+            "attach": "formula",
+            "attach_x": "2.5 + 2 cos(w)",
+            "attach_y": "2 sin(w)"
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "a0cd7e6fd30a",
+          "kind": "text",
+          "name": "Label Q",
+          "x": 5.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FFFFFF",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "text": "Q",
+            "font_size": 36.0,
+            "font": "",
+            "bold": false,
+            "italic": false,
+            "alignment": "left",
+            "line_spacing": 0.0,
+            "colored_words": [],
+            "attach": "follow",
+            "attach_target": "4313c9b150b6"
+          },
+          "locked": false,
+          "editor_hidden": false
+        }
+      ],
+      "steps": [
+        {
+          "id": "c4c13c4cf785",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "6a794ca15db5",
+              "kind": "create",
+              "target_id": "369104578db2",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "1475e2d5206c",
+              "kind": "fade_in",
+              "target_id": "7e67e77023d9",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            },
+            {
+              "id": "31df701d95d0",
+              "kind": "fade_in",
+              "target_id": "a04912f8ff4c",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            },
+            {
+              "id": "103cdaf532ac",
+              "kind": "fade_in",
+              "target_id": "4313c9b150b6",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            },
+            {
+              "id": "cf91740070be",
+              "kind": "fade_in",
+              "target_id": "a0cd7e6fd30a",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "5a2ff274d4a7",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "44954a8604eb",
+              "kind": "move",
+              "target_id": "7e67e77023d9",
+              "run_time": 3.0,
+              "rate_func": "smooth",
+              "params": {
+                "x": -1.0,
+                "y": 2.5
+              },
+              "delay": 0.0
+            },
+            {
+              "id": "2bea0f723638",
+              "kind": "set_value",
+              "target_id": "efa001366b46",
+              "run_time": 3.0,
+              "rate_func": "smooth",
+              "params": {
+                "value": 6.28319
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "279b70fbc051",
+          "kind": "wait",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        }
+      ]
+    }
+  ],
+  "render": {
+    "quality": "h",
+    "width": 1920,
+    "height": 1080,
+    "fps": 60,
+    "format": "mp4",
+    "output_dir": "",
+    "png_after_step": -1,
+    "transparent": false,
+    "scenes": "current",
+    "transition": "cut",
+    "save_sections": false
+  },
+  "aspect": "16:9"
+}

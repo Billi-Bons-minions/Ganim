@@ -1,0 +1,758 @@
+{
+  "format": "manim-studio-project",
+  "version": 1,
+  "scenes": [
+    {
+      "id": "25193f6440fd",
+      "name": "Pythagorean theorem",
+      "background_color": "#000000",
+      "objects": [
+        {
+          "id": "879aa4b40293",
+          "kind": "line",
+          "name": "a",
+          "x": -2.5,
+          "y": -1.5,
+          "rotation": 0.0,
+          "stroke_color": "#FFFFFF",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "length": 3.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "834dc2b3489c",
+          "kind": "line",
+          "name": "b",
+          "x": -4.0,
+          "y": -0.5,
+          "rotation": 90.0,
+          "stroke_color": "#FFFFFF",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "length": 2.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "cdd3e8cbf989",
+          "kind": "line",
+          "name": "c",
+          "x": -2.5,
+          "y": -0.5,
+          "rotation": 146.309932,
+          "stroke_color": "#FC6255",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "length": 3.605551
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "8a603363bda7",
+          "kind": "angle",
+          "name": "Angle 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#F7D96F",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "first_line": "879aa4b40293",
+            "second_line": "834dc2b3489c",
+            "radius": 0.4,
+            "right_angle": true,
+            "flip_first": false,
+            "flip_second": false,
+            "reflex": false,
+            "label": "none",
+            "symbol": "α",
+            "decimals": 0,
+            "label_size": 32.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "cb0b13f735fc",
+          "kind": "text",
+          "name": "Text a",
+          "x": -2.5,
+          "y": -2.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FFFFFF",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "text": "a",
+            "font_size": 40.0,
+            "font": "",
+            "bold": false,
+            "italic": false,
+            "alignment": "left",
+            "line_spacing": 0.0,
+            "colored_words": []
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "ac8119704cf0",
+          "kind": "text",
+          "name": "Text b",
+          "x": -4.45,
+          "y": -0.5,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FFFFFF",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "text": "b",
+            "font_size": 40.0,
+            "font": "",
+            "bold": false,
+            "italic": false,
+            "alignment": "left",
+            "line_spacing": 0.0,
+            "colored_words": []
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "7391f6194d82",
+          "kind": "text",
+          "name": "Text c",
+          "x": -2.25,
+          "y": -0.2,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FC6255",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "text": "c",
+            "font_size": 40.0,
+            "font": "",
+            "bold": false,
+            "italic": false,
+            "alignment": "left",
+            "line_spacing": 0.0,
+            "colored_words": []
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "64c5ee9e854e",
+          "kind": "text",
+          "name": "Formula",
+          "x": 2.8,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FFFFFF",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "text": "a² + b² = c²",
+            "font_size": 56.0,
+            "font": "",
+            "bold": false,
+            "italic": false,
+            "alignment": "left",
+            "line_spacing": 0.0,
+            "colored_words": []
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "76e8d1a0f102",
+          "kind": "highlight",
+          "name": "Highlight 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#F7D96F",
+          "fill_color": "#000000",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "target": "64c5ee9e854e",
+            "style": "frame",
+            "buff": 0.15,
+            "corner_radius": 0.1,
+            "opacity": 0.75
+          },
+          "locked": false,
+          "editor_hidden": false
+        }
+      ],
+      "steps": [
+        {
+          "id": "df7c7eb7816e",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "35ebd1533964",
+              "kind": "create",
+              "target_id": "879aa4b40293",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "ffdae79da828",
+              "kind": "create",
+              "target_id": "834dc2b3489c",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "198d9bcb8ee9",
+              "kind": "create",
+              "target_id": "cdd3e8cbf989",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "86a2313a949f",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "cf427fa67ceb",
+              "kind": "create",
+              "target_id": "8a603363bda7",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "64fb24f15323",
+              "kind": "write",
+              "target_id": "cb0b13f735fc",
+              "run_time": 1.0,
+              "rate_func": "linear",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "495110cfd49d",
+              "kind": "write",
+              "target_id": "ac8119704cf0",
+              "run_time": 1.0,
+              "rate_func": "linear",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "43ead2a74fe6",
+              "kind": "write",
+              "target_id": "7391f6194d82",
+              "run_time": 1.0,
+              "rate_func": "linear",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "f0a68f7b5255",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "ed859a557693",
+              "kind": "transform_from_copy",
+              "target_id": "cb0b13f735fc",
+              "run_time": 1.5,
+              "rate_func": "smooth",
+              "params": {
+                "target": "64c5ee9e854e"
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "d9ccf1e41904",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "bdf4da09bb39",
+              "kind": "create",
+              "target_id": "76e8d1a0f102",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "c3a1c462de6c",
+              "kind": "indicate",
+              "target_id": "64c5ee9e854e",
+              "run_time": 1.0,
+              "rate_func": "there_and_back",
+              "params": {
+                "color": "#F7D96F",
+                "scale_factor": 1.2
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "50b66a7283ed",
+          "kind": "wait",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        }
+      ]
+    },
+    {
+      "id": "9a97a3d7c04d",
+      "name": "Conic sections (implicit)",
+      "background_color": "#000000",
+      "objects": [
+        {
+          "id": "7dbb25db80b7",
+          "kind": "parameter",
+          "name": "r",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "symbol": "r",
+            "value": 1.0,
+            "minimum": 0.5,
+            "maximum": 3.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "c6643242250e",
+          "kind": "axes",
+          "name": "Axes 1",
+          "x": 0.0,
+          "y": -0.3,
+          "rotation": 0.0,
+          "stroke_color": "#FFFFFF",
+          "fill_color": "#58C4DD",
+          "stroke_width": 2.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "x_min": -5.0,
+            "x_max": 5.0,
+            "x_step": 1.0,
+            "x_length": 10.0,
+            "y_min": -3.0,
+            "y_max": 3.0,
+            "y_step": 1.0,
+            "y_length": 6.0,
+            "show_numbers": false,
+            "tips": true,
+            "x_label": "",
+            "y_label": ""
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "e7dd2387001f",
+          "kind": "function_graph",
+          "name": "x² + y² = r²",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#FC6255",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "curve": "implicit",
+            "expression": "sin(x)",
+            "derive_from": null,
+            "derive_order": "1",
+            "pieces": [
+              [
+                "x^2",
+                "-5",
+                "1"
+              ],
+              [
+                "2 - x",
+                "1",
+                "5"
+              ]
+            ],
+            "x_expression": "2cos(t)",
+            "y_expression": "sin(2t)",
+            "r_expression": "2sin(3t)",
+            "implicit_expression": "x^2 + y^2 - r^2",
+            "x_min": -5.0,
+            "x_max": 5.0,
+            "t_min": 0.0,
+            "t_max": 6.2832,
+            "axes_id": "c6643242250e",
+            "clip": true
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "c3278c8c4bbc",
+          "kind": "function_graph",
+          "name": "x²/4 − y² = 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#83C167",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "curve": "implicit",
+            "expression": "sin(x)",
+            "derive_from": null,
+            "derive_order": "1",
+            "pieces": [
+              [
+                "x^2",
+                "-5",
+                "1"
+              ],
+              [
+                "2 - x",
+                "1",
+                "5"
+              ]
+            ],
+            "x_expression": "2cos(t)",
+            "y_expression": "sin(2t)",
+            "r_expression": "2sin(3t)",
+            "implicit_expression": "x^2/4 - y^2 - 1",
+            "x_min": -5.0,
+            "x_max": 5.0,
+            "t_min": 0.0,
+            "t_max": 6.2832,
+            "axes_id": "c6643242250e",
+            "clip": true
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "2b08f9ceb4c6",
+          "kind": "text",
+          "name": "r =",
+          "x": -5.9,
+          "y": 3.3,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FFFFFF",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "text": "r =",
+            "font_size": 40.0,
+            "font": "",
+            "bold": false,
+            "italic": false,
+            "alignment": "left",
+            "line_spacing": 0.0,
+            "colored_words": []
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "8e03d5927c49",
+          "kind": "decimal_number",
+          "name": "Number r",
+          "x": -4.65,
+          "y": 3.3,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FFFFFF",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "value": 0.0,
+            "decimals": 2,
+            "font_size": 40.0,
+            "show_sign": false,
+            "unit": "",
+            "parameter_id": "7dbb25db80b7"
+          },
+          "locked": false,
+          "editor_hidden": false
+        }
+      ],
+      "steps": [
+        {
+          "id": "db3ba68f2787",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "afcbd1f55ca1",
+              "kind": "create",
+              "target_id": "c6643242250e",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "0f95022cb4c0",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "6ef9afc79247",
+              "kind": "create",
+              "target_id": "e7dd2387001f",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "88c82bf14051",
+              "kind": "create",
+              "target_id": "c3278c8c4bbc",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "e4d429601d2c",
+              "kind": "fade_in",
+              "target_id": "2b08f9ceb4c6",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            },
+            {
+              "id": "1fd0a9b65834",
+              "kind": "fade_in",
+              "target_id": "8e03d5927c49",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "3343977af058",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "b4362d4e3a64",
+              "kind": "set_value",
+              "target_id": "7dbb25db80b7",
+              "run_time": 3.0,
+              "rate_func": "smooth",
+              "params": {
+                "value": 2.5
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "c72b38187702",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "2e9e2d4a1eba",
+              "kind": "set_value",
+              "target_id": "7dbb25db80b7",
+              "run_time": 2.0,
+              "rate_func": "smooth",
+              "params": {
+                "value": 1.5
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        }
+      ]
+    }
+  ],
+  "render": {
+    "quality": "h",
+    "width": 1920,
+    "height": 1080,
+    "fps": 60,
+    "format": "mp4",
+    "output_dir": "",
+    "png_after_step": -1,
+    "transparent": false,
+    "scenes": "current",
+    "transition": "cut",
+    "save_sections": false
+  },
+  "aspect": "16:9"
+}

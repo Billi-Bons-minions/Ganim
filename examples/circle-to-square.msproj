@@ -1,0 +1,197 @@
+{
+  "format": "manim-studio-project",
+  "version": 1,
+  "scenes": [
+    {
+      "id": "96fdbcd137f6",
+      "name": "Circle to square",
+      "background_color": "#000000",
+      "objects": [
+        {
+          "id": "ce1f44f8baf9",
+          "kind": "circle",
+          "name": "Circle 1",
+          "x": -3.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.4,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "radius": 1.4
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "85f3d09b2cf5",
+          "kind": "square",
+          "name": "Square 1",
+          "x": -3.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#FC6255",
+          "fill_color": "#FC6255",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.4,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "side_length": 2.6
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "65c8baf98ee0",
+          "kind": "text",
+          "name": "Text 1",
+          "x": 2.4,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FFFFFF",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "text": "Hallo Manim!",
+            "font_size": 48.0,
+            "font": "",
+            "bold": false,
+            "italic": false,
+            "alignment": "left",
+            "line_spacing": 0.0,
+            "colored_words": []
+          },
+          "locked": false,
+          "editor_hidden": false
+        }
+      ],
+      "steps": [
+        {
+          "id": "9f333dad873b",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "57477e802450",
+              "kind": "create",
+              "target_id": "ce1f44f8baf9",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "2fee1c92c993",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "2601c4fdc5a8",
+              "kind": "transform",
+              "target_id": "ce1f44f8baf9",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "target": "85f3d09b2cf5"
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "5c410cba059d",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "259cec73683e",
+              "kind": "write",
+              "target_id": "65c8baf98ee0",
+              "run_time": 1.5,
+              "rate_func": "linear",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "8ba1e9bea27b",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "df7c0afca8b7",
+              "kind": "indicate",
+              "target_id": "65c8baf98ee0",
+              "run_time": 1.0,
+              "rate_func": "there_and_back",
+              "params": {
+                "color": "#F7D96F",
+                "scale_factor": 1.2
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        }
+      ]
+    }
+  ],
+  "render": {
+    "quality": "h",
+    "width": 1920,
+    "height": 1080,
+    "fps": 60,
+    "format": "mp4",
+    "output_dir": "",
+    "png_after_step": -1,
+    "transparent": false,
+    "scenes": "current",
+    "transition": "cut",
+    "save_sections": false
+  },
+  "aspect": "16:9"
+}

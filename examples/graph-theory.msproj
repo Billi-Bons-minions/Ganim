@@ -1,0 +1,275 @@
+{
+  "format": "manim-studio-project",
+  "version": 1,
+  "scenes": [
+    {
+      "id": "479ac736ce2d",
+      "name": "Graph theory: a path",
+      "background_color": "#000000",
+      "objects": [
+        {
+          "id": "010b68c52ffb",
+          "kind": "text",
+          "name": "Text 1",
+          "x": 0.0,
+          "y": 3.3,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FFFFFF",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "text": "A path from A to F",
+            "font_size": 40.0,
+            "font": "",
+            "bold": false,
+            "italic": false,
+            "alignment": "left",
+            "line_spacing": 0.0,
+            "colored_words": []
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "02bae8c34bc7",
+          "kind": "network",
+          "name": "Network (graph) 1",
+          "x": 0.0,
+          "y": -0.4,
+          "rotation": 0.0,
+          "stroke_color": "#FFFFFF",
+          "fill_color": "#58C4DD",
+          "stroke_width": 3.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "vertices": "A, B, C, D, E, F",
+            "edges": "A-B\nA-C\nB-D\nC-D\nC-E\nD-F\nE-F\nB-C",
+            "directed": false,
+            "layout": "spring",
+            "seed": 49,
+            "layout_scale": 3.6,
+            "radius": 0.32,
+            "labels": true,
+            "label_size": 28.0,
+            "label_color": "#000000"
+          },
+          "locked": false,
+          "editor_hidden": false
+        }
+      ],
+      "steps": [
+        {
+          "id": "e482e9744870",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "c9b100e5e993",
+              "kind": "fade_in",
+              "target_id": "010b68c52ffb",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            },
+            {
+              "id": "da6e2d929967",
+              "kind": "create",
+              "target_id": "02bae8c34bc7",
+              "run_time": 2.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "f6f0fef10f61",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "264a9d630d87",
+              "kind": "network_parts",
+              "target_id": "02bae8c34bc7",
+              "run_time": 0.6,
+              "rate_func": "smooth",
+              "params": {
+                "parts": "A",
+                "effect": "color",
+                "color": "#FC6255"
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "3524ec24b67e",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "75a54daaee5f",
+              "kind": "network_parts",
+              "target_id": "02bae8c34bc7",
+              "run_time": 0.8,
+              "rate_func": "smooth",
+              "params": {
+                "parts": "A-C, C",
+                "effect": "color",
+                "color": "#FC6255"
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "2b3050c7012f",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "cdf62ff9918f",
+              "kind": "network_parts",
+              "target_id": "02bae8c34bc7",
+              "run_time": 0.8,
+              "rate_func": "smooth",
+              "params": {
+                "parts": "C-E, E",
+                "effect": "color",
+                "color": "#FC6255"
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "e8f5779bddf1",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "a3fb7e789edc",
+              "kind": "network_parts",
+              "target_id": "02bae8c34bc7",
+              "run_time": 0.8,
+              "rate_func": "smooth",
+              "params": {
+                "parts": "E-F, F",
+                "effect": "color",
+                "color": "#FC6255"
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "6469df7c672f",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "7c990d6fc208",
+              "kind": "network_parts",
+              "target_id": "02bae8c34bc7",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "parts": "F",
+                "effect": "flash",
+                "color": "#FC6255"
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "118031113783",
+          "kind": "wait",
+          "wait_time": 1.5,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        }
+      ]
+    }
+  ],
+  "render": {
+    "quality": "h",
+    "width": 1920,
+    "height": 1080,
+    "fps": 60,
+    "format": "mp4",
+    "output_dir": "",
+    "png_after_step": -1,
+    "transparent": false,
+    "scenes": "current",
+    "transition": "cut",
+    "save_sections": false
+  },
+  "aspect": "16:9"
+}

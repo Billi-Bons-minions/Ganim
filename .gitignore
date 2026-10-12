@@ -24,6 +24,8 @@ partial_movie_files/
 *.mov
 *.webm
 *.gif
+# ... but keep the README pictures
+!docs/images/*.gif
 *.wav
 *.mp3
 renders/

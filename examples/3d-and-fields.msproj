@@ -1,0 +1,473 @@
+{
+  "format": "manim-studio-project",
+  "version": 1,
+  "scenes": [
+    {
+      "id": "8e8857860628",
+      "name": "3D solids with camera move",
+      "background_color": "#000000",
+      "objects": [
+        {
+          "id": "fbff6f39e69e",
+          "kind": "axes_3d",
+          "name": "3D axes 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#FFFFFF",
+          "fill_color": "#58C4DD",
+          "stroke_width": 2.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "x_min": -4.0,
+            "x_max": 4.0,
+            "x_step": 1.0,
+            "x_length": 6.0,
+            "y_min": -4.0,
+            "y_max": 4.0,
+            "y_step": 1.0,
+            "y_length": 6.0,
+            "z_min": -3.0,
+            "z_max": 3.0,
+            "z_step": 1.0,
+            "z_length": 4.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "6f278ecf5630",
+          "kind": "solid",
+          "name": "Sphere",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#58C4DD",
+          "stroke_width": 0.5,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.75,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "axes_id": "fbff6f39e69e",
+            "shape": "sphere",
+            "center_x": -2.5,
+            "center_y": 0.0,
+            "center_z": 0.0,
+            "radius": 0.9,
+            "minor_radius": 0.3,
+            "side": 1.4,
+            "width": 3.0,
+            "depth": 2.0,
+            "height": 2.0,
+            "resolution": 12
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "1fdd10fc6bed",
+          "kind": "solid",
+          "name": "Cube",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#83C167",
+          "fill_color": "#83C167",
+          "stroke_width": 0.5,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.75,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "axes_id": "fbff6f39e69e",
+            "shape": "cube",
+            "center_x": 0.0,
+            "center_y": 0.0,
+            "center_z": 0.0,
+            "radius": 0.9,
+            "minor_radius": 0.3,
+            "side": 1.4,
+            "width": 3.0,
+            "depth": 2.0,
+            "height": 2.0,
+            "resolution": 12
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "a98943a95991",
+          "kind": "solid",
+          "name": "Torus (ring)",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#FC6255",
+          "fill_color": "#FC6255",
+          "stroke_width": 0.5,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.75,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "axes_id": "fbff6f39e69e",
+            "shape": "torus",
+            "center_x": 2.5,
+            "center_y": 0.0,
+            "center_z": 0.0,
+            "radius": 0.9,
+            "minor_radius": 0.3,
+            "side": 1.4,
+            "width": 3.0,
+            "depth": 2.0,
+            "height": 2.0,
+            "resolution": 12
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "58e81f54dfe1",
+          "kind": "camera",
+          "name": "Camera 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "width": 0.0,
+            "phi": 70.0,
+            "theta": -60.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "93a7b2b7e0cd",
+          "kind": "text",
+          "name": "Text 1",
+          "x": 0.0,
+          "y": 3.3,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FFFFFF",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "text": "Solids in space",
+            "font_size": 40.0,
+            "font": "",
+            "bold": false,
+            "italic": false,
+            "alignment": "left",
+            "line_spacing": 0.0,
+            "colored_words": []
+          },
+          "locked": false,
+          "editor_hidden": false
+        }
+      ],
+      "steps": [
+        {
+          "id": "f468d8ca98f7",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "fce17d2aaf39",
+              "kind": "create",
+              "target_id": "fbff6f39e69e",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "6dcb1ea24329",
+              "kind": "write",
+              "target_id": "93a7b2b7e0cd",
+              "run_time": 1.0,
+              "rate_func": "linear",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "94d8da5311d2",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "64a40df914fc",
+              "kind": "grow_from_center",
+              "target_id": "6f278ecf5630",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "4164d91bced3",
+              "kind": "grow_from_center",
+              "target_id": "1fdd10fc6bed",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "1557dc0a4fa7",
+              "kind": "grow_from_center",
+              "target_id": "a98943a95991",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "b226964f5814",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "45fea5c16d9a",
+              "kind": "orbit",
+              "target_id": "58e81f54dfe1",
+              "run_time": 4.0,
+              "rate_func": "smooth",
+              "params": {
+                "phi": 55.0,
+                "theta": 30.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        }
+      ]
+    },
+    {
+      "id": "dad7b82b4a46",
+      "name": "Flow (vector field)",
+      "background_color": "#000000",
+      "objects": [
+        {
+          "id": "0c51c1acbd4d",
+          "kind": "vector_field",
+          "name": "Vector field 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#58C4DD",
+          "stroke_width": 2.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "x_expression": "sin(y)",
+            "y_expression": "cos(x) - 0.3 y",
+            "display": "stream",
+            "x_min": -7.0,
+            "x_max": 7.0,
+            "y_min": -4.0,
+            "y_max": 4.0,
+            "step": 0.6,
+            "colored": true,
+            "max_color": 2.0,
+            "virtual_time": 3.0,
+            "flow": true,
+            "flow_speed": 1.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "14ed2ae69c16",
+          "kind": "highlight",
+          "name": "Highlight 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#F7D96F",
+          "fill_color": "#000000",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "target": "1ff0a5f6af22",
+            "style": "background",
+            "buff": 0.15,
+            "corner_radius": 0.1,
+            "opacity": 0.75
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "1ff0a5f6af22",
+          "kind": "text",
+          "name": "Text 1",
+          "x": 0.0,
+          "y": 3.3,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FFFFFF",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "text": "v(x, y) = (sin y, cos x − 0.3 y)",
+            "font_size": 34.0,
+            "font": "",
+            "bold": false,
+            "italic": false,
+            "alignment": "left",
+            "line_spacing": 0.0,
+            "colored_words": []
+          },
+          "locked": false,
+          "editor_hidden": false
+        }
+      ],
+      "steps": [
+        {
+          "id": "5ba0b9caefb2",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "999de509d998",
+              "kind": "fade_in",
+              "target_id": "0c51c1acbd4d",
+              "run_time": 1.5,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "1b7fa693e714",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "df844e6ac0bb",
+              "kind": "fade_in",
+              "target_id": "14ed2ae69c16",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            },
+            {
+              "id": "a078715ec158",
+              "kind": "write",
+              "target_id": "1ff0a5f6af22",
+              "run_time": 1.0,
+              "rate_func": "linear",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "a54a7cd19794",
+          "kind": "wait",
+          "wait_time": 3.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        }
+      ]
+    }
+  ],
+  "render": {
+    "quality": "h",
+    "width": 1920,
+    "height": 1080,
+    "fps": 60,
+    "format": "mp4",
+    "output_dir": "",
+    "png_after_step": -1,
+    "transparent": false,
+    "scenes": "current",
+    "transition": "cut",
+    "save_sections": false
+  },
+  "aspect": "16:9"
+}

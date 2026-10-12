@@ -1,0 +1,627 @@
+{
+  "format": "manim-studio-project",
+  "version": 1,
+  "scenes": [
+    {
+      "id": "6a787d988eb5",
+      "name": "Analyze a function",
+      "background_color": "#000000",
+      "objects": [
+        {
+          "id": "c15bfcc8007c",
+          "kind": "axes",
+          "name": "Axes 1",
+          "x": 0.0,
+          "y": -0.3,
+          "rotation": 0.0,
+          "stroke_color": "#FFFFFF",
+          "fill_color": "#58C4DD",
+          "stroke_width": 2.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "x_min": -5.0,
+            "x_max": 5.0,
+            "x_step": 1.0,
+            "x_length": 10.0,
+            "y_min": -3.0,
+            "y_max": 3.0,
+            "y_step": 1.0,
+            "y_length": 6.0,
+            "show_numbers": false,
+            "tips": true,
+            "x_label": "x",
+            "y_label": "y"
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "289423982446",
+          "kind": "function_graph",
+          "name": "f",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#F7D96F",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "curve": "function",
+            "expression": "x^3/3 - x",
+            "derive_from": null,
+            "derive_order": "1",
+            "pieces": [
+              [
+                "x^2",
+                "-5",
+                "1"
+              ],
+              [
+                "2 - x",
+                "1",
+                "5"
+              ]
+            ],
+            "x_expression": "2cos(t)",
+            "y_expression": "sin(2t)",
+            "r_expression": "2sin(3t)",
+            "implicit_expression": "x^2 + y^2 - 4",
+            "x_min": -5.0,
+            "x_max": 5.0,
+            "t_min": 0.0,
+            "t_max": 6.2832,
+            "axes_id": "c15bfcc8007c",
+            "clip": true
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "5f9782e2334c",
+          "kind": "graph_markers",
+          "name": "Zeros",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FC6255",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "graph_id": "289423982446",
+            "feature": "zeros",
+            "other_graph_id": null,
+            "show_labels": true,
+            "radius": 0.08
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "c56d669a3a26",
+          "kind": "graph_markers",
+          "name": "Extrema",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#83C167",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "graph_id": "289423982446",
+            "feature": "extrema",
+            "other_graph_id": null,
+            "show_labels": true,
+            "radius": 0.08
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "148b2528a56b",
+          "kind": "graph_label",
+          "name": "Graph label 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#F7D96F",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "graph_id": "289423982446",
+            "text": "f(x) = x³/3 − x",
+            "use_latex": false,
+            "x_value": 2.2,
+            "direction": "up_right",
+            "font_size": 36.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        }
+      ],
+      "steps": [
+        {
+          "id": "1e1ee400fb00",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "1cba74c0de0c",
+              "kind": "create",
+              "target_id": "c15bfcc8007c",
+              "run_time": 1.5,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "68f55766f6fe",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "33ea1a9bb958",
+              "kind": "create",
+              "target_id": "289423982446",
+              "run_time": 2.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "3c025146e89e",
+              "kind": "fade_in",
+              "target_id": "148b2528a56b",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "87b1d4ae03be",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "94d0ea1637cd",
+              "kind": "fade_in",
+              "target_id": "5f9782e2334c",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "77064fb472ce",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "712d3999636c",
+              "kind": "fade_in",
+              "target_id": "c56d669a3a26",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "19007021fd73",
+          "kind": "wait",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        }
+      ]
+    },
+    {
+      "id": "7b40b6dbc756",
+      "name": "Explore a parameter",
+      "background_color": "#000000",
+      "objects": [
+        {
+          "id": "38baead5519a",
+          "kind": "parameter",
+          "name": "a",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "symbol": "a",
+            "value": 1.0,
+            "minimum": 0.0,
+            "maximum": 3.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "7730d7278aed",
+          "kind": "axes",
+          "name": "Axes 1",
+          "x": 0.0,
+          "y": -0.3,
+          "rotation": 0.0,
+          "stroke_color": "#FFFFFF",
+          "fill_color": "#58C4DD",
+          "stroke_width": 2.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "x_min": -5.0,
+            "x_max": 5.0,
+            "x_step": 1.0,
+            "x_length": 10.0,
+            "y_min": -3.0,
+            "y_max": 3.0,
+            "y_step": 1.0,
+            "y_length": 6.0,
+            "show_numbers": false,
+            "tips": true,
+            "x_label": "",
+            "y_label": ""
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "73f8c0e64c3a",
+          "kind": "function_graph",
+          "name": "f",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#F7D96F",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "curve": "function",
+            "expression": "a sin(x)",
+            "derive_from": null,
+            "derive_order": "1",
+            "pieces": [
+              [
+                "x^2",
+                "-5",
+                "1"
+              ],
+              [
+                "2 - x",
+                "1",
+                "5"
+              ]
+            ],
+            "x_expression": "2cos(t)",
+            "y_expression": "sin(2t)",
+            "r_expression": "2sin(3t)",
+            "implicit_expression": "x^2 + y^2 - 4",
+            "x_min": -5.0,
+            "x_max": 5.0,
+            "t_min": 0.0,
+            "t_max": 6.2832,
+            "axes_id": "7730d7278aed",
+            "clip": true
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "b2648476f4fe",
+          "kind": "graph_point",
+          "name": "Point on graph 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FC6255",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "graph_id": "73f8c0e64c3a",
+            "x_value": 1.0,
+            "x_parameter": "38baead5519a",
+            "show_lines": true,
+            "show_label": true,
+            "radius": 0.08
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "673bb09d6009",
+          "kind": "text",
+          "name": "a =",
+          "x": -5.9,
+          "y": 3.3,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FFFFFF",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "text": "a =",
+            "font_size": 40.0,
+            "font": "",
+            "bold": false,
+            "italic": false,
+            "alignment": "left",
+            "line_spacing": 0.0,
+            "colored_words": []
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "4957d52c0fb4",
+          "kind": "decimal_number",
+          "name": "Number a",
+          "x": -4.65,
+          "y": 3.3,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FFFFFF",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "value": 0.0,
+            "decimals": 2,
+            "font_size": 40.0,
+            "show_sign": false,
+            "unit": "",
+            "parameter_id": "38baead5519a"
+          },
+          "locked": false,
+          "editor_hidden": false
+        }
+      ],
+      "steps": [
+        {
+          "id": "864e2b69e35b",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "92c69d1c1fa8",
+              "kind": "create",
+              "target_id": "7730d7278aed",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "d864b60625b7",
+              "kind": "create",
+              "target_id": "73f8c0e64c3a",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "2729003c0b5e",
+              "kind": "fade_in",
+              "target_id": "673bb09d6009",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            },
+            {
+              "id": "0b5764d84321",
+              "kind": "fade_in",
+              "target_id": "4957d52c0fb4",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "85f7c4c3e4d3",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "fd6b04443da4",
+              "kind": "fade_in",
+              "target_id": "b2648476f4fe",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "17d8e529e5ff",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "0c166954613f",
+              "kind": "set_value",
+              "target_id": "38baead5519a",
+              "run_time": 3.0,
+              "rate_func": "smooth",
+              "params": {
+                "value": 3.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "9585e8d397d7",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "f933127c4554",
+              "kind": "set_value",
+              "target_id": "38baead5519a",
+              "run_time": 2.0,
+              "rate_func": "smooth",
+              "params": {
+                "value": 1.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        }
+      ]
+    }
+  ],
+  "render": {
+    "quality": "h",
+    "width": 1920,
+    "height": 1080,
+    "fps": 60,
+    "format": "mp4",
+    "output_dir": "",
+    "png_after_step": -1,
+    "transparent": false,
+    "scenes": "current",
+    "transition": "cut",
+    "save_sections": false
+  },
+  "aspect": "16:9"
+}

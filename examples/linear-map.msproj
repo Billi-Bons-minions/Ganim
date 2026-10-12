@@ -1,0 +1,311 @@
+{
+  "format": "manim-studio-project",
+  "version": 1,
+  "scenes": [
+    {
+      "id": "cfd865b2504d",
+      "name": "Linear map (shear)",
+      "background_color": "#000000",
+      "objects": [
+        {
+          "id": "a9aa17980454",
+          "kind": "number_plane",
+          "name": "Number Plane 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#29ABCA",
+          "fill_color": "#58C4DD",
+          "stroke_width": 2.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "x_min": -16.0,
+            "x_max": 16.0,
+            "x_step": 1.0,
+            "x_length": 32.0,
+            "y_min": -10.0,
+            "y_max": 10.0,
+            "y_step": 1.0,
+            "y_length": 20.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "f5a9d3a5dec7",
+          "kind": "vector",
+          "name": "i",
+          "x": 0.5,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#83C167",
+          "fill_color": "#83C167",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "length": 1.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "bc77c0a78941",
+          "kind": "vector",
+          "name": "j",
+          "x": 0.0,
+          "y": 0.5,
+          "rotation": 90.0,
+          "stroke_color": "#FC6255",
+          "fill_color": "#FC6255",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "length": 1.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "6a56cc927359",
+          "kind": "text",
+          "name": "Text 1",
+          "x": -3.4,
+          "y": 3.3,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FFFFFF",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 1,
+          "visibility": "auto",
+          "params": {
+            "text": "Shear: (x, y) ↦ (x + y, y)",
+            "font_size": 34.0,
+            "font": "",
+            "bold": false,
+            "italic": false,
+            "alignment": "left",
+            "line_spacing": 0.0,
+            "colored_words": []
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "a6ca8669a3cb",
+          "kind": "highlight",
+          "name": "Highlight 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#F7D96F",
+          "fill_color": "#000000",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "target": "6a56cc927359",
+            "style": "background",
+            "buff": 0.15,
+            "corner_radius": 0.1,
+            "opacity": 0.85
+          },
+          "locked": false,
+          "editor_hidden": false
+        }
+      ],
+      "steps": [
+        {
+          "id": "8a189fa788ba",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "9577da34bc34",
+              "kind": "create",
+              "target_id": "a9aa17980454",
+              "run_time": 1.5,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "63df97e8c9dd",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "7544798e0eb2",
+              "kind": "grow_arrow",
+              "target_id": "f5a9d3a5dec7",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "d50dc3d6af86",
+              "kind": "grow_arrow",
+              "target_id": "bc77c0a78941",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "c5cf32e7f0ae",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "007128d3357d",
+              "kind": "fade_in",
+              "target_id": "a6ca8669a3cb",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            },
+            {
+              "id": "32d5969c74e2",
+              "kind": "write",
+              "target_id": "6a56cc927359",
+              "run_time": 1.0,
+              "rate_func": "linear",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "3e2b940923c9",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "47d512389f0e",
+              "kind": "apply_matrix",
+              "target_id": "a9aa17980454",
+              "run_time": 2.5,
+              "rate_func": "smooth",
+              "params": {
+                "m11": 1.0,
+                "m12": 1.0,
+                "m21": 0.0,
+                "m22": 1.0
+              },
+              "delay": 0.0
+            },
+            {
+              "id": "47306224a0d1",
+              "kind": "apply_matrix",
+              "target_id": "f5a9d3a5dec7",
+              "run_time": 2.5,
+              "rate_func": "smooth",
+              "params": {
+                "m11": 1.0,
+                "m12": 1.0,
+                "m21": 0.0,
+                "m22": 1.0
+              },
+              "delay": 0.0
+            },
+            {
+              "id": "ccea4c58ca7d",
+              "kind": "apply_matrix",
+              "target_id": "bc77c0a78941",
+              "run_time": 2.5,
+              "rate_func": "smooth",
+              "params": {
+                "m11": 1.0,
+                "m12": 1.0,
+                "m21": 0.0,
+                "m22": 1.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "032607803bb1",
+          "kind": "wait",
+          "wait_time": 1.5,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        }
+      ]
+    }
+  ],
+  "render": {
+    "quality": "h",
+    "width": 1920,
+    "height": 1080,
+    "fps": 60,
+    "format": "mp4",
+    "output_dir": "",
+    "png_after_step": -1,
+    "transparent": false,
+    "scenes": "current",
+    "transition": "cut",
+    "save_sections": false
+  },
+  "aspect": "16:9"
+}

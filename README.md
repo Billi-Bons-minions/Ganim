@@ -1,210 +1,195 @@
 # Manim Studio
 
-*Ganim – Vibe Coded GUI for Manim*
+*Ganim – a GUI for [Manim](https://www.manim.community)*
 
-Mit Manim Studio erstellst du Animationen für die [Manim Community Edition](https://www.manim.community) per Maus, ohne eine Zeile Code zu schreiben.
-Im Hintergrund erzeugt die App ein gültiges Manim-Skript und rendert es mit Manim. Das Skript lässt sich jederzeit ansehen und exportieren.
+[![CI](https://github.com/Billi-Bons-minions/Ganim/actions/workflows/ci.yml/badge.svg)](https://github.com/Billi-Bons-minions/Ganim/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Python 3.10–3.13](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue.svg)
 
-Die Oberfläche ist auf **Deutsch und Englisch** verfügbar (umschaltbar unter *Bearbeiten → Einstellungen*).
+**Manim Studio lets you build math animations with the mouse.** You place objects on a stage, add animations on a timeline and press *Preview*. In the background the app writes a clean [Manim Community](https://www.manim.community) script and renders it with Manim. You never have to write Python, but you can always look at the script, export it and keep working on it by hand.
 
----
+The interface is available in **English and German** (*Edit → Settings*). A German guide is in [docs/ANLEITUNG.md](docs/ANLEITUNG.md).
 
-## Funktionen
+![Manim Studio with the template "Analyze a function"](docs/images/screenshot-dark.png)
 
-| Bereich | Möglichkeiten |
-|---|---|
-| **Objekte** | Kreis, Quadrat, Rechteck, Dreieck, Ellipse, Linie, Pfeil, Punkt, Text, Formel (MathTex), Koordinatensystem (Axes), Zahlenebene (NumberPlane), Funktionsgraph (Term als Eingabe, z. B. `2x^2 + sin(x)`), Bild (PNG/JPG/SVG) |
-| **Bühne** | Manim-Koordinaten (Ursprung in der Mitte, y nach oben, Rahmen 14,22 × 8), Raster, Einrasten, Auswählen (auch per Rahmen), Verschieben, Skalieren und Drehen mit Griffen, Zoom (Strg + Mausrad), Verschieben der Ansicht mit der mittleren Maustaste |
-| **Eigenschaften** | Name, Position, Größe, Drehung, Linien- und Füllfarbe (Manim-Palette oder frei), Deckkraft, Strichstärke, Text, Schriftgröße, Ebene, Sichtbarkeit am Anfang |
-| **Zeitleiste** | Schritte mit einer oder mehreren gleichzeitigen Animationen (= ein `self.play(...)`), Warte-Schritte (= `self.wait(...)`), Hinzufügen, Löschen, Duplizieren, Umsortieren per Drag & Drop. Ein Klick auf einen Schritt zeigt den Zustand nach diesem Schritt |
-| **Animationen** | Create, Write, DrawBorderThenFill, FadeIn, FadeOut, GrowFromCenter, Transform, ReplacementTransform, Bewegen, Skalieren, Drehen, Farbe ändern, Indicate, Circumscribe, Uncreate, jeweils mit Dauer und Rate-Funktion |
-| **Vorschau & Export** | Schnellvorschau (480p) im eingebetteten Player; Export als MP4, GIF oder PNG (Ende der Szene oder Zustand nach einem Schritt), Auflösung, FPS, Qualität, Hintergrundfarbe, Ausgabeordner, Fortschritt und Abbrechen |
-| **Code** | Schreibgeschützte Code-Ansicht mit Syntaxhervorhebung, Export als `.py` |
-| **Projekt** | Neu/Öffnen/Speichern/Speichern unter (JSON, `.msproj`), zuletzt geöffnete Projekte, mehrere Szenen pro Projekt, Undo/Redo für alle Änderungen, Kopieren/Einfügen/Duplizieren/Löschen |
-| **Robustheit** | Prüfung von Manim, FFmpeg und LaTeX beim Start; verständliche Fehlermeldungen und vollständiges Render-Log; Nutzereingaben werden sicher eingebettet (kein `eval`) |
+## Made with Manim Studio
 
----
+All of these clips were made from the built-in templates and exported as GIF by the app itself, without touching any code.
+
+| | | |
+|---|---|---|
+| ![Analyze a function](docs/images/analysis.gif) | ![Explore a parameter](docs/images/parameter.gif) | ![Graph theory: a path](docs/images/network.gif) |
+| Zeros and extrema of a function | A slider (parameter) moves a point along a graph | Highlighting a path in a network |
+| ![Linear map](docs/images/linear_map.gif) | ![3D solids](docs/images/solids.gif) | ![Vector field](docs/images/flow.gif) |
+| A shear applied to the coordinate grid | 3D solids with a camera move | Stream lines of a vector field |
+
+## Features
+
+**Objects**
+- Shapes: circle, square, rectangle, triangle, ellipse, polygon, regular polygon, star, arc, sector, ring, line, dashed line, arrow, double arrow, vector, dot, brace, highlight (frame, background, underline, strike-through), angle marks, motion traces
+- Text: text with colored words, Markup text, bullet lists, code blocks with syntax highlighting, tables; with LaTeX also formulas (`MathTex`, `Tex`) with colored parts and matrices
+- Math: number line, number plane, coordinate system with labels, function graphs (`2x^2 + sin(x)`, piecewise, parametric, polar, implicit `f(x, y) = 0`, derivatives), area under a curve, Riemann rectangles, tangents, points on graphs, zeros/extrema/inflection points/intersections, graph labels, data points with regression lines, bar charts (CSV import), vector fields (arrows or stream lines), networks of vertices and edges (Manim's `Graph`/`DiGraph` with several layouts)
+- 3D: 3D axes, surfaces `z = f(x, y)`, 3D curves, solids (sphere, cube, box, cone, cylinder, torus), camera orbits and camera moves
+- Images (PNG, JPG, SVG), groups, layers, lock/hide, align and distribute
+
+**Animations** (each with duration, delay and easing)
+- Appear: Create, Write, Fade in (with direction and zoom), Grow, Spin in, Border then fill, Add letters, Type with cursor, Grow arrow, Grow from edge, One by one
+- Change: Move, Scale, Rotate (also around a fixed point), Change color, Move along a path, Swap, **Linear map** (`ApplyMatrix`), Change value of a parameter, 3D camera orbit
+- Transform: Transform, Replacement transform, Fade transform, Transform matching shapes, Transform from copy
+- Emphasize: Indicate, Circumscribe, Flash, Wiggle, Apply wave, Focus on, Passing flash, Broadcast, **Highlight vertices/edges** of a network
+- Disappear: Fade out, Uncreate, Unwrite, Shrink to center
+- Steps play their animations together, staggered or one after another. A 2D camera can move and zoom, and **objects can be coupled** (Manim updaters): a label can follow a moving dot, the camera can follow an object, and a position can come from a formula like `x = 2 cos(w)`, `y = 2 sin(w)` driven by a parameter.
+
+**Parameters (ValueTracker)**: sliders such as `a` can be used in every formula (graphs, areas, tangents, surfaces, vector fields, positions) and animated with *Change value*. The stage updates live.
+
+**Stage and timeline**
+- The stage uses Manim's coordinates and shows every moment of the animation: press *Space* to play it on the stage without rendering
+- Edits at a timeline step are recorded as animations (like keyframes in presentation software)
+- Undo/redo for everything, copy and paste between scenes, several scenes per project
+- Video formats 16:9, 9:16 (shorts), 1:1 and 4:3
+
+**Preview and export**
+- Quick preview (480p or 720p) inside the app, also starting from any step
+- Export as **MP4, WebM, MOV, GIF or PNG** (last frame or state after a step) in 480p, 720p, 1080p, 1440p, 4K or a custom size; transparent background (MOV/WebM/PNG)
+- All scenes as separate videos or joined into one (hard cut or fade), sections as separate clips, subtitles (`.srt`) and sound per step
+- Export of the generated Python script; the code view shows it at any time
+
+**More**
+- 13 templates (e.g. title card, function analysis, Pythagorean theorem, orbit, 3D solids, conic sections, presentation slide, graph theory, linear map) and 5 example projects in the welcome dialog
+- Interactive tour, hover previews for every animation, a list of all keyboard shortcuts (*F1*)
+- Dark and light theme, adjustable UI scale, German and English
+- Autosave and recovery after a crash, project packages (project and images in one file), your own styles, building blocks and templates
+- Import of simple Manim scripts, custom code steps for advanced users, plugins (see [examples/plugins](examples/plugins))
+- Clear error messages: missing Manim/LaTeX/FFmpeg is detected at start, render errors are explained (for LaTeX, with the formula that failed), and the full render log is one click away
+
+### What Manim Studio does not do (yet)
+- It has no installer or app bundle yet: you install it with Python (see below).
+- The script import understands the code Manim Studio writes and simple hand-written scenes, not arbitrary Manim code (networks, for example, are skipped with a note).
+- 3D scenes are limited to the objects listed above; moving and rotating 3D solids is not possible as an animation.
 
 ## Installation
 
-Voraussetzung ist **Python 3.10 oder neuer**. Manim braucht außerdem einige Systembibliotheken.
-**LaTeX ist optional**: Ohne LaTeX funktioniert alles außer Formeln (MathTex).
+You need **Python 3.10 to 3.13**. Manim needs a few system libraries; **LaTeX is optional** (without it everything works except formulas).
 
-> FFmpeg: Manim ab Version 0.18 bringt über das Paket *PyAV* eigene FFmpeg-Bibliotheken mit. Ein separat installiertes FFmpeg ist deshalb meist nicht nötig, schadet aber nicht.
+FFmpeg: Manim brings its own FFmpeg libraries (via *PyAV*), so a separate FFmpeg is usually not needed.
 
 ### Windows
-
-1. Python von [python.org](https://www.python.org/downloads/) installieren und dabei *„Add Python to PATH“* ankreuzen.
-2. Optional für Formeln: [MiKTeX](https://miktex.org/download) installieren und die automatische Paketinstallation erlauben.
-3. In der Eingabeaufforderung (im Projektordner):
+1. Install Python from [python.org](https://www.python.org/downloads/) and tick *"Add Python to PATH"*.
+2. Optional, for formulas: install [MiKTeX](https://miktex.org/download) and allow it to install packages automatically.
+3. In a command prompt:
    ```bat
-   python -m venv .venv
-   .venv\Scripts\activate
-   pip install -r requirements.txt
+   python -m venv manim-studio-env
+   manim-studio-env\Scripts\activate
+   pip install git+https://github.com/Billi-Bons-minions/Ganim
+   manim-studio
    ```
 
 ### macOS
-
-1. [Homebrew](https://brew.sh) installieren, dann:
+1. Install [Homebrew](https://brew.sh), then:
    ```bash
-   brew install python py3cairo pango pkg-config ffmpeg
+   brew install python py3cairo pango pkg-config
    ```
-2. Optional für Formeln:
+2. Optional, for formulas: `brew install --cask mactex-no-gui`
+3. Then:
    ```bash
-   brew install --cask mactex-no-gui
-   ```
-3. Im Projektordner:
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
+   python3 -m venv manim-studio-env
+   source manim-studio-env/bin/activate
+   pip install git+https://github.com/Billi-Bons-minions/Ganim
+   manim-studio
    ```
 
 ### Linux (Debian/Ubuntu)
-
-1. Systempakete installieren:
+1. System packages:
    ```bash
    sudo apt install python3-venv python3-dev build-essential libcairo2-dev libpango1.0-dev pkg-config ffmpeg
    ```
-2. Optional für Formeln:
+2. Optional, for formulas:
    ```bash
    sudo apt install texlive texlive-latex-extra dvisvgm
    ```
-3. Im Projektordner:
+3. Then:
    ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
+   python3 -m venv manim-studio-env
+   source manim-studio-env/bin/activate
+   pip install git+https://github.com/Billi-Bons-minions/Ganim
+   manim-studio
    ```
+Other distributions have similar packages (Fedora: `cairo-devel pango-devel`). See also the [Manim installation guide](https://docs.manim.community/en/stable/installation.html).
 
-Bei anderen Distributionen heißen die Pakete ähnlich (z. B. Fedora: `cairo-devel pango-devel`). Details stehen in der [Manim-Installationsanleitung](https://docs.manim.community/en/stable/installation.html).
+### From a clone (for development)
+```bash
+git clone https://github.com/Billi-Bons-minions/Ganim.git
+cd Ganim
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+python -m manim_studio             # or: manim-studio
+```
+You can open a project directly: `manim-studio my-project.msproj`.
 
----
+At the first start Manim Studio checks in the background whether Manim, FFmpeg and LaTeX are available and tells you what is missing (again under *Render → System Check …*). If Manim lives in a different Python environment, choose its interpreter under *Edit → Settings → Python for Manim*.
 
-## Starten
+## Quickstart: your first animation in two minutes
 
-Bei aktivierter virtueller Umgebung im Projektordner:
+**Goal:** a circle appears, turns into a square, then a text is written.
+
+1. In the **Objects** panel on the left, click *Circle*, *Square* and *Text* (or drag them onto the stage). Put the square on top of the circle.
+2. Click the **circle**, then in the timeline **Animation ▾ → Create**. *Step 1* appears.
+3. Click the **circle**, hold **Ctrl** and click the **square**, then **Animation ▾ → Transform**. The first selected object turns into the second (*Step 2*).
+4. Click the **text**, then **Animation ▾ → Write** (*Step 3*). Change the text in the properties panel on the right.
+5. Press **Space** to play it on the stage, or **F5** for a real Manim preview.
+6. **File → Export …**: choose *Video (MP4)*, the quality and a folder, then *Export*.
+
+Good to know:
+- **Steps:** all animations of a step play at the same time (or staggered / one after another, see *Timing*). *Animation ▾* creates a new step; the buttons in the properties panel add to the timeline as well.
+- **Visibility:** an object stays invisible until an animation brings it in (Create, Write, Fade in …). Invisible objects are shown as faint "ghosts" on the stage.
+- **Stage and timeline:** with *Start* selected, dragging changes where an object starts. With a step selected, dragging records a *Move*, *Scale* or *Rotate* animation in that step.
+- **Formulas for graphs** accept `x`, numbers, `+ - * / ^`, brackets, implicit multiplication (`2x`, `3sin(x)`), `pi`, `e`, and `sin cos tan asin acos atan sinh cosh tanh exp log ln log10 log2 sqrt abs floor ceil sign`.
+- **Shortcuts:** *F1* shows all of them. The most important ones: *Ctrl+Z/Y* undo/redo, *Ctrl+D* duplicate, *Del* delete, *Ctrl+T* new step, *Ctrl+W* wait step, *Space* play on stage, *F5* preview, *Ctrl+E* export.
+
+## Examples and templates
+
+- **Templates** (*Scene → New scene from template*): title and subtitle, analyze a function, explore a parameter, compare two columns, analyze data, Pythagorean theorem, orbit with trace, flow (vector field), 3D solids with camera move, conic sections, presentation slide, graph theory (a path), linear map (shear).
+- **Example projects** (welcome dialog): circle becomes square, function graph, motion, formula, title card.
+- The folder [examples](examples) contains example projects to open with *File → Open* and an example plugin.
+
+## The generated script
+
+The code view shows the complete script at any time; *File → Export Script (.py) …* saves it as a `.py` file that renders without Manim Studio:
 
 ```bash
-python -m manim_studio
+manim -pql my_scene.py Scene1
 ```
 
-Ein Projekt lässt sich direkt mit öffnen: `python -m manim_studio meinprojekt.msproj`
+Every scene becomes a class, every object a variable, every step one `self.play(...)` or `self.wait(...)`. Texts, formulas and file names are embedded as checked string literals; function terms are parsed and checked against a fixed list of allowed building blocks. User input is never passed to `eval`.
 
-Beim ersten Start prüft Manim Studio im Hintergrund, ob Manim, FFmpeg und LaTeX vorhanden sind. Fehlt etwas, erscheint ein Hinweis mit Installationsanleitung (erneut aufrufbar unter *Rendern → Systemprüfung*).
-Liegt Manim in einer anderen Python-Umgebung, stellst du den Interpreter unter *Bearbeiten → Einstellungen → Python für Manim* ein.
+## Troubleshooting
 
----
-
-## Bedienung in 2 Minuten
-
-**Beispiel:** Ein Kreis erscheint, verwandelt sich in ein Quadrat, dann wird ein Text geschrieben.
-
-1. Links in **Objekte hinzufügen** auf *Kreis*, *Quadrat* und *Text* klicken (oder sie auf die Bühne ziehen). Objekte mit der Maus platzieren; das Quadrat darf auf dem Kreis liegen.
-2. Den **Kreis** anklicken, dann in der Zeitleiste **Animation ▾ → Erstellen (Create)**. Es entsteht *Schritt 1*.
-3. **Kreis** anklicken, mit **Strg** zusätzlich das **Quadrat** anklicken, dann **Animation ▾ → Verwandeln (Transform)**. Das erste gewählte Objekt verwandelt sich in das zweite (*Schritt 2*).
-4. Den **Text** anklicken, dann **Animation ▾ → Schreiben (Write)** (*Schritt 3*). Den Text änderst du rechts im Eigenschaften-Panel.
-5. **F5** drücken: Die Vorschau wird gerendert und im Player abgespielt.
-6. **Datei → Exportieren …**: Format *Video (MP4)*, Qualität und Ordner wählen, dann *Exportieren*.
-
-### Wichtige Konzepte
-
-- **Schritte:** Alle Animationen eines Schritts laufen gleichzeitig. *Animation ▾* legt einen neuen Schritt an; mit **+** neben der Animationsliste kommt eine Animation in den aktuellen Schritt.
-- **Sichtbarkeit:** Ein Objekt ist automatisch unsichtbar, bis es durch eine Einblend-Animation (Create, Write, FadeIn …) erscheint oder als Ziel einer Verwandlung dient. Unsichtbare Objekte zeigt die Bühne als blasse „Geister“. Unter *Am Anfang sichtbar* lässt sich das fest einstellen.
-- **Bühne und Zeitleiste:** Ist **Start** gewählt, ändert Ziehen, Skalieren und Drehen die Startwerte. Ist ein **Schritt** gewählt, verändert Ziehen den Zielwert der *Bewegen*-, *Skalieren*- oder *Drehen*-Animation dieses Objekts in genau diesem Schritt. Ohne passende Animation ist das Objekt dort gesperrt; ein Hinweis erklärt, warum.
-- **Funktionsgraph:** Gibt es ein Koordinatensystem, wird ein neuer Graph automatisch daran gebunden (`axes.plot(...)`). Erlaubt sind `x`, Zahlen (auch `0,5`), `+ - * / ^`, Klammern, implizite Multiplikation (`2x`, `3sin(x)`), `pi`, `e`, `tau` und die Funktionen `sin cos tan asin acos atan sinh cosh tanh exp log ln log10 log2 sqrt abs floor ceil sign`.
-
-### Tastenkürzel
-
-| Aktion | Kürzel |
+| Problem | Solution |
 |---|---|
-| Neu / Öffnen / Speichern / Speichern unter | Strg+N / Strg+O / Strg+S / Strg+Umschalt+S |
-| Rückgängig / Wiederholen | Strg+Z / Strg+Y bzw. Strg+Umschalt+Z |
-| Ausschneiden / Kopieren / Einfügen / Duplizieren | Strg+X / Strg+C / Strg+V / Strg+D |
-| Löschen (Objekte bzw. Schritt, je nach Fokus) | Entf |
-| Alles auswählen | Strg+A |
-| Objekt verschieben | Pfeiltasten (mit Umschalt: 1 Einheit) |
-| Einrasten kurz aussetzen | Alt beim Ziehen |
-| Eine Ebene nach vorne / hinten | Strg+] / Strg+[ |
-| Schritt hinzufügen / Warte-Schritt | Strg+T / Strg+W |
-| Vorheriger / nächster Schritt, Start, Ende | Bild↑ / Bild↓ / Pos1 / Ende |
-| Raster / Einrasten / Unsichtbare zeigen | Strg+G / Strg+Umschalt+G / Strg+H |
-| Einpassen / Zoom | Strg+0 / Strg+Plus, Strg+Minus, Strg+Mausrad |
-| Vorschau / Abbrechen / Exportieren / Skript exportieren | F5 / Umschalt+F5 / Strg+E / Strg+Umschalt+E |
-| Neue Szene / Szene umbenennen | Strg+Umschalt+N / F2 |
+| "Manim is not installed in the configured Python interpreter" | Run `pip install manim` in that environment, or pick the right interpreter under *Edit → Settings → Python for Manim*. |
+| Formulas only show their source in grey | LaTeX is missing (`latex` and `dvisvgm` must be on the PATH) or the formula has an error; the note in the properties panel tells you which. |
+| Rendering fails | The message names the cause; the full log is in the *Render Log* tab. |
+| On Linux the app does not start (Qt platform error) | Install the missing Qt libraries, e.g. `sudo apt install libxcb-cursor0`. |
+| `pip install` fails while building `manimpango` or `pycairo` | The Cairo/Pango development packages are missing (see the installation steps for your system). |
 
----
-
-## Das erzeugte Skript
-
-Die Code-Ansicht zeigt jederzeit das vollständige Skript. Über *Datei → Skript exportieren* speicherst du es als `.py`-Datei und kannst es ohne Manim Studio rendern:
+## Development
 
 ```bash
-manim -pql meine_szene.py Szene1
+pip install -e ".[dev]"
+QT_QPA_PLATFORM=offscreen pytest -q          # all tests, including real Manim renders (a few minutes)
+QT_QPA_PLATFORM=offscreen pytest -q -m "not manim"   # without Manim renders (about a minute)
+ruff check manim_studio tests tools examples
 ```
 
-Jede Szene wird zu einer Klasse (Name aus dem Szenennamen, z. B. *Szene 1* → `Szene1`), jedes Objekt zu einer Variablen (z. B. *Kreis 1* → `kreis_1`), jeder Schritt zu genau einem `self.play(...)` oder `self.wait(...)`.
-Bewegen, Skalieren, Drehen und Farbe ändern desselben Objekts im selben Schritt werden zu einer `.animate`-Kette zusammengefasst.
+`tools/fuzz_sessions.py` plays random editing sessions through the real app and checks every result with Manim. How the code is organized and how to add an object or animation is described in [CONTRIBUTING.md](CONTRIBUTING.md). Changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
-Texte, Formeln und Dateipfade werden als geprüfte String-Literale eingebettet; Funktionsterme werden geparst und gegen eine feste Liste erlaubter Bausteine geprüft. Es wird nie `eval` auf Eingaben angewendet.
+## License
 
----
+Manim Studio is released under the [MIT License](LICENSE).
 
-## Projektstruktur
+It uses [Manim Community](https://www.manim.community) (MIT), [PySide6 / Qt for Python](https://doc.qt.io/qtforpython/) (LGPL-3.0), NumPy (BSD) and NetworkX (BSD). Manim renders with FFmpeg via PyAV and, for formulas, with your LaTeX installation. If you distribute Manim Studio together with these libraries (e.g. as a bundled app), their licenses apply to them; for PySide6 this means the LGPL-3.0 conditions.
 
-```
-manim_studio/
-├── __main__.py          Einstieg für "python -m manim_studio"
-├── app.py               QApplication, Sprache, Hauptfenster
-├── i18n/                alle Texte zentral: de.py, en.py, tr()
-├── model/               Datenmodell (einzige Quelle der Wahrheit), ohne Qt
-│   ├── entities.py      Dataclasses: Project → Scene → SceneObject / Step → Animation
-│   ├── types.py         Enums, Rate-Funktionen, Farbpalette
-│   ├── schema.py        Parameter je Objekt-/Animationstyp (steuert das Eigenschaften-Panel)
-│   ├── expression.py    sicherer Parser für Funktionsterme
-│   ├── geometry.py      Achsen-Layout, Abtastung von Graphen
-│   ├── state.py         Zustand der Szene nach Schritt n
-│   ├── operations.py    alle Änderungen am Modell
-│   ├── stage_edits.py   Regeln für kontextabhängiges Bearbeiten auf der Bühne
-│   ├── animation_builder.py, factory.py, validation.py, serialization.py, assets.py
-├── codegen/             Modell → Manim-Skript (deterministisch), ohne Qt
-├── render/              Manim per QProcess, Fortschritt, Fehleranalyse, Systemprüfung, LaTeX-Vorschau
-└── ui/                  Fenster, Bühne, Panels, Dialoge (keine Manim-Logik)
-    ├── document.py      Projekt + QUndoStack (Snapshot-Befehle)
-    ├── controller.py    alle Bearbeitungsbefehle
-    ├── stage/           QGraphicsView-Bühne, Zeichnen der Objekte, Griffe
-    ├── panels/          Bibliothek, Objektliste, Eigenschaften, Zeitleiste, Player, Code, Log
-    └── dialogs/         Export, Einstellungen, Systemprüfung, Meldungen
-tests/                   pytest
-```
+## Deutsch
 
-Die UI ändert nur das Modell (über `ProjectDocument.edit_scene`, damit jede Änderung rückgängig gemacht werden kann). Bühne, Code-Ansicht und Zeitleiste werden aus dem Modell neu aufgebaut.
-
----
-
-## Tests
-
-```bash
-pytest                 # alle Tests (inkl. echter Manim-Renderläufe, ca. 10–30 s)
-pytest -m "not manim"  # nur die schnellen Tests ohne Manim-Rendering
-```
-
-Die Tests prüfen unter anderem:
-- den Code-Generator gegen erwartete Skripte (vollständige Golden-Tests und alle Objekt- und Animationstypen),
-- die sichere Einbettung bösartiger Eingaben,
-- den Formel-Parser, Zustandsberechnung, Speichern/Laden (identisches Modell nach dem Neuladen),
-- die Vollständigkeit beider Sprachen,
-- das echte Rendern erzeugter Skripte mit Manim,
-- einen Offscreen-Durchlauf der Oberfläche.
-
----
-
-## Fehlerbehebung
-
-| Problem | Lösung |
-|---|---|
-| „Manim ist im eingestellten Python-Interpreter nicht installiert“ | `pip install manim` in der verwendeten Umgebung ausführen oder unter *Einstellungen → Python für Manim* den richtigen Interpreter wählen. |
-| Formeln werden nur als grauer Quelltext angezeigt | LaTeX fehlt (`latex` und `dvisvgm` müssen im PATH liegen) oder die Formel enthält einen Fehler; der Hinweis im Eigenschaften-Panel nennt den Grund. |
-| Rendern schlägt fehl | Die Meldung nennt die Ursache; das vollständige Log steht im Tab *Render-Log* und lässt sich speichern. |
-| Die Vorschau spielt nicht ab | Mit *Extern öffnen* im Systemplayer abspielen. Die Datei liegt im Cache-Ordner der App. |
-| Unter Linux startet die App nicht (Qt-Plattform-Fehler) | Fehlende Qt-Abhängigkeiten installieren, z. B. `sudo apt install libxcb-cursor0`. |
+Manim Studio ist eine Desktop-App, mit der du Manim-Animationen per Maus baust – ohne Code. Die Oberfläche gibt es komplett auf Deutsch (auf deutschen Systemen automatisch, sonst unter *Bearbeiten → Einstellungen → Sprache*). Installation und Bedienung auf Deutsch: **[docs/ANLEITUNG.md](docs/ANLEITUNG.md)**.

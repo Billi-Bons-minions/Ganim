@@ -1242,4 +1242,7 @@ STRINGS: dict[str, str] = {
     "aparam.pivot_y": "Drehpunkt y",
     "choice.pivot.center": "eigene Mitte",
     "choice.pivot.point": "fester Punkt",
+    "action.camera_zoom": "Kamera auf Auswahl zoomen",
+    "action.camera_reset": "Kamera zurück auf das ganze Bild",
+    "status.camera_zoom_2d_only": "Zoomen auf die Auswahl gibt es nur in 2D-Szenen. In 3D-Szenen die Kamera umkreisen lassen.",
 }

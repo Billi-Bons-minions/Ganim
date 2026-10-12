@@ -703,6 +703,39 @@ class EditorController(QObject):
         animations = [create_animation(AnimationKind.FADE_OUT, object_id) for object_id in ids]
         self._insert_animations(animations, False, AnimationKind.FADE_OUT, False)
 
+    def zoom_camera(self, center: tuple[float, float] | None, size: tuple[float, float] | None, frame: tuple[float, float]) -> None:
+        """Add a step that moves and zooms the camera onto a region (``None`` = back to the start view).
+
+        ``frame`` is the size of the video frame in Manim units.
+        """
+        scene = self.scene()
+        from manim_studio.model.three_d import is_3d
+
+        if is_3d(scene):
+            self.statusMessage.emit(tr("status.camera_zoom_2d_only"))
+            return
+        camera = next((obj for obj in scene.objects if obj.kind == ObjectKind.CAMERA), None)
+        if camera is None:
+            if center is None:
+                return
+            camera_id = self.add_object(ObjectKind.CAMERA)
+            camera = self.scene().object_by_id(camera_id)
+            scene = self.scene()
+        state = states_after(scene, self.editor.cursor).get(camera.id)
+        base_width = float(camera.params.get("width", 0.0) or 0.0) or frame[0]
+        current = base_width * (state.scale if state is not None else 1.0)
+        if center is None or size is None:
+            target_center, target_width = (camera.x, camera.y), base_width
+        else:
+            # leave a margin and keep the video's aspect ratio
+            target_center = center
+            target_width = max(size[0] * 1.3, size[1] * 1.3 * frame[0] / frame[1], 0.5)
+        animations = [
+            create_animation(AnimationKind.MOVE, camera.id, run_time=1.5, x=round(target_center[0], 4), y=round(target_center[1], 4)),
+            create_animation(AnimationKind.SCALE, camera.id, run_time=1.5, factor=round(target_width / current, 5)),
+        ]
+        self._insert_animations(animations, False, AnimationKind.MOVE, False)
+
     def add_transform_to_new(self, kind: AnimationKind, source_id: str, new_kind: ObjectKind, same_step: bool) -> None:
         """Create a hidden object at the source's position and transform into it."""
         source = self.scene().object_by_id(source_id)

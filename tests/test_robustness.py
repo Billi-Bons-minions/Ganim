@@ -219,3 +219,26 @@ def test_exits_of_hidden_objects_are_reported() -> None:
     )
     issues = [issue for issue in validate_scene(scene) if issue.code == "animated_while_hidden"]
     assert [issue.animation_id for issue in issues] == ["a2", "a3"] and not has_errors(issues)
+
+
+def test_camera_zooms_onto_the_selection(window) -> None:
+    import pytest
+
+    from manim_studio.codegen import generate_script
+    from manim_studio.model.state import states_after
+
+    controller = window.controller
+    small = controller.add_object(ObjectKind.CIRCLE, 3.0, 1.0, radius=0.5)
+    window.refresh_stage()
+    window.editor.select_objects([small])
+    window.zoom_camera_to_selection()
+    scene = window.editor.scene()
+    camera = next(obj for obj in scene.objects if obj.kind == ObjectKind.CAMERA)
+    end = states_after(scene, len(scene.steps) - 1)[camera.id]
+    assert (end.x, end.y) == pytest.approx((3.0, 1.0), abs=0.05)
+    assert 0.1 < end.scale < 0.3  # a circle of 1 unit fills the frame with a margin
+    window.act_camera_reset.trigger()
+    scene = window.editor.scene()
+    end = states_after(scene, len(scene.steps) - 1)[camera.id]
+    assert (end.x, end.y, end.scale) == pytest.approx((0.0, 0.0, 1.0), abs=1e-3)
+    assert "self.camera.frame.animate(" in generate_script(window.document.project)

@@ -100,6 +100,9 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
   - Zeichen wählbar: •, –, 1., a) oder keins.
 - Neue Animation „Nacheinander zeigen“ für Listen und Gruppen (`LaggedStart`).
 - „Drehen“ kann jetzt um einen festen Punkt drehen (`Rotate(..., about_point=...)`), z. B. für Uhrzeiger, Pendel oder den Einheitskreis.
+- Menü „Zeitleiste“:
+  - „Kamera auf Auswahl zoomen“ legt einen Schritt mit Kamerafahrt und Zoom auf die markierten Objekte an, bei Bedarf samt Kamera.
+  - „Kamera zurück auf das ganze Bild“.
 
 ### Halbfertig
 - (nichts)

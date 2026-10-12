@@ -212,6 +212,8 @@ class MainWindow(QMainWindow):
         self.act_add_step = self._action("add_step", lambda: c.add_step(StepKind.PLAY), "Ctrl+T", "plus")
         self.act_add_wait = self._action("add_wait", lambda: c.add_step(StepKind.WAIT), "Ctrl+W", "clock")
         self.act_fade_out_all = self._action("fade_out_all", c.fade_out_all, "Ctrl+Shift+F", "a_fade_out")
+        self.act_camera_zoom = self._action("camera_zoom", self.zoom_camera_to_selection, None, "camera")
+        self.act_camera_reset = self._action("camera_reset", lambda: self.controller.zoom_camera(None, None, frame_size(self.document.project.aspect)), None, "fit")
         self.act_add_code = self._action("add_code_step", lambda: c.add_step(StepKind.CODE), None, "code")
         self.act_duplicate_step = self._action("duplicate_step", c.duplicate_step, None, "duplicate")
         self.act_delete_step = self._action("delete_step", c.delete_step, None, "trash")
@@ -305,6 +307,8 @@ class MainWindow(QMainWindow):
         self.simultaneous_menu.aboutToShow.connect(lambda: build_animation_menu(self.simultaneous_menu, self.controller, True))
         timeline_menu.addSeparator()
         timeline_menu.addActions([self.act_add_step, self.act_add_wait, self.act_fade_out_all, self.act_add_code, self.act_duplicate_step, self.act_delete_step])
+        timeline_menu.addSeparator()
+        timeline_menu.addActions([self.act_camera_zoom, self.act_camera_reset])
         timeline_menu.addSeparator()
         timeline_menu.addActions([self.act_start, self.act_prev_step, self.act_next_step, self.act_end])
         timeline_menu.addSeparator()
@@ -622,6 +626,19 @@ class MainWindow(QMainWindow):
                 self.still.request()
             else:
                 self.stage.set_exact_image(None)
+
+    def zoom_camera_to_selection(self) -> None:
+        """Let the camera move to the selected objects and zoom in on them (new step)."""
+        scene = self.editor.scene()
+        ids = [i for i in self.editor.selected_objects if (obj := scene.object_by_id(i)) is not None and obj.kind != ObjectKind.CAMERA]
+        rect = QRectF()
+        for object_id in ids:
+            rect = rect.united(self.stage.item_rect(object_id))
+        if not ids or rect.isNull():
+            self.show_status(tr("status.select_object_first"))
+            return
+        center = (rect.center().x() / PX, -rect.center().y() / PX)
+        self.controller.zoom_camera(center, (rect.width() / PX, rect.height() / PX), frame_size(self.document.project.aspect))
 
     def _motion_paths(self, scene, cursor: int) -> list:
         if not is_recording(scene, cursor):

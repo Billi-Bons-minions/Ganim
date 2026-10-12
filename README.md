@@ -14,7 +14,7 @@ The interface is available in **English and German** (*Edit → Settings*). A Ge
 
 ## Made with Manim Studio
 
-All of these clips were made from the built-in templates and exported as GIF by the app itself, without touching any code.
+All of these clips were made from the built-in templates and the projects in [examples](examples), and exported as GIF by the app itself, without touching any code.
 
 | | | |
 |---|---|---|
@@ -22,6 +22,8 @@ All of these clips were made from the built-in templates and exported as GIF by 
 | Zeros and extrema of a function | A slider (parameter) moves a point along a graph | Highlighting a path in a network |
 | ![Linear map](docs/images/linear_map.gif) | ![3D solids](docs/images/solids.gif) | ![Vector field](docs/images/flow.gif) |
 | A shear applied to the coordinate grid | 3D solids with a camera move | Stream lines of a vector field |
+| ![Coupled objects](docs/images/coupling.gif) | ![Polar curves](docs/images/polar.gif) | ![Vectors in space](docs/images/vectors.gif) |
+| A label follows a dot; a dot driven by a parameter | Polar grid, a rose turns into a cardioid | Vector addition in space with a camera orbit |
 
 ## Features
 

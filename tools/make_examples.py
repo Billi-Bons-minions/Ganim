@@ -67,6 +67,57 @@ def coupling() -> Project:
     return project
 
 
+def polar_curves() -> Project:
+    """A polar grid with a rose and a cardioid drawn one after the other."""
+    project = create_project("Polar curves")
+    scene = project.scenes[0]
+    plane = create_object(ObjectKind.NUMBER_PLANE, "Polar grid", 0.0, 0.0, grid="polar", azimuth_divisions=12)
+    plane.stroke_opacity = 0.6
+    rose = create_object(ObjectKind.FUNCTION_GRAPH, "Rose", curve="polar", r_expression="3 cos(2t)", axes_id=plane.id)
+    rose.stroke_color = "#FC6255"
+    cardioid = create_object(ObjectKind.FUNCTION_GRAPH, "Cardioid", curve="polar", r_expression="1.5 (1 + cos(t))", axes_id=plane.id)
+    cardioid.stroke_color = "#F7D96F"
+    title = create_object(ObjectKind.TEXT, "Title", -4.4, 3.3, text="r = 3 cos(2θ)", font_size=36.0)
+    title.fill_color = "#FC6255"
+    title_2 = create_object(ObjectKind.TEXT, "Title 2", -4.4, 3.3, text="r = 1.5 (1 + cos θ)", font_size=36.0)
+    title_2.fill_color = "#F7D96F"
+    scene.objects += [plane, rose, cardioid, title, title_2]
+    scene.steps.append(create_play_step([create_animation(AnimationKind.CREATE, plane.id, run_time=1.5)]))
+    scene.steps.append(create_play_step([create_animation(AnimationKind.CREATE, rose.id, run_time=3.0), create_animation(AnimationKind.WRITE, title.id)]))
+    scene.steps.append(
+        create_play_step(
+            [
+                create_animation(AnimationKind.REPLACEMENT_TRANSFORM, rose.id, run_time=2.0, target=cardioid.id),
+                create_animation(AnimationKind.REPLACEMENT_TRANSFORM, title.id, run_time=2.0, target=title_2.id),
+            ]
+        )
+    )
+    scene.steps.append(create_wait_step(1.0))
+    return project
+
+
+def vectors_in_space() -> Project:
+    """Two vectors in space, their sum and a point, seen by an orbiting camera."""
+    project = create_project("Vectors in space")
+    scene = project.scenes[0]
+    axes = create_object(ObjectKind.AXES_3D, "Space", 0.0, 0.0)
+    a = create_object(ObjectKind.VECTOR_3D, "a", axes_id=axes.id, to_x=3.0, to_y=0.0, to_z=1.5)
+    b = create_object(ObjectKind.VECTOR_3D, "b", axes_id=axes.id, from_x=3.0, from_y=0.0, from_z=1.5, to_x=3.0, to_y=3.0, to_z=3.0)
+    b.stroke_color = b.fill_color = "#83C167"
+    total = create_object(ObjectKind.VECTOR_3D, "a + b", axes_id=axes.id, to_x=3.0, to_y=3.0, to_z=3.0)
+    total.stroke_color = total.fill_color = "#F7D96F"
+    tip = create_object(ObjectKind.VECTOR_3D, "P", axes_id=axes.id, element="point", to_x=3.0, to_y=3.0, to_z=3.0, radius=0.1)
+    tip.stroke_color = "#FFFFFF"
+    camera = create_object(ObjectKind.CAMERA, "Camera", 0.0, 0.0)
+    scene.objects += [axes, a, b, total, tip, camera]
+    scene.steps.append(create_play_step([create_animation(AnimationKind.CREATE, axes.id, run_time=1.5)]))
+    scene.steps.append(create_play_step([create_animation(AnimationKind.CREATE, a.id)]))
+    scene.steps.append(create_play_step([create_animation(AnimationKind.CREATE, b.id)]))
+    scene.steps.append(create_play_step([create_animation(AnimationKind.CREATE, total.id), create_animation(AnimationKind.FADE_IN, tip.id)]))
+    scene.steps.append(create_play_step([create_animation(AnimationKind.ORBIT, camera.id, run_time=3.0, phi=65.0, theta=-110.0)]))
+    return project
+
+
 EXAMPLES = {
     "circle-to-square.msproj": circle_to_square,
     "function-analysis.msproj": lambda: from_templates("Function analysis", "analysis", "parameter"),
@@ -75,6 +126,8 @@ EXAMPLES = {
     "linear-map.msproj": lambda: from_templates("Linear map", "linear_map"),
     "coupled-objects.msproj": coupling,
     "3d-and-fields.msproj": lambda: from_templates("3D and vector fields", "solids", "flow"),
+    "polar-curves.msproj": polar_curves,
+    "vectors-in-space.msproj": vectors_in_space,
 }
 
 

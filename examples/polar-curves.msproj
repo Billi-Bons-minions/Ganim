@@ -1,0 +1,310 @@
+{
+  "format": "manim-studio-project",
+  "version": 1,
+  "scenes": [
+    {
+      "id": "fc405af8f962",
+      "name": "Polar curves",
+      "background_color": "#000000",
+      "objects": [
+        {
+          "id": "df41cc23b391",
+          "kind": "number_plane",
+          "name": "Polar grid",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#29ABCA",
+          "fill_color": "#58C4DD",
+          "stroke_width": 2.0,
+          "stroke_opacity": 0.6,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "x_min": -7.0,
+            "x_max": 7.0,
+            "x_step": 1.0,
+            "x_length": 14.0,
+            "y_min": -4.0,
+            "y_max": 4.0,
+            "y_step": 1.0,
+            "y_length": 8.0,
+            "grid": "polar",
+            "azimuth_divisions": 12
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "c64e8028a4e8",
+          "kind": "function_graph",
+          "name": "Rose",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#FC6255",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "curve": "polar",
+            "expression": "sin(x)",
+            "derive_from": null,
+            "derive_order": "1",
+            "pieces": [
+              [
+                "x^2",
+                "-5",
+                "1"
+              ],
+              [
+                "2 - x",
+                "1",
+                "5"
+              ]
+            ],
+            "x_expression": "2cos(t)",
+            "y_expression": "sin(2t)",
+            "r_expression": "3 cos(2t)",
+            "implicit_expression": "x^2 + y^2 - 4",
+            "x_min": -5.0,
+            "x_max": 5.0,
+            "t_min": 0.0,
+            "t_max": 6.2832,
+            "axes_id": "df41cc23b391",
+            "clip": true
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "c0d1211dc7b6",
+          "kind": "function_graph",
+          "name": "Cardioid",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#F7D96F",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "curve": "polar",
+            "expression": "sin(x)",
+            "derive_from": null,
+            "derive_order": "1",
+            "pieces": [
+              [
+                "x^2",
+                "-5",
+                "1"
+              ],
+              [
+                "2 - x",
+                "1",
+                "5"
+              ]
+            ],
+            "x_expression": "2cos(t)",
+            "y_expression": "sin(2t)",
+            "r_expression": "1.5 (1 + cos(t))",
+            "implicit_expression": "x^2 + y^2 - 4",
+            "x_min": -5.0,
+            "x_max": 5.0,
+            "t_min": 0.0,
+            "t_max": 6.2832,
+            "axes_id": "df41cc23b391",
+            "clip": true
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "58eeff631c27",
+          "kind": "text",
+          "name": "Title",
+          "x": -4.4,
+          "y": 3.3,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FC6255",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "text": "r = 3 cos(2θ)",
+            "font_size": 36.0,
+            "font": "",
+            "bold": false,
+            "italic": false,
+            "alignment": "left",
+            "line_spacing": 0.0,
+            "colored_words": []
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "0e1599ef2a19",
+          "kind": "text",
+          "name": "Title 2",
+          "x": -4.4,
+          "y": 3.3,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#F7D96F",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "text": "r = 1.5 (1 + cos θ)",
+            "font_size": 36.0,
+            "font": "",
+            "bold": false,
+            "italic": false,
+            "alignment": "left",
+            "line_spacing": 0.0,
+            "colored_words": []
+          },
+          "locked": false,
+          "editor_hidden": false
+        }
+      ],
+      "steps": [
+        {
+          "id": "866db57502b2",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "c8d14165fc6f",
+              "kind": "create",
+              "target_id": "df41cc23b391",
+              "run_time": 1.5,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "74fa09944230",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "29ecc75c096a",
+              "kind": "create",
+              "target_id": "c64e8028a4e8",
+              "run_time": 3.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "276254418f80",
+              "kind": "write",
+              "target_id": "58eeff631c27",
+              "run_time": 1.0,
+              "rate_func": "linear",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "9f020fa0e3fc",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "cdf58c078500",
+              "kind": "replacement_transform",
+              "target_id": "c64e8028a4e8",
+              "run_time": 2.0,
+              "rate_func": "smooth",
+              "params": {
+                "target": "c0d1211dc7b6"
+              },
+              "delay": 0.0
+            },
+            {
+              "id": "8b8a7ff3548e",
+              "kind": "replacement_transform",
+              "target_id": "58eeff631c27",
+              "run_time": 2.0,
+              "rate_func": "smooth",
+              "params": {
+                "target": "0e1599ef2a19"
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "888a7d0d58d3",
+          "kind": "wait",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        }
+      ]
+    }
+  ],
+  "render": {
+    "quality": "h",
+    "width": 1920,
+    "height": 1080,
+    "fps": 60,
+    "format": "mp4",
+    "output_dir": "",
+    "png_after_step": -1,
+    "transparent": false,
+    "scenes": "current",
+    "transition": "cut",
+    "save_sections": false
+  },
+  "aspect": "16:9"
+}

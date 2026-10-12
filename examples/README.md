@@ -12,6 +12,8 @@ None of them needs LaTeX.
 | `linear-map.msproj` | A shear (2×2 matrix) applied to the coordinate grid and the basis vectors |
 | `coupled-objects.msproj` | A label that follows a moving dot, and a dot whose position comes from a formula `(2.5 + 2 cos(w), 2 sin(w))` |
 | `3d-and-fields.msproj` | 3D solids with a camera move; a vector field with stream lines |
+| `polar-curves.msproj` | A polar grid; a rose curve turns into a cardioid |
+| `vectors-in-space.msproj` | Vector addition in space (arrows and a point in 3D axes) with a camera orbit |
 
 `plugins/` contains an example extension (a dot grid, a style and a scene template). Copy it into the extensions folder (*Extensions → Manage extensions … → Open folder*) and enable it there.
 

@@ -1,0 +1,329 @@
+{
+  "format": "manim-studio-project",
+  "version": 1,
+  "scenes": [
+    {
+      "id": "ad052abe8c0c",
+      "name": "Vectors in space",
+      "background_color": "#000000",
+      "objects": [
+        {
+          "id": "b1978995158e",
+          "kind": "axes_3d",
+          "name": "Space",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#FFFFFF",
+          "fill_color": "#58C4DD",
+          "stroke_width": 2.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "x_min": -4.0,
+            "x_max": 4.0,
+            "x_step": 1.0,
+            "x_length": 6.0,
+            "y_min": -4.0,
+            "y_max": 4.0,
+            "y_step": 1.0,
+            "y_length": 6.0,
+            "z_min": -3.0,
+            "z_max": 3.0,
+            "z_step": 1.0,
+            "z_length": 4.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "ab38c377de84",
+          "kind": "vector_3d",
+          "name": "a",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#FC6255",
+          "fill_color": "#FC6255",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "axes_id": "b1978995158e",
+            "element": "arrow",
+            "from_x": 0.0,
+            "from_y": 0.0,
+            "from_z": 0.0,
+            "to_x": 3.0,
+            "to_y": 0.0,
+            "to_z": 1.5,
+            "radius": 0.08
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "b3b6c8c57722",
+          "kind": "vector_3d",
+          "name": "b",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#83C167",
+          "fill_color": "#83C167",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "axes_id": "b1978995158e",
+            "element": "arrow",
+            "from_x": 3.0,
+            "from_y": 0.0,
+            "from_z": 1.5,
+            "to_x": 3.0,
+            "to_y": 3.0,
+            "to_z": 3.0,
+            "radius": 0.08
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "fd6d98b75bfc",
+          "kind": "vector_3d",
+          "name": "a + b",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#F7D96F",
+          "fill_color": "#F7D96F",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "axes_id": "b1978995158e",
+            "element": "arrow",
+            "from_x": 0.0,
+            "from_y": 0.0,
+            "from_z": 0.0,
+            "to_x": 3.0,
+            "to_y": 3.0,
+            "to_z": 3.0,
+            "radius": 0.08
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "f68f36a9b8c1",
+          "kind": "vector_3d",
+          "name": "P",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#FFFFFF",
+          "fill_color": "#FC6255",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "axes_id": "b1978995158e",
+            "element": "point",
+            "from_x": 0.0,
+            "from_y": 0.0,
+            "from_z": 0.0,
+            "to_x": 3.0,
+            "to_y": 3.0,
+            "to_z": 3.0,
+            "radius": 0.1
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "e33e70ef912e",
+          "kind": "camera",
+          "name": "Camera",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "width": 0.0,
+            "phi": 70.0,
+            "theta": -45.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        }
+      ],
+      "steps": [
+        {
+          "id": "2d1e8a427729",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "934ff6e2bc99",
+              "kind": "create",
+              "target_id": "b1978995158e",
+              "run_time": 1.5,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "ccabd290fd7f",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "cef35ab259d9",
+              "kind": "create",
+              "target_id": "ab38c377de84",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "e76d622918e1",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "6338cfdc8918",
+              "kind": "create",
+              "target_id": "b3b6c8c57722",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "93e972ce59e1",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "69286511797b",
+              "kind": "create",
+              "target_id": "fd6d98b75bfc",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "d60df0c259fa",
+              "kind": "fade_in",
+              "target_id": "f68f36a9b8c1",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "b491cadb443f",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "da6b36a9ef56",
+              "kind": "orbit",
+              "target_id": "e33e70ef912e",
+              "run_time": 3.0,
+              "rate_func": "smooth",
+              "params": {
+                "phi": 65.0,
+                "theta": -110.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        }
+      ]
+    }
+  ],
+  "render": {
+    "quality": "h",
+    "width": 1920,
+    "height": 1080,
+    "fps": 60,
+    "format": "mp4",
+    "output_dir": "",
+    "png_after_step": -1,
+    "transparent": false,
+    "scenes": "current",
+    "transition": "cut",
+    "save_sections": false
+  },
+  "aspect": "16:9"
+}

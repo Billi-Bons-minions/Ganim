@@ -16,6 +16,8 @@ from manim_studio.model.analysis import (
     FEATURE_EXTREMA,
     FEATURE_INFLECTION,
     FEATURE_INTERSECTIONS,
+    KIND_MAXIMUM,
+    KIND_MINIMUM,
     SpecialPoint,
     extrema,
     inflection_points,
@@ -585,6 +587,25 @@ def format_coordinate(value: float) -> str:
 def point_label(x: float, y: float) -> str:
     """Return the label of a point, e.g. ``(1.57 | 1)``."""
     return f"({format_coordinate(x)} | {format_coordinate(y)})"
+
+
+def marker_label_direction(scene: Scene, obj: SceneObject, special: SpecialPoint, values: Values | None = None) -> Point:
+    """Direction of a marker label (like Manim's ``next_to``) that keeps it off the curve.
+
+    Maxima get their label above, minima below; other points sit on the side the curve
+    does not pass through (below right where it rises, above right where it falls).
+    """
+    if special.kind == KIND_MAXIMUM:
+        return (0.0, 1.0)
+    if special.kind == KIND_MINIMUM:
+        return (0.0, -1.0)
+    graph = tool_graph(scene, obj)
+    function = graph_function(scene, graph, values) if graph is not None else None
+    if function is None:
+        return (1.0, 1.0)
+    step = 1e-3
+    slope = (function(special.x + step) - function(special.x - step)) / (2 * step)
+    return (1.0, -1.0) if math.isfinite(slope) and slope > 0 else (1.0, 1.0)
 
 
 def label_anchor(scene: Scene, obj: SceneObject, values: Values | None = None) -> tuple[Point, Point] | None:

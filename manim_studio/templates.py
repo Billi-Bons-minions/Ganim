@@ -66,7 +66,7 @@ def explore_parameter() -> Scene:
     graph = _add(scene, create_object(ObjectKind.FUNCTION_GRAPH, "f", expression="a sin(x)", axes_id=axes.id))
     point = _add(scene, create_object(ObjectKind.GRAPH_POINT, tr("kind.graph_point") + " 1", graph_id=graph.id, x_parameter=parameter.id, show_label=True))
     caption = _add(scene, create_object(ObjectKind.TEXT, "a =", -5.9, 3.3, text="a =", font_size=40.0))
-    number = _add(scene, create_object(ObjectKind.DECIMAL_NUMBER, tr("kind.decimal_number") + " a", -4.9, 3.3, parameter_id=parameter.id, font_size=40.0))
+    number = _add(scene, create_object(ObjectKind.DECIMAL_NUMBER, tr("kind.decimal_number") + " a", -4.65, 3.3, parameter_id=parameter.id, font_size=40.0))
     _play(
         scene,
         create_animation(AnimationKind.CREATE, axes.id),
@@ -200,7 +200,7 @@ def conic_sections() -> Scene:
     hyperbola = _add(scene, create_object(ObjectKind.FUNCTION_GRAPH, "x²/4 − y² = 1", axes_id=axes.id, curve="implicit", implicit_expression="x^2/4 - y^2 - 1"))
     hyperbola.stroke_color = "#83C167"
     caption = _add(scene, create_object(ObjectKind.TEXT, "r =", -5.9, 3.3, text="r =", font_size=40.0))
-    number = _add(scene, create_object(ObjectKind.DECIMAL_NUMBER, tr("kind.decimal_number") + " r", -4.9, 3.3, parameter_id=radius.id, font_size=40.0))
+    number = _add(scene, create_object(ObjectKind.DECIMAL_NUMBER, tr("kind.decimal_number") + " r", -4.65, 3.3, parameter_id=radius.id, font_size=40.0))
     _play(scene, create_animation(AnimationKind.CREATE, axes.id))
     _play(
         scene,

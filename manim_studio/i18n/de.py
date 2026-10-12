@@ -238,9 +238,9 @@ STRINGS: dict[str, str] = {
     # --- timeline -----------------------------------------------------------------------------------
     "timeline.add_animation": "Animation ▾",
     "timeline.add_animation_tip": "Ausgewählte Objekte in einem neuen Schritt animieren",
-    "timeline.add_step": "+ Schritt",
+    "timeline.add_step": "Schritt",
     "timeline.add_step_tip": "Leeren Schritt nach dem aktuellen einfügen",
-    "timeline.add_wait": "+ Warten",
+    "timeline.add_wait": "Warten",
     "timeline.add_wait_tip": "Warte-Schritt nach dem aktuellen einfügen",
     "timeline.duplicate_tip": "Aktuellen Schritt kopieren",
     "timeline.delete_tip": "Gewählte Animation bzw. gewählten Schritt löschen",

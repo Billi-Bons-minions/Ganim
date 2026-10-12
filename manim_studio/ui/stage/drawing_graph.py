@@ -159,8 +159,9 @@ def _marker_primitives(scene: Scene, obj: SceneObject, state: ObjectState, value
         center = pt(sx - offset[0], sy - offset[1])
         primitives.append(_dot(center, radius, obj, state))
         if obj.params.get("show_labels", True):
-            corner = QPointF(center.x() + radius * PX, center.y() - radius * PX)
-            primitives.append(_text_near(graphs.point_label(special.x, special.y), corner, (1.0, 1.0), SMALL_BUFF, POINT_LABEL_SIZE, obj, state))
+            dx, dy = graphs.marker_label_direction(scene, obj, special, values)
+            corner = QPointF(center.x() + dx * radius * PX, center.y() - dy * radius * PX)
+            primitives.append(_text_near(graphs.point_label(special.x, special.y), corner, (dx, dy), SMALL_BUFF, POINT_LABEL_SIZE, obj, state))
     return primitives
 
 

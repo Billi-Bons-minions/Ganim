@@ -306,7 +306,12 @@ def tangent_code(scene: Scene, obj: SceneObject, names: dict[str, str], variable
     return lines, f"always_redraw({variable}_build)"
 
 
-def _point_parts(axes_variable: str, x_code: str, y_code: str, obj: SceneObject, label: str | None) -> list[str]:
+_DIRECTIONS = {(1.0, 1.0): "UR", (1.0, -1.0): "DR", (0.0, 1.0): "UP", (0.0, -1.0): "DOWN"}
+
+
+def _point_parts(
+    axes_variable: str, x_code: str, y_code: str, obj: SceneObject, label: str | None, direction: tuple[float, float] = (1.0, 1.0)
+) -> list[str]:
     point = f"{axes_variable}.c2p({x_code}, {y_code})"
     color = py_color(obj.fill_color)
     radius = fmt_float(param_float(obj.params, "radius", 0.08))
@@ -316,7 +321,7 @@ def _point_parts(axes_variable: str, x_code: str, y_code: str, obj: SceneObject,
     parts.append(f"Dot({point}, radius={radius}, color={color})")
     if label is not None:
         buff = fmt_float(param_float(obj.params, "radius", 0.08) + SMALL_BUFF)
-        parts.append(f"Text({label}, font_size={fmt_float(POINT_LABEL_SIZE)}, color={color}).next_to({point}, UR, buff={buff})")
+        parts.append(f"Text({label}, font_size={fmt_float(POINT_LABEL_SIZE)}, color={color}).next_to({point}, {_DIRECTIONS[direction]}, buff={buff})")
     return parts
 
 
@@ -360,7 +365,8 @@ def markers_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> str:
     parts: list[str] = []
     for special in graphs.marker_points(scene, obj):
         label = py_str(graphs.point_label(special.x, special.y)) if obj.params.get("show_labels", True) else None
-        parts += _point_parts(axes_variable, fmt_float(special.x), fmt_float(special.y), obj, label)
+        direction = graphs.marker_label_direction(scene, obj, special)
+        parts += _point_parts(axes_variable, fmt_float(special.x), fmt_float(special.y), obj, label, direction)
     if not parts:
         return "VGroup()"
     return "VGroup(\n" + "".join(f"{INDENT}{part},\n" for part in parts) + ")"

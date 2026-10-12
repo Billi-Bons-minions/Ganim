@@ -427,3 +427,8 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
   - Das Skript hält eine laufende Drehung um denselben Winkel vorher an (zwei würden sich in Manim addieren) und am Ende der Szene (sonst drehte sich im Gesamtvideo die nächste Szene weiter).
   - *Kamera schwenken* während einer Dauerdrehung ist gesperrt (Manim würde beides vermischen).
 - **Gefunden:** Manims erstes Bild jeder Animation hat dt = 0; pro Schritt dreht sich die Kamera deshalb 1/fps Sekunden kürzer (bei 60 fps 0,3° bei 20 °/s). Die Bühne kennt die Bildrate nicht und rechnet ohne diesen Verlust; der Test hält die Abweichung fest.
+
+## Fuzz-Runde 9 (30 Sitzungen, nach den Abbildungen)
+- 28 in Ordnung, 2 Funde:
+  - **Echter Fehler:** Ein ungültiger Term in einer komplexen oder punktweisen Abbildung (z. B. `x` statt `z`) ließ die Code-Ansicht mit einer unbehandelten Ausnahme abbrechen. Die Prüfung meldete ihn schon richtig; jetzt meldet auch die Codeerzeugung einen normalen Fehler.
+  - **Fehlalarm des Fuzzers:** `Tex(r"\frac{a}{b}")` ohne `$` lehnt LaTeX ab. Die App erkennt das vorher, weil die Bühne jede Formel kompiliert; der Fuzzer prüfte ohne diese Auskunft. Er kompiliert Formeln jetzt selbst vor der Prüfung.

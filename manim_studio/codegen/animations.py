@@ -217,14 +217,20 @@ def simple_animation_code(anim: Animation, scene: Scene, names: dict[str, str], 
         return f"ApplyMatrix({', '.join([f'[[{m11}, {m12}], [{m21}, {m22}]]', variable] + timing.args())})"
     if anim.kind == AnimationKind.APPLY_COMPLEX:
         # every point z moves to f(z), along an arc of angle arg f(1) (Manim's ApplyComplexFunction)
-        from manim_studio.model.expression import IMAGINARY_UNIT, parse_complex
+        from manim_studio.model.expression import IMAGINARY_UNIT, ExpressionError, parse_complex
 
-        code = parse_complex(str(anim.params.get("function", "z^2"))).to_numpy({IMAGINARY_UNIT: "1j"}, pad_variable=False)
+        try:
+            code = parse_complex(str(anim.params.get("function", "z^2"))).to_numpy({IMAGINARY_UNIT: "1j"}, pad_variable=False)
+        except ExpressionError as error:
+            raise CodegenError("expression_invalid", f"{anim.params.get('function', '')}: {error.code}") from None
         return f"ApplyComplexFunction({', '.join([f'lambda z: {STUDIO_MAP_COMPLEX}(lambda z: {code}, z)', variable] + timing.args())})"
     if anim.kind == AnimationKind.APPLY_POINTWISE:
-        from manim_studio.model.expression import parse_expression
+        from manim_studio.model.expression import ExpressionError, parse_expression
 
-        x_code, y_code = (parse_expression(str(anim.params.get(key, default)), "x", ("y",)).to_numpy(pad_variable=False) for key, default in (("x_function", "x"), ("y_function", "y")))
+        try:
+            x_code, y_code = (parse_expression(str(anim.params.get(key, default)), "x", ("y",)).to_numpy(pad_variable=False) for key, default in (("x_function", "x"), ("y_function", "y")))
+        except ExpressionError as error:
+            raise CodegenError("expression_invalid", error.code) from None
         return f"ApplyPointwiseFunction({', '.join([f'lambda p: {STUDIO_MAP_POINT}(lambda x, y: ({x_code}, {y_code}), p)', variable] + timing.args())})"
     if anim.kind == AnimationKind.TYPE_WITH_CURSOR:
         cursor = f"Rectangle(height={variable}.height * 1.1, width=0.06, fill_opacity=1, stroke_width=0, color={variable}.get_color()).move_to({variable}[0])"

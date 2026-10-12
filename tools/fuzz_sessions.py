@@ -319,6 +319,15 @@ def close_window(app, window) -> None:
     app.processEvents()
 
 
+def latex_rejections(source: str, environment: str) -> str | None:
+    """The error of a formula LaTeX rejects (compiled at once; the stage does it in the background)."""
+    from manim_studio.render.tex_preview import LatexFailure, compile_latex_to_svg
+
+    with tempfile.TemporaryDirectory(prefix="fuzz_tex_") as folder:
+        error = compile_latex_to_svg(source, Path(folder) / "formula.svg", environment=environment)
+    return str(error) if isinstance(error, LatexFailure) else None
+
+
 def check_project(project, work: Path, dry_run: bool) -> list[str]:
     problems: list[str] = []
     if loads_project(dumps_project(project)) != project:
@@ -327,7 +336,8 @@ def check_project(project, work: Path, dry_run: bool) -> list[str]:
     for scene in project.scenes:
         for moment in (0.0, 0.37, total_duration(scene) / 2, total_duration(scene) - 0.01, total_duration(scene) + 1):
             state_at_time(scene, max(moment, 0.0))
-        if not has_errors(validate_scene(scene)):
+        # like the app, which knows from the stage which formulas LaTeX rejects
+        if not has_errors(validate_scene(scene, True, None, latex_rejections)):
             renderable.append(scene)
     if not renderable:
         return problems

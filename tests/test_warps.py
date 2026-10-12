@@ -163,3 +163,15 @@ def test_plane_numbers_like_manim(qapp, numbers: str, step: float) -> None:
     rect = drawing.primitives[-1].path.boundingRect()
     stage_box = (rect.left() / PX, -rect.bottom() / PX, rect.right() / PX, -rect.top() / PX)
     assert stage_box == pytest.approx(manim_box, abs=0.03)
+
+
+def test_invalid_terms_give_a_codegen_error() -> None:
+    """The live code view must not crash on a map term the validation already reports (fuzz round 9)."""
+    from manim_studio.codegen.errors import CodegenError
+
+    circle = make_object(ObjectKind.CIRCLE, "Kreis", "c")
+    for anim in (make_animation(AnimationKind.APPLY_COMPLEX, "c", function="x"), make_animation(AnimationKind.APPLY_POINTWISE, "c", x_function="z", y_function="y")):
+        scene = Scene(id="s", name="S", objects=[circle], steps=[play(anim)])
+        assert "expression_invalid" in {issue.code for issue in validate_scene(scene)}
+        with pytest.raises(CodegenError):
+            generate_script(make_project(scene))

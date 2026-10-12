@@ -124,6 +124,7 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
 - Kompatibilität: Python 3.10–3.13, Manim 0.19–0.22. PySide6 6.12 stürzt unter Python < 3.12 ab → dort `<6.12`. PNG-Export nutzt `-s`.
 - Experimentelle App-Bündel: `packaging/` + Workflow `bundle.yml` (nur manuell). Unter Linux geprüft, Windows/macOS ungetestet.
 - Nachmittag: Wertetabelle, Polar-Gitter, Sekante (h → 0 wird zur Tangente) mit Vorlage (jetzt 14), platonische Körper, gebogener Pfeil (`model/curved.py`, rechnet Manims Geometrie exakt nach), 3D-Tiefensortierung auf der Bühne.
+- Nachtrag: Tangente/Sekante mit mitlaufender Beschriftung des Terms (`graphs.line_label`, Skript-Helfer `studio_term`/`studio_beside`), Vorlage „Tangente wandert am Graphen“ (jetzt 15).
 - Fixes: gestrichelte Linien der Länge 0 brachen Manim 0.19 ab (`studio_dashed_line`); Objektnamen wie `x0` oder `studio_plot` verdeckten Teile des Skripts (`naming.BUILD_LOCALS`, `HELPER_FUNCTIONS`).
 
 ### Halbfertig

@@ -6,6 +6,13 @@ All notable changes to Manim Studio are listed here. The format follows
 
 ## Unreleased
 
+### Added
+- Tangents and secants can show their current term as a label (`t(x) = 1.50x − 0.25`, `y = …` or `m = …`). The label follows the line while a parameter moves it and stays on the side away from the graph (or above/below, as chosen).
+- Template "A tangent slides along the graph" (now 15 templates).
+
+### Fixed
+- The label of a point that follows a parameter showed fewer decimals on the stage than in the video.
+
 ## 0.9.0 – first public pre-release (not yet published)
 
 Everything below was built for this first public version.

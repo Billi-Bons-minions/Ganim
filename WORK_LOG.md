@@ -307,3 +307,22 @@ Jede Funktion ist mit einem Vergleich Bühne ↔ Manim-Bild und mit echten Manim
 5. **E-Mail in Commits:** Die Commits der Nacht tragen deine Gmail-Adresse und sind öffentlich (siehe oben). Für künftige Commits kannst du die GitHub-noreply-Adresse setzen.
 6. **Repo-Einstellungen auf GitHub** (macht nur du): Beschreibung, Website, Topics (z. B. manim, animation, math, education), Issues aktivieren.
 7. **CI-Hinweis:** GitHub stellt `ubuntu-latest` ab dem 19.10.2026 auf Ubuntu 26 um (Hinweis im CI-Lauf). Falls die CI danach scheitert (z. B. andere Paketnamen für LaTeX/Cairo), in `.github/workflows/ci.yml` `ubuntu-24.04` fest eintragen. Ich habe das bewusst nicht vorab geändert.
+
+---
+
+# Nachtrag: Rückmeldung nach dem Testen
+
+**Dein Anwendungsfall:** Eine Tangente wandert animiert am Graphen entlang, und eine Beschriftung soll ihr folgen und den aktuellen Term zeigen. Das ging bisher nicht.
+
+**Umgesetzt:**
+- Tangente und Sekante haben die Option **Beschriftung**: keine, *Term* (`t(x) = 1.50x − 0.25`, bei der Sekante `s(x) = …`), *Gleichung* (`y = …`) oder *Steigung* (`m = …`), dazu Nachkommastellen und Seite.
+- Ist x₀ (oder h, oder ein Parameter im Funktionsterm) an einen Parameter gekoppelt, zeichnet Manim die Beschriftung in jedem Bild neu (`always_redraw`). Sie zeigt also immer den aktuellen Term.
+- **Entscheidung Position:** am Berührpunkt (bei der Sekante zwischen den beiden Punkten), mit kleinem Abstand neben der Linie. „Automatisch“ legt sie auf die Seite, auf der der Graph nicht verläuft. Am Wendepunkt wechselt sie deshalb die Seite; wer das nicht will, wählt fest „über“ oder „unter der Linie“.
+- **Entscheidung Zahlenformat:** feste Nachkommastellen (Standard 2), damit die Breite beim Wandern nicht springt; echtes Minuszeichen „−“, nie „−0.00“.
+- Das Skript bekommt dafür zwei kleine Hilfsfunktionen (`studio_term`, `studio_beside`). Die Bühne rechnet genauso; ein Test führt `studio_term` aus und vergleicht mit der Bühne. Ein Manim-Test prüft, dass die Beschriftung am Ende genau neben der Tangente an der neuen Stelle sitzt (Manim 0.19 und 0.22).
+- Neue Vorlage **„Tangente wandert am Graphen“** (jetzt 15). Ich habe sie als GIF geprüft. Damit der Term am Anfang und am Ende nicht auf der Achse liegt, läuft die Tangente von x = −1,5 bis 1,5. Unterwegs kreuzt der Term kurz die y-Achse; das lässt sich bei einer wandernden Beschriftung nicht ganz vermeiden.
+
+**Dabei gefunden und behoben:** Folgt ein „Punkt am Graphen“ einem Parameter, zeigte die Bühne `(1.5 | -1)`, das Video aber `(1.50 | -1.00)`. Jetzt zeigen beide zwei feste Nachkommastellen.
+
+**Offen:** Die Beschriftung gehört zur Tangente (gleiche Farbe, erscheint und verschwindet mit ihr). Eine eigene Animation nur für die Beschriftung, z. B. erst später einblenden, geht noch nicht.
+

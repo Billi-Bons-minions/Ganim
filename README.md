@@ -30,7 +30,7 @@ All of these clips were made from the built-in templates and the projects in [ex
 **Objects**
 - Shapes: circle, square, rectangle, triangle, ellipse, polygon, regular polygon, star, arc, sector, ring, line, dashed line, arrow, double arrow, curved arrow (`CurvedArrow`, `CurvedDoubleArrow`, `ArcBetweenPoints`), vector, dot, brace, highlight (frame, background, underline, strike-through), angle marks, motion traces
 - Text: text with colored words, Markup text, bullet lists, code blocks with syntax highlighting, tables; with LaTeX also formulas (`MathTex`, `Tex`) with colored parts and matrices
-- Math: number line, number plane (square or polar grid), coordinate system with labels, function graphs (`2x^2 + sin(x)`, piecewise, parametric, polar, implicit `f(x, y) = 0`, derivatives), area under a curve, Riemann rectangles, tangents, secants with slope triangle (let h run to 0 and the secant becomes the tangent), points on graphs, zeros/extrema/inflection points/intersections, graph labels, tables of values, data points with regression lines, bar charts (CSV import), vector fields (arrows or stream lines), networks of vertices and edges (Manim's `Graph`/`DiGraph` with several layouts)
+- Math: number line, number plane (square or polar grid), coordinate system with labels, function graphs (`2x^2 + sin(x)`, piecewise, parametric, polar, implicit `f(x, y) = 0`, derivatives), area under a curve, Riemann rectangles, tangents and secants with a live label of their current term (e.g. `t(x) = 1.50x − 0.25`, also while they move along the graph), secants with slope triangle (let h run to 0 and the secant becomes the tangent), points on graphs, zeros/extrema/inflection points/intersections, graph labels, tables of values, data points with regression lines, bar charts (CSV import), vector fields (arrows or stream lines), networks of vertices and edges (Manim's `Graph`/`DiGraph` with several layouts)
 - 3D: 3D axes, surfaces `z = f(x, y)`, 3D curves, solids (sphere, cube, box, cone, cylinder, torus and the Platonic solids tetrahedron, octahedron, icosahedron, dodecahedron), arrows, lines and points in space, camera orbits and camera moves
 - Images (PNG, JPG, SVG), groups, layers, lock/hide, align and distribute
 
@@ -57,7 +57,7 @@ All of these clips were made from the built-in templates and the projects in [ex
 - Export of the generated Python script; the code view shows it at any time
 
 **More**
-- 14 templates (e.g. title card, function analysis, secant to tangent, Pythagorean theorem, orbit, 3D solids, conic sections, presentation slide, graph theory, linear map) and 5 example projects in the welcome dialog
+- 15 templates (e.g. title card, function analysis, secant to tangent, sliding tangent, Pythagorean theorem, orbit, 3D solids, conic sections, presentation slide, graph theory, linear map) and 5 example projects in the welcome dialog
 - Interactive tour, hover previews for every animation, a list of all keyboard shortcuts (*F1*)
 - Dark and light theme, adjustable UI scale, German and English
 - Autosave and recovery after a crash, project packages (project and images in one file), your own styles, building blocks and templates
@@ -151,7 +151,7 @@ Good to know:
 
 ## Examples and templates
 
-- **Templates** (*Scene → New scene from template*): title and subtitle, analyze a function, explore a parameter, compare two columns, analyze data, Pythagorean theorem, orbit with trace, flow (vector field), 3D solids with camera move, conic sections, presentation slide, graph theory (a path), linear map (shear), from secant to tangent.
+- **Templates** (*Scene → New scene from template*): title and subtitle, analyze a function, explore a parameter, compare two columns, analyze data, Pythagorean theorem, orbit with trace, flow (vector field), 3D solids with camera move, conic sections, presentation slide, graph theory (a path), linear map (shear), from secant to tangent, a tangent sliding along the graph.
 - **Example projects** (welcome dialog): circle becomes square, function graph, motion, formula, title card.
 - The folder [examples](examples) contains example projects to open with *File → Open* and an example plugin.
 

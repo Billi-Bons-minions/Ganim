@@ -95,3 +95,21 @@ def test_axes_are_centered_with_their_numbers(numbers: bool, x_min: float, x_max
     if numbers:
         shown = [label.get_value() for label in axes.x_axis.numbers]
         assert [axis_number_text(value, x_step) for value in shown] == ["".join(part.text for part in label) for label in axes.x_axis.numbers]
+
+
+@pytest.mark.manim
+@pytest.mark.skipif(not HAS_MANIM, reason="Manim is not installed")
+@pytest.mark.parametrize("low, high, step", [(-2, 2, 1), (-7, 7, 1), (2, 6, 1), (-3, 3, 0.5), (-1, 4, 1), (-7.11, 7.11, 1), (-6, -2, 1)])
+def test_grid_lines_like_manim(low: float, high: float, step: float) -> None:
+    """``NumberPlane`` draws its lines from the axis outwards and leaves out the far ends."""
+    from manim import NumberPlane
+
+    from manim_studio.model.geometry import plane_line_values
+
+    plane = NumberPlane(x_range=[low, high, step], y_range=[low, high, step], x_length=8, y_length=8)
+    vertical = set()
+    for line in plane.background_lines:
+        start, end = plane.p2c(line.get_start()), plane.p2c(line.get_end())
+        if abs(start[0] - end[0]) < 1e-6:
+            vertical.add(round(float(start[0]), 6) + 0.0)
+    assert [round(value, 6) for value in plane_line_values(low, high, step)] == sorted(vertical)

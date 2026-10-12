@@ -403,3 +403,6 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
 
 ## Bühne = Video: Achsenbeschriftungen x/y
 - Manim setzt sie mit `next_to` an die obere rechte Ecke der Achse (Pfeilspitze eingeschlossen), die y-Beschriftung nach rechts und halb nach oben (nicht schräg), und schiebt sie danach ins Bild zurück (`shift_onto_screen`, 0,25 Abstand vom Rand). Die Bühne setzte sie schräg und ohne Zurückschieben; bei Achsen bis an den Bildrand stand „y“ dadurch rund 0,2 Einheiten zu hoch. Jetzt gleich; ein Test vergleicht vier Lagen mit Manim (Abweichung < 0,03).
+
+## Bühne = Video: Gitterlinien der Zahlenebene
+- Beim Bildvergleich der nichtlinearen Abbildungen gefunden: Manims `NumberPlane` zeichnet Linien von der Achse aus in beide Richtungen und lässt die äußeren Enden weg (`arange`). Eine Ebene von −7 bis 7 hat also keine Linie bei ±7, eine von −1 bis 4 keine bei −1 und 4. Die Bühne zeichnete sie. Jetzt gleich; Test gegen Manim für 7 Bereiche.

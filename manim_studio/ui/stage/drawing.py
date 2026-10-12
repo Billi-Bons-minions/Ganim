@@ -39,6 +39,7 @@ from manim_studio.model.geometry import (
     axis_number_text,
     origin_shift,
     param_float,
+    plane_line_values,
     polar_grid,
     tick_values,
 )
@@ -454,10 +455,10 @@ def _number_plane_primitives(obj: SceneObject, state: ObjectState) -> list[Primi
             grid.moveTo(origin)
             grid.lineTo(QPointF(origin.x() + reach * math.cos(angle), origin.y() - reach * math.sin(angle)))
     else:
-        for xv in _ticks(layout.x_min, layout.x_max, x_step):
+        for xv in plane_line_values(layout.x_min, layout.x_max, x_step):
             grid.moveTo(_local_pt(layout, xv, layout.y_min))
             grid.lineTo(_local_pt(layout, xv, layout.y_max))
-        for yv in _ticks(layout.y_min, layout.y_max, y_step):
+        for yv in plane_line_values(layout.y_min, layout.y_max, y_step):
             grid.moveTo(_local_pt(layout, layout.x_min, yv))
             grid.lineTo(_local_pt(layout, layout.x_max, yv))
     grid_pen = _pen(state.stroke_color, obj.stroke_width, obj.stroke_opacity, state.scale)

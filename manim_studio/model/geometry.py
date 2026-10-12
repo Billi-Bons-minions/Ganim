@@ -54,6 +54,21 @@ def tick_values(low: float, high: float, step: float, tip: bool, exclude_origin:
     return sorted(set(negative) | set(positive))
 
 
+def plane_line_values(low: float, high: float, step: float) -> list[float]:
+    """Where Manim's ``NumberPlane`` draws its grid lines across one axis (axis values).
+
+    From the axis outwards in both directions; the far ends are left out (``arange``), so a
+    plane from -2 to 2 has lines at -1, 0 and 1 only.
+    """
+    if step <= 0 or high <= low:
+        return []
+    origin = origin_shift(low, high)
+    # the ranges are measured from the axis, like Manim does for ranges with and without 0
+    span_low, span_high = low - origin, high - origin
+    offsets = [0.0] + _arange(step, min(span_high - span_low, span_high), step) + [-value for value in _arange(step, -max(span_low - span_high, span_low), step)]
+    return sorted(origin + offset for offset in offsets)
+
+
 def rotate_point(x: float, y: float, degrees: float) -> Point:
     """Rotate a point counter-clockwise around the origin."""
     radians = math.radians(degrees)

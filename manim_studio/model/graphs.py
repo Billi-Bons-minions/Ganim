@@ -572,6 +572,73 @@ def secant(scene: Scene, obj: SceneObject, values: Values | None = None) -> Seca
     return Secant(x0, y0, x1, y1, slope, [(low, y0 + slope * (low - x0)), (high, y0 + slope * (high - x0))])
 
 
+#: Label styles of tangents and secants: "t(x) = 1.50x − 0.25", "y = …" or "m = …".
+LINE_LABEL_STYLES = ("term", "equation", "slope")
+#: Distance between such a label and its line, in scene units.
+LINE_LABEL_BUFF = 0.15
+#: Step left and right of the anchor that decides on which side of the line the graph runs.
+SIDE_STEP = 0.01
+
+
+def line_term(name: str, slope: float, intercept: float, decimals: int, style: str) -> str:
+    """Label text of a tangent or secant; the script's ``studio_term`` does exactly the same."""
+    m, b = f"{abs(slope):.{decimals}f}", f"{abs(intercept):.{decimals}f}"
+    m = ("−" if slope < 0 and float(m) != 0 else "") + m
+    if style == "slope":
+        return f"m = {m}"
+    sign = "−" if intercept < 0 and float(b) != 0 else "+"
+    left = "y" if style == "equation" else f"{name}(x)"
+    return f"{left} = {m}x {sign} {b}"
+
+
+@dataclass(frozen=True)
+class LineLabel:
+    """A label next to a tangent or secant: text, anchor on the line (axes coordinates) and side."""
+
+    text: str
+    x: float
+    y: float
+    slope: float
+    #: 1 above the line, -1 below
+    side: int
+
+
+def label_side(choice: str, curve, x: float, y: float) -> int:
+    """``auto`` puts the label on the side of the line the graph does not run on."""
+    if choice in ("above", "below"):
+        return 1 if choice == "above" else -1
+    try:
+        return -1 if curve(x + SIDE_STEP) + curve(x - SIDE_STEP) > 2 * y else 1
+    except (ArithmeticError, ValueError):
+        return 1
+
+
+def line_label(scene: Scene, obj: SceneObject, values: Values | None = None) -> LineLabel | None:
+    """The live label of a tangent (at the point of contact) or secant (between its two points)."""
+    style = obj.params.get("label", "none")
+    graph = tool_graph(scene, obj)
+    pieces = function_pieces(scene, graph) if graph is not None else None
+    if style not in LINE_LABEL_STYLES or pieces is None:
+        return None
+    values = scene_values(scene, values)
+    if obj.kind == ObjectKind.SECANT:
+        found = secant(scene, obj, values)
+        if found is None:
+            return None
+        x, y, slope, name = (found.x0 + found.x1) / 2, (found.y0 + found.y1) / 2, found.slope, "s"
+    else:
+        slope = tangent_slope(scene, obj, values)
+        x = tool_x(scene, obj, values)
+        y = evaluate_pieces(pieces, x, values)
+        if slope is None or not math.isfinite(y):
+            return None
+        name = "t"
+    decimals = int(param_float(obj.params, "decimals", 2.0))
+    text = line_term(name, slope, y - slope * x, decimals, str(style))
+    side = label_side(str(obj.params.get("label_side", "auto")), lambda t: evaluate_pieces(pieces, t, values), x, y)
+    return LineLabel(text, x, y, slope, side)
+
+
 def tangent_slope(scene: Scene, obj: SceneObject, values: Values | None = None) -> float | None:
     """Return the slope of a tangent (for labels and code generation)."""
     points = tangent_points(scene, obj, values)
@@ -638,8 +705,14 @@ def format_coordinate(value: float) -> str:
     return "0" if text in ("-0", "") else text
 
 
-def point_label(x: float, y: float) -> str:
-    """Return the label of a point, e.g. ``(1.57 | 1)``."""
+def point_label(x: float, y: float, live: bool = False) -> str:
+    """Return the label of a point, e.g. ``(1.57 | 1)``.
+
+    A ``live`` label (the point follows a parameter) always shows two decimals, like
+    the script's ``f"({x0:.2f} | {y0:.2f})"``, so its width does not jump while it moves.
+    """
+    if live:
+        return f"({x:.2f} | {y:.2f})"
     return f"({format_coordinate(x)} | {format_coordinate(y)})"
 
 

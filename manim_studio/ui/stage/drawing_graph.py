@@ -8,6 +8,8 @@ while Move animations still move it as a whole.
 
 from __future__ import annotations
 
+import math
+
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QBrush, QPainterPath, QPen
 
@@ -114,7 +116,7 @@ def tool_primitives(scene: Scene, obj: SceneObject, state: ObjectState, values: 
         return [Primitive(path=_path(rectangles, offset, closed=True), brush=brush, pen=pen)], False
     if kind == ObjectKind.TANGENT:
         line = _scene(axes, graphs.tangent_points(scene, obj, values))
-        return [_stroke_primitive(_path([line], offset), obj, state)], False
+        return [_stroke_primitive(_path([line], offset), obj, state), *_line_label_primitives(scene, obj, state, values, axes, offset)], False
     if kind == ObjectKind.SECANT:
         return _secant_primitives(scene, obj, state, values, axes, offset), False
     if kind == ObjectKind.GRAPH_POINT:
@@ -150,7 +152,25 @@ def _secant_primitives(scene: Scene, obj: SceneObject, state: ObjectState, value
             path = QPainterPath()
             path.addEllipse(pt(sx - offset[0], sy - offset[1]), radius * PX, radius * PX)
             primitives.append(Primitive(path=path, brush=brush))
-    return primitives
+    return primitives + _line_label_primitives(scene, obj, state, values, axes, offset)
+
+
+def _line_label_primitives(scene: Scene, obj: SceneObject, state: ObjectState, values, axes: SceneObject, offset: Point) -> list[Primitive]:
+    """The term of a tangent or secant, placed like the script's ``studio_beside``."""
+    label = graphs.line_label(scene, obj, values)
+    if label is None:
+        return []
+    path = text_path(label.text, text_font(obj, POINT_LABEL_SIZE))
+    bounds = path.boundingRect()
+    (px, py), (qx, qy) = axes_to_scene(axes, label.x, label.y), axes_to_scene(axes, label.x + 1, label.y + label.slope)
+    length = math.hypot(qx - px, qy - py)
+    if not math.isfinite(length) or length == 0:
+        return []
+    nx, ny = label.side * -(qy - py) / length, label.side * (qx - px) / length
+    distance = abs(nx) * bounds.width() / PX / 2 + abs(ny) * bounds.height() / PX / 2 + graphs.LINE_LABEL_BUFF
+    center = pt(px + distance * nx - offset[0], py + distance * ny - offset[1])
+    path.translate(center.x() - bounds.center().x(), center.y() - bounds.center().y())
+    return [Primitive(path=path, brush=QBrush(_color(state.stroke_color, obj.stroke_opacity)))]
 
 
 def _graph_point_primitives(scene: Scene, obj: SceneObject, state: ObjectState, values, axes: SceneObject, offset: Point) -> list[Primitive]:
@@ -170,7 +190,8 @@ def _graph_point_primitives(scene: Scene, obj: SceneObject, state: ObjectState, 
     primitives.append(_dot(center, radius, obj, state))
     if obj.params.get("show_label"):
         corner = QPointF(center.x() + radius * PX, center.y() - radius * PX)
-        primitives.append(_text_near(graphs.point_label(x0, y0), corner, (1.0, 1.0), SMALL_BUFF, POINT_LABEL_SIZE, obj, state))
+        live = bool(graphs.parameter_users(scene, obj))  # redrawn by Manim with two fixed decimals
+        primitives.append(_text_near(graphs.point_label(x0, y0, live), corner, (1.0, 1.0), SMALL_BUFF, POINT_LABEL_SIZE, obj, state))
     return primitives
 
 

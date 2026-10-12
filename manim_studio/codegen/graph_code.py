@@ -30,6 +30,8 @@ from manim_studio.model.types import (
 STUDIO_PLOT = "studio_plot"
 STUDIO_DASHED = "studio_dashed_line"
 STUDIO_LINES = "studio_lines_to_point"
+STUDIO_TERM = "studio_term"
+STUDIO_BESIDE = "studio_beside"
 POINT_LABEL_SIZE = 24.0
 AXIS_LABEL_SIZE = 28.0
 SMALL_BUFF = 0.1
@@ -286,6 +288,7 @@ def tangent_code(scene: Scene, obj: SceneObject, names: dict[str, str], variable
     graph, _graph_variable, axes_variable = _tool_parts(scene, obj, names)
     half = param_float(obj.params, "width", 3.0) / 2
     style = _line_style(obj)
+    labelled = obj.params.get("label", "none") in graphs.LINE_LABEL_STYLES
     if not dynamic:
         function_of_graph = graphs.graph_function(scene, graph)
         x0 = graphs.tool_x(scene, obj, None)
@@ -294,22 +297,73 @@ def tangent_code(scene: Scene, obj: SceneObject, names: dict[str, str], variable
         if slope is None or not math.isfinite(y0):
             raise CodegenError("tangent_undefined", obj.name)
         function = f"lambda x: {fmt_float(y0)} + {fmt_float(slope)} * (x - {fmt_float(x0)})"
-        return [], "\n".join(call(f"{axes_variable}.plot", [function], [("x_range", py_range(x0 - half, x0 + half))] + style, 2))
+        plot = call(f"{axes_variable}.plot", [function], [("x_range", py_range(x0 - half, x0 + half))] + style, 2)
+        if not labelled:
+            return [], "\n".join(plot)
+        return [], "\n".join(["VGroup("] + [f"{INDENT}{line}" for line in plot[:-1]] + [f"{INDENT}{plot[-1]},", f"{INDENT}{_static_label(scene, obj, axes_variable)},", ")"])
     rename = renames(scene, names)
     function_code = pieces_code(_function_pieces(scene, graph), rename)
+    if not labelled:
+        lines = [
+            "",
+            f"def {variable}_build():",
+            f"{INDENT}x0 = {_x_code(scene, obj, names)}",
+            f"{INDENT}y0 = (lambda x: {function_code})(x0)",
+            f"{INDENT}slope = (lambda x: {_slope_code(scene, graph, rename)})(x0)",
+            f"{INDENT}return {axes_variable}.plot(",
+            f"{INDENT * 2}lambda x: y0 + slope * (x - x0),",
+            f"{INDENT * 2}x_range=[x0 - {fmt_float(half)}, x0 + {fmt_float(half)}],",
+        ]
+        lines += [f"{INDENT * 2}{key}={value}," for key, value in style]
+        lines += [f"{INDENT})", ""]
+        return lines, f"always_redraw({variable}_build)"
     lines = [
         "",
         f"def {variable}_build():",
         f"{INDENT}x0 = {_x_code(scene, obj, names)}",
-        f"{INDENT}y0 = (lambda x: {function_code})(x0)",
+        f"{INDENT}curve = lambda x: {function_code}",
+        f"{INDENT}y0 = curve(x0)",
         f"{INDENT}slope = (lambda x: {_slope_code(scene, graph, rename)})(x0)",
-        f"{INDENT}return {axes_variable}.plot(",
-        f"{INDENT * 2}lambda x: y0 + slope * (x - x0),",
-        f"{INDENT * 2}x_range=[x0 - {fmt_float(half)}, x0 + {fmt_float(half)}],",
+        *_side_lines(obj, "x0", "y0"),
+        f"{INDENT}return VGroup(",
+        f"{INDENT * 2}{axes_variable}.plot(",
+        f"{INDENT * 3}lambda x: y0 + slope * (x - x0),",
+        f"{INDENT * 3}x_range=[x0 - {fmt_float(half)}, x0 + {fmt_float(half)}],",
     ]
-    lines += [f"{INDENT * 2}{key}={value}," for key, value in style]
-    lines += [f"{INDENT})", ""]
+    lines += [f"{INDENT * 3}{key}={value}," for key, value in style]
+    lines += [f"{INDENT * 2}),", f"{INDENT * 2}{_live_label(obj, 't', axes_variable, 'x0', 'y0')},", f"{INDENT})", ""]
     return lines, f"always_redraw({variable}_build)"
+
+
+def _label_text(obj: SceneObject, text_code: str) -> str:
+    color = py_color(obj.stroke_color)
+    return f"Text({text_code}, font_size={fmt_float(POINT_LABEL_SIZE)}, color={color}, fill_opacity={fmt_float(obj.stroke_opacity)})"
+
+
+def _static_label(scene: Scene, obj: SceneObject, axes_variable: str) -> str:
+    """The label of a tangent or secant whose numbers do not change."""
+    label = graphs.line_label(scene, obj)
+    if label is None:
+        raise CodegenError("tangent_undefined" if obj.kind == ObjectKind.TANGENT else "secant_undefined", obj.name)
+    numbers = ", ".join(fmt_float(value) for value in (label.x, label.y, label.slope))
+    return f"{STUDIO_BESIDE}({_label_text(obj, py_str(label.text))}, {axes_variable}, {numbers}, {label.side})"
+
+
+def _side_lines(obj: SceneObject, x_code: str, y_code: str) -> list[str]:
+    """``side = …``: above or below the line; ``auto`` keeps the label off the graph (see ``graphs.label_side``)."""
+    choice = str(obj.params.get("label_side", "auto"))
+    if choice in ("above", "below"):
+        return [f"{INDENT}side = {1 if choice == 'above' else -1}"]
+    step = fmt_float(graphs.SIDE_STEP)
+    return [f"{INDENT}side = -1 if curve({x_code} + {step}) + curve({x_code} - {step}) > 2 * {y_code} else 1  # keep off the graph"]
+
+
+def _live_label(obj: SceneObject, name: str, axes_variable: str, x_code: str, y_code: str) -> str:
+    """The label of a tangent or secant inside its build function (slope, x and y are variables there)."""
+    decimals = int(param_float(obj.params, "decimals", 2.0))
+    style = py_str(str(obj.params.get("label", "term")))
+    text = f'{STUDIO_TERM}("{name}", slope, {y_code} - slope * {x_code}, {decimals}, {style})'
+    return f"{STUDIO_BESIDE}({_label_text(obj, text)}, {axes_variable}, {x_code}, {y_code}, slope, side)"
 
 
 def _h_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> str:
@@ -350,27 +404,36 @@ def secant_code(scene: Scene, obj: SceneObject, names: dict[str, str], variable:
         (left_x, left_y), (right_x, right_y) = found.line
         numbers = [fmt_float(value) for value in (found.x0, found.y0, found.x1, found.y1)]
         parts = _secant_parts(axes_variable, obj, *numbers, (fmt_float(left_x), fmt_float(left_y)), (fmt_float(right_x), fmt_float(right_y)))
+        if obj.params.get("label", "none") in graphs.LINE_LABEL_STYLES:
+            parts.append(_static_label(scene, obj, axes_variable))
         return [], "\n".join(["VGroup("] + [f"{INDENT}{part}," for part in parts] + [")"])
     rename = renames(scene, names)
     function_code = pieces_code(_function_pieces(scene, graph), rename)
     parts = _secant_parts(axes_variable, obj, "x0", "y0", "x1", "y1", ("left", "y0 + slope * (left - x0)"), ("right", "y0 + slope * (right - x0)"))
+    labelled = obj.params.get("label", "none") in graphs.LINE_LABEL_STYLES
+    curve = "curve" if labelled else f"(lambda x: {function_code})"
     lines = [
         "",
         f"def {variable}_build():",
         f"{INDENT}x0 = {_x_code(scene, obj, names)}",
         f"{INDENT}dx = {_h_code(scene, obj, names)}",
-        f"{INDENT}y0 = (lambda x: {function_code})(x0)",
+        *([f"{INDENT}curve = lambda x: {function_code}"] if labelled else []),
+        f"{INDENT}y0 = {curve}(x0)",
         f"{INDENT}if abs(dx) < {graphs.SECANT_MIN_H!r}:",
         f"{INDENT * 2}# h = 0: the secant has become the tangent",
         f"{INDENT * 2}x1, y1 = x0, y0",
         f"{INDENT * 2}slope = (lambda x: {_slope_code(scene, graph, rename)})(x0)",
         f"{INDENT}else:",
         f"{INDENT * 2}x1 = x0 + dx",
-        f"{INDENT * 2}y1 = (lambda x: {function_code})(x1)",
+        f"{INDENT * 2}y1 = {curve}(x1)",
         f"{INDENT * 2}slope = (y1 - y0) / dx",
         f"{INDENT}left, right = min(x0, x1) - {fmt_float(extend)}, max(x0, x1) + {fmt_float(extend)}",
-        f"{INDENT}return VGroup(",
     ]
+    if labelled:
+        # the label sits between the two points, on the secant
+        lines += _side_lines(obj, "(x0 + x1) / 2", "(y0 + y1) / 2")
+        parts.append(_live_label(obj, "s", axes_variable, "(x0 + x1) / 2", "(y0 + y1) / 2"))
+    lines.append(f"{INDENT}return VGroup(")
     lines += [f"{INDENT * 2}{part}," for part in parts]
     lines += [f"{INDENT})", ""]
     return lines, f"always_redraw({variable}_build)"
@@ -496,8 +559,9 @@ def graph_object_code(scene: Scene, obj: SceneObject, names: dict[str, str], hel
     code = "\n".join(lines)
     if f"{STUDIO_LINES}(" in code:
         helpers.update((STUDIO_LINES, STUDIO_DASHED))
-    if f"{STUDIO_DASHED}(" in code:
-        helpers.add(STUDIO_DASHED)
+    for name in (STUDIO_DASHED, STUDIO_TERM, STUDIO_BESIDE):
+        if f"{name}(" in code:
+            helpers.add(name)
     return lines, placement
 
 
@@ -541,6 +605,27 @@ STUDIO_DASHED_SOURCE = '''def studio_dashed_line(start, end, **kwargs):
 STUDIO_LINES_SOURCE = '''def studio_lines_to_point(axes, point, **kwargs):
     """Like axes.get_lines_to_point, but also for points on an axis."""
     return VGroup(*(studio_dashed_line(axis.get_projection(point), point, **kwargs) for axis in (axes.y_axis, axes.x_axis)))'''
+
+#: Text of a tangent's or secant's label; ``graphs.line_term`` (stage) does the same.
+STUDIO_TERM_SOURCE = '''def studio_term(name, slope, intercept, decimals, style):
+    """Label of a tangent or secant, e.g. "t(x) = 1.50x − 0.25" (style "term"), "y = …" or "m = …"."""
+    m, b = f"{abs(slope):.{decimals}f}", f"{abs(intercept):.{decimals}f}"
+    m = ("−" if slope < 0 and float(m) != 0 else "") + m
+    if style == "slope":
+        return f"m = {m}"
+    sign = "−" if intercept < 0 and float(b) != 0 else "+"
+    left = "y" if style == "equation" else f"{name}(x)"
+    return f"{left} = {m}x {sign} {b}"'''
+
+#: Places such a label next to its line, like the stage does.
+STUDIO_BESIDE_SOURCE = '''def studio_beside(label, axes, x, y, slope, side, buff=0.15):
+    """Put a label next to the line through (x, y) with this slope: above it (side 1) or below (side -1)."""
+    point = axes.c2p(x, y)
+    direction = axes.c2p(x + 1, y + slope) - point
+    normal = side * np.array([-direction[1], direction[0], 0.0]) / np.linalg.norm(direction)
+    # move the label away from the line until its box only touches the line's parallel at distance buff
+    distance = abs(normal[0]) * label.width / 2 + abs(normal[1]) * label.height / 2 + buff
+    return label.move_to(point + distance * normal)'''
 
 #: Source of the clipping plot helper, emitted once per script when needed.
 STUDIO_PLOT_SOURCE = '''def studio_plot(axes, function, x_range, y_range=None, breaks=(), **kwargs):

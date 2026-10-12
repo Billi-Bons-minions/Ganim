@@ -1357,4 +1357,12 @@ STRINGS: dict[str, str] = {
     "choice.tips_at.both": "An beiden Enden",
     "choice.tips_at.none": "Keine (Bogen)",
     "issue.latex_failed": "LaTeX kann diese Formel nicht setzen: {detail}. Korrigiere sie im Eigenschaften-Panel (in einem LaTeX-Text braucht Mathematik $…$).",
+    "choice.label.term": "Term, z. B. t(x) = 1.50x − 0.25",
+    "choice.label.equation": "Gleichung, z. B. y = 1.50x − 0.25",
+    "choice.label.slope": "Steigung, z. B. m = 1.50",
+    "param.label_side": "Seite der Beschriftung",
+    "choice.label_side.auto": "Automatisch (weg vom Graphen)",
+    "choice.label_side.above": "Über der Linie",
+    "choice.label_side.below": "Unter der Linie",
+    "template.tangent.name": "Tangente wandert am Graphen",
 }

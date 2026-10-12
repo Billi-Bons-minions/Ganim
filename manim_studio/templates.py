@@ -304,6 +304,26 @@ def secant_to_tangent() -> Scene:
     return scene
 
 
+def moving_tangent() -> Scene:
+    """A tangent slides along the graph; its label shows the current term."""
+    scene = create_scene(tr("template.tangent.name"))
+    # from -1.5 to 1.5 the label stays clear of the axes at the start and the end
+    position = _add(scene, create_object(ObjectKind.PARAMETER, "a", symbol="a", value=-1.5, minimum=-2.0, maximum=2.0))
+    axes = _add(
+        scene,
+        create_object(ObjectKind.AXES, tr("kind.axes") + " 1", 0.0, -0.3, x_min=-3.0, x_max=3.0, y_min=-2.0, y_max=2.0, x_length=10.0, y_length=6.0, x_label="x", y_label="y"),
+    )
+    graph = _add(scene, create_object(ObjectKind.FUNCTION_GRAPH, "f", expression="x^3/3 - x", axes_id=axes.id))
+    tangent = _add(scene, create_object(ObjectKind.TANGENT, tr("kind.tangent") + " 1", graph_id=graph.id, x_parameter=position.id, width=2.5, label="term"))
+    point = _add(scene, create_object(ObjectKind.GRAPH_POINT, tr("kind.graph_point") + " 1", graph_id=graph.id, x_parameter=position.id, show_lines=False))
+    point.fill_color = tangent.stroke_color
+    _play(scene, create_animation(AnimationKind.CREATE, axes.id), create_animation(AnimationKind.CREATE, graph.id, run_time=1.5))
+    _play(scene, create_animation(AnimationKind.CREATE, tangent.id), create_animation(AnimationKind.FADE_IN, point.id))
+    _play(scene, create_animation(AnimationKind.SET_VALUE, position.id, run_time=6.0, value=1.5))
+    scene.steps.append(create_wait_step(1.0))
+    return scene
+
+
 BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("title", "text", title_and_subtitle),
     BuiltinTemplate("analysis", "graph", analyze_function),
@@ -319,4 +339,5 @@ BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("network", "a_network_parts", shortest_path),
     BuiltinTemplate("linear_map", "a_apply_matrix", linear_map),
     BuiltinTemplate("secant", "graph", secant_to_tangent),
+    BuiltinTemplate("tangent", "graph", moving_tangent),
 )

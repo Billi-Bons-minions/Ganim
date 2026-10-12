@@ -1357,4 +1357,12 @@ STRINGS: dict[str, str] = {
     "choice.tips_at.both": "At both ends",
     "choice.tips_at.none": "None (arc)",
     "issue.latex_failed": "LaTeX cannot typeset this formula: {detail}. Correct it in the properties panel (in a LaTeX text, math needs $…$).",
+    "choice.label.term": "Term, e.g. t(x) = 1.50x − 0.25",
+    "choice.label.equation": "Equation, e.g. y = 1.50x − 0.25",
+    "choice.label.slope": "Slope, e.g. m = 1.50",
+    "param.label_side": "Label side",
+    "choice.label_side.auto": "Automatic (away from the graph)",
+    "choice.label_side.above": "Above the line",
+    "choice.label_side.below": "Below the line",
+    "template.tangent.name": "A tangent slides along the graph",
 }

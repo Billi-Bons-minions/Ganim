@@ -1278,4 +1278,9 @@ STRINGS: dict[str, str] = {
     "issue.network_parts_empty": "Es sind keine Knoten oder Kanten angegeben.",
     "codegen.network_parts_unknown": "Diese Knoten oder Kanten gibt es im Netzwerk nicht: {detail}.",
     "codegen.network_parts_empty": "Für „Knoten/Kanten hervorheben“ sind keine Knoten oder Kanten angegeben ({detail}).",
+    "template.slide.name": "Präsentationsfolie",
+    "template.slide.title": "Meine Präsentation",
+    "template.slide.items": "Ein wichtiger Gedanke\nEin Beispiel dazu\nDas Fazit",
+    "template.network.name": "Graphentheorie: ein Weg",
+    "template.network.title": "Ein Weg von A nach F",
 }

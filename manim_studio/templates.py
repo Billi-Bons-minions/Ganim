@@ -214,6 +214,48 @@ def conic_sections() -> Scene:
     return scene
 
 
+def presentation_slide() -> Scene:
+    scene = create_scene(tr("template.slide.name"))
+    scene.background_color = "#1E1E2E"
+    title = _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " 1", 0.0, 3.0, text=tr("template.slide.title"), font_size=56.0, bold=True))
+    rule = _add(scene, create_object(ObjectKind.LINE, tr("kind.line") + " 1", 0.0, 2.3, length=11.0))
+    rule.stroke_color = "#58C4DD"
+    items = _add(scene, create_object(ObjectKind.BULLET_LIST, tr("kind.bullet_list") + " 1", -1.2, 0.0, items=tr("template.slide.items"), font_size=40.0, buff=0.45))
+    _play(scene, create_animation(AnimationKind.WRITE, title.id, run_time=1.2))
+    _play(scene, create_animation(AnimationKind.GROW_FROM_EDGE, rule.id, run_time=0.8, edge="left"))
+    _play(scene, create_animation(AnimationKind.ONE_BY_ONE, items.id, run_time=2.5))
+    scene.steps.append(create_wait_step(2.0))
+    return scene
+
+
+def shortest_path() -> Scene:
+    scene = create_scene(tr("template.network.name"))
+    title = _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " 1", 0.0, 3.3, text=tr("template.network.title"), font_size=40.0))
+    network = _add(
+        scene,
+        create_object(
+            ObjectKind.NETWORK,
+            tr("kind.network") + " 1",
+            0.0,
+            -0.4,
+            vertices="A, B, C, D, E, F",
+            edges="A-B\nA-C\nB-D\nC-D\nC-E\nD-F\nE-F\nB-C",
+            layout="spring",
+            seed=49,  # the path A → F runs from left to right
+            layout_scale=3.6,
+            radius=0.32,
+        ),
+    )
+    red = "#FC6255"
+    _play(scene, create_animation(AnimationKind.FADE_IN, title.id), create_animation(AnimationKind.CREATE, network.id, run_time=2.0))
+    _play(scene, create_animation(AnimationKind.NETWORK_PARTS, network.id, run_time=0.6, parts="A", color=red))
+    for parts in ("A-C, C", "C-E, E", "E-F, F"):
+        _play(scene, create_animation(AnimationKind.NETWORK_PARTS, network.id, run_time=0.8, parts=parts, color=red))
+    _play(scene, create_animation(AnimationKind.NETWORK_PARTS, network.id, parts="F", effect="flash", color=red))
+    scene.steps.append(create_wait_step(1.5))
+    return scene
+
+
 BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("title", "text", title_and_subtitle),
     BuiltinTemplate("analysis", "graph", analyze_function),
@@ -225,4 +267,6 @@ BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("flow", "a_apply_wave", flow_field),
     BuiltinTemplate("solids", "a_orbit", solids_in_space),
     BuiltinTemplate("conics", "a_set_value", conic_sections),
+    BuiltinTemplate("slide", "a_one_by_one", presentation_slide),
+    BuiltinTemplate("network", "a_network_parts", shortest_path),
 )

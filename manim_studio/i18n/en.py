@@ -1278,4 +1278,9 @@ STRINGS: dict[str, str] = {
     "issue.network_parts_empty": "No vertices or edges are given.",
     "codegen.network_parts_unknown": "The network has no such vertices or edges: {detail}.",
     "codegen.network_parts_empty": "“Highlight vertices/edges” names no vertices or edges ({detail}).",
+    "template.slide.name": "Presentation slide",
+    "template.slide.title": "My presentation",
+    "template.slide.items": "An important idea\nAn example of it\nThe conclusion",
+    "template.network.name": "Graph theory: a path",
+    "template.network.title": "A path from A to F",
 }

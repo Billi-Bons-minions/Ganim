@@ -318,6 +318,26 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         _LINE_STYLE,
         (("stroke_color", "#F7D96F"),),
     ),
+    ObjectKind.VECTOR_FIELD: KindInfo(
+        ObjectKind.VECTOR_FIELD,
+        (
+            ParamSpec("x_expression", ParamType.EXPRESSION, "-y", extra_names=("y",)),
+            ParamSpec("y_expression", ParamType.EXPRESSION, "x", extra_names=("y",)),
+            ParamSpec("display", ParamType.CHOICE, "arrows", choices=("arrows", "stream")),
+            ParamSpec("x_min", ParamType.FLOAT, -7.0, minimum=-100.0, maximum=100.0, step=0.5),
+            ParamSpec("x_max", ParamType.FLOAT, 7.0, minimum=-100.0, maximum=100.0, step=0.5),
+            ParamSpec("y_min", ParamType.FLOAT, -4.0, minimum=-100.0, maximum=100.0, step=0.5),
+            ParamSpec("y_max", ParamType.FLOAT, 4.0, minimum=-100.0, maximum=100.0, step=0.5),
+            ParamSpec("step", ParamType.FLOAT, 0.5, minimum=0.1, maximum=10.0, step=0.1),
+            ParamSpec("colored", ParamType.BOOL, True),
+            ParamSpec("max_color", ParamType.FLOAT, 2.0, minimum=0.01, maximum=1000.0, step=0.5, visible_when=("colored", (True,))),
+            ParamSpec("virtual_time", ParamType.FLOAT, 3.0, minimum=0.1, maximum=20.0, step=0.5, visible_when=("display", ("stream",))),
+            ParamSpec("flow", ParamType.BOOL, True, visible_when=("display", ("stream",))),
+            ParamSpec("flow_speed", ParamType.FLOAT, 1.0, minimum=0.1, maximum=10.0, step=0.1, visible_when=("display", ("stream",))),
+        ),
+        _LINE_STYLE,
+        (("stroke_color", "#58C4DD"), ("stroke_width", 2.0)),
+    ),
     ObjectKind.TRACE: KindInfo(
         ObjectKind.TRACE,
         (
@@ -732,7 +752,7 @@ _NOT_FOR_HIGHLIGHTS = (
 
 def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: dict[str, Any]) -> bool:
     """Return ``True`` if the animation can be applied to the object."""
-    if obj_kind in (ObjectKind.HIGHLIGHT, ObjectKind.ANGLE) and anim_kind in _NOT_FOR_HIGHLIGHTS:
+    if obj_kind in (ObjectKind.HIGHLIGHT, ObjectKind.ANGLE, ObjectKind.VECTOR_FIELD) and anim_kind in _NOT_FOR_HIGHLIGHTS:
         return False
     if obj_kind == ObjectKind.TRACE:
         # a trace starts recording when it appears and can be faded out

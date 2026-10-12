@@ -56,6 +56,7 @@ class ObjectKind(str, Enum):
     HIGHLIGHT = "highlight"
     ANGLE = "angle"
     TRACE = "trace"
+    VECTOR_FIELD = "vector_field"
 
 
 class AnimationKind(str, Enum):

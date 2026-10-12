@@ -79,6 +79,11 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
 - Fuzzing Runde 3:
   - „Kopie verwandeln“ wird jetzt als `ReplacementTransform(quelle.copy(), ziel)` erzeugt (gleiches Bild, Ziel bleibt intakt).
   - Kopieren und Einfügen in eine andere Szene bringt fehlende Hosts (Achsen, Graph, Ziel) mit.
+- Neue Objektart „Vektorfeld“:
+  - Pfeile (ArrowVectorField) oder Stromlinien (StreamLines, optional fließend).
+  - Farbskala nach Stärke, Parameter möglich (Pfeile mit `always_redraw`).
+  - Die Bühne bildet Manim exakt nach (gleiches Gitter, gleicher Zufalls-Seed). Stromlinien sind gecacht.
+- 3D-Flächen und 3D-Kurven mit Parametern werden jetzt mitanimiert. Vorher erkannte `parameter_users` nur Funktionsgraphen.
 
 ### Halbfertig
 - (nichts)

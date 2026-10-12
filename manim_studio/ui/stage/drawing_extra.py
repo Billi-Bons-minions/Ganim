@@ -17,6 +17,7 @@ from PySide6.QtGui import (
     QPainter,
     QPainterPath,
     QPen,
+    QPolygonF,
     QTextDocument,
 )
 
@@ -277,6 +278,48 @@ def highlight_primitives(scene: Scene, obj: SceneObject, state: ObjectState) -> 
     return [_shape_primitive(path, obj, state)]
 
 
+def field_primitives(scene: Scene, obj: SceneObject, state: ObjectState, resources: StageResources) -> list[Primitive]:
+    """Arrows or stream lines of a vector field (relative to the object's position)."""
+    from manim_studio.model.fields import field_arrows, magnitude_color, stream_lines
+
+    ox, oy = obj.x, obj.y
+    paths: dict[str, QPainterPath] = {}
+    tips: dict[str, QPainterPath] = {}
+    widths: dict[str, float] = {}
+
+    def local(x: float, y: float) -> QPointF:
+        return QPointF((x - ox) * PX, -(y - oy) * PX)
+
+    if obj.params.get("display") == "stream":
+        for line in stream_lines(scene, obj, resources.values):
+            for (x1, y1, m1), (x2, y2, _m2) in zip(line, line[1:]):
+                # colors are bucketed so that the stage needs only a few paths
+                color = magnitude_color(obj, round(m1 * 8) / 8)
+                path = paths.setdefault(color, QPainterPath())
+                path.moveTo(local(x1, y1))
+                path.lineTo(local(x2, y2))
+                widths[color] = obj.stroke_width
+    else:
+        for arrow in field_arrows(scene, obj, resources.values):
+            length = math.hypot(arrow.dx, arrow.dy)
+            if length < 1e-6:
+                continue
+            tip = min(0.35, 0.25 * length)
+            ux, uy = arrow.dx / length, arrow.dy / length
+            end = (arrow.x + arrow.dx, arrow.y + arrow.dy)
+            base = (end[0] - ux * tip, end[1] - uy * tip)
+            path = paths.setdefault(arrow.color, QPainterPath())
+            path.moveTo(local(arrow.x, arrow.y))
+            path.lineTo(local(*base))
+            head = tips.setdefault(arrow.color, QPainterPath())
+            head.addPolygon(QPolygonF([local(*end), local(base[0] - uy * tip / 2, base[1] + ux * tip / 2), local(base[0] + uy * tip / 2, base[1] - ux * tip / 2)]))
+            head.closeSubpath()
+            widths[arrow.color] = min(6.0, 5.0 * length)
+    primitives = [Primitive(path=path, pen=_pen(color, widths[color], obj.stroke_opacity, 1.0)) for color, path in paths.items()]
+    primitives += [Primitive(path=path, brush=QBrush(_color(color, obj.stroke_opacity))) for color, path in tips.items()]
+    return primitives
+
+
 def trace_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
     """The recorded positions of the traced object as a line."""
     values = state.geometry
@@ -521,6 +564,8 @@ def extra_drawing(scene: Scene, obj: SceneObject, state: ObjectState, resources:
         return angle_primitives(obj, state), False
     if kind == ObjectKind.TRACE:
         return trace_primitives(obj, state), False
+    if kind == ObjectKind.VECTOR_FIELD:
+        return field_primitives(scene, obj, state, resources), False
     if kind == ObjectKind.GROUP:
         return [], False
     return None

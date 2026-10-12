@@ -1187,4 +1187,13 @@ STRINGS: dict[str, str] = {
     "issue.trace_target_missing": "The trace needs an object whose path it draws.",
     "codegen.trace_target_missing": "“{detail}” does not trace any object.",
     "status.trace_needs_target": "First select the object whose path should be drawn – then click “Trace”. The trace starts at the beginning or where you fade it in.",
+    "kind.vector_field": "Vector field",
+    "param.step": "Spacing",
+    "param.colored": "Color by strength",
+    "param.max_color": "Red from strength",
+    "param.virtual_time": "Length of the lines",
+    "param.flow": "Let it flow",
+    "param.flow_speed": "Flow speed",
+    "choice.display.arrows": "Arrows",
+    "choice.display.stream": "Stream lines",
 }

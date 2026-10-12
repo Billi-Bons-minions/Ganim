@@ -712,6 +712,19 @@ def parameter_users(scene: Scene, obj: SceneObject, _seen: frozenset[str] = froz
             expression = parse(scene, text, variable) if text.strip() else None
             if expression is not None:
                 used |= {by_symbol[symbol] for symbol in expression.used_parameters() if symbol in by_symbol}
+    if obj.kind == ObjectKind.VECTOR_FIELD:
+        from manim_studio.model.fields import field_users
+
+        used |= {by_symbol[symbol] for symbol in field_users(scene, obj) if symbol in by_symbol}
+    if obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D):
+        # 3D objects with parameters are redrawn while the parameters change
+        texts = [(obj.params.get("expression", ""), "x", ("y",))] if obj.kind == ObjectKind.SURFACE else [(obj.params.get(key, ""), "t", ()) for key in ("x_expression", "y_expression", "z_expression")]
+        for text, variable, extra in texts:
+            try:
+                expression = parse_expression(str(text), variable, (*extra, *parameter_symbols(scene)))
+            except ExpressionError:
+                continue
+            used |= {by_symbol[symbol] for symbol in expression.used_parameters() if symbol in by_symbol}
     for key in ("graph_id", "other_graph_id", "derive_from"):
         reference = scene.object_by_id(obj.params.get(key))
         if reference is not None:

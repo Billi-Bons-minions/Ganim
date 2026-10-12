@@ -1187,4 +1187,13 @@ STRINGS: dict[str, str] = {
     "issue.trace_target_missing": "Die Spur braucht ein Objekt, dessen Weg sie zeichnet.",
     "codegen.trace_target_missing": "„{detail}“ zeichnet den Weg keines Objekts.",
     "status.trace_needs_target": "Wähle zuerst das Objekt aus, dessen Weg gezeichnet werden soll – dann „Spur“ anklicken. Die Spur beginnt am Start oder dort, wo du sie einblendest.",
+    "kind.vector_field": "Vektorfeld",
+    "param.step": "Abstand",
+    "param.colored": "Nach Stärke färben",
+    "param.max_color": "Rot ab Stärke",
+    "param.virtual_time": "Länge der Linien",
+    "param.flow": "Fließen lassen",
+    "param.flow_speed": "Fließgeschwindigkeit",
+    "choice.display.arrows": "Pfeile",
+    "choice.display.stream": "Stromlinien",
 }

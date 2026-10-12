@@ -88,6 +88,11 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
 
         if not is_3d(scene):
             add(ERROR, "camera_rotation_2d")
+    if obj.kind == ObjectKind.VECTOR_FIELD:
+        for key in ("x_expression", "y_expression"):
+            _expression_issue_names(scene, str(params.get(key, "")), "x", ("y",), add)
+        if float(params.get("x_min", -7)) >= float(params.get("x_max", 7)) or float(params.get("y_min", -4)) >= float(params.get("y_max", 4)):
+            add(ERROR, "graph_range_invalid")
     if obj.kind == ObjectKind.TRACE:
         from manim_studio.model.traces import trace_target
 

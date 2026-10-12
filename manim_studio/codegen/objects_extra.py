@@ -298,6 +298,30 @@ def angle_code(obj: SceneObject, variable: str, first: str, second: str) -> list
     return [f"{variable} = always_redraw(lambda: {STUDIO_ANGLE}({', '.join(arguments)}))"]
 
 
+def vector_field_code(obj: SceneObject, variable: str, x_code: str, y_code: str, redraw: bool) -> list[str]:
+    """``ArrowVectorField`` or ``StreamLines`` of ``(f_x(x, y), f_y(x, y))``; the window follows the object's position."""
+    function = f"{variable}_function"
+    step = max(0.05, _f(obj, "step", 0.5))
+    x_range = f"[{fmt_float(obj.x + _f(obj, 'x_min', -7.0))}, {fmt_float(obj.x + _f(obj, 'x_max', 7.0))}, {fmt_float(step)}]"
+    y_range = f"[{fmt_float(obj.y + _f(obj, 'y_min', -4.0))}, {fmt_float(obj.y + _f(obj, 'y_max', 4.0))}, {fmt_float(step)}]"
+    lines = [f"def {function}(pos):", "    x, y = pos[0], pos[1]", f"    return np.array([{x_code}, {y_code}, 0.0])", ""]
+    arguments = [function, f"x_range={x_range}", f"y_range={y_range}"]
+    if obj.params.get("colored", True):
+        arguments.append(f"max_color_scheme_value={fmt_float(_f(obj, 'max_color', 2.0))}")
+    else:
+        arguments.append(f"color={py_color(obj.stroke_color)}")
+    arguments.append(f"opacity={fmt_float(obj.stroke_opacity)}")
+    if obj.params.get("display") == "stream":
+        arguments += [f"stroke_width={fmt_float(obj.stroke_width)}", f"virtual_time={fmt_float(_f(obj, 'virtual_time', 3.0))}"]
+        lines.append(f"{variable} = StreamLines({', '.join(arguments)})")
+        if obj.params.get("flow", True):
+            lines.append(f"{variable}.start_animation(warm_up=True, flow_speed={fmt_float(_f(obj, 'flow_speed', 1.0))})")
+        return lines
+    field = f"ArrowVectorField({', '.join(arguments)})"
+    lines.append(f"{variable} = always_redraw(lambda: {field})" if redraw else f"{variable} = {field}")
+    return lines
+
+
 def trace_code(obj: SceneObject, variable: str, target_variable: str) -> list[str]:
     """``TracedPath`` that records the center of its target from the moment it is added."""
     arguments = [

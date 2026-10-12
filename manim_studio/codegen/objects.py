@@ -28,6 +28,7 @@ from manim_studio.codegen.objects_extra import (
     group_code,
     highlight_code,
     trace_code,
+    vector_field_code,
 )
 from manim_studio.codegen.objects_extra import text as extra_text
 from manim_studio.codegen.three_d_code import axes_3d_code, curve_3d_code, surface_code
@@ -35,6 +36,7 @@ from manim_studio.model import graphs
 from manim_studio.model.angles import ANGLE_LINE_KEYS, angle_lines
 from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import Scene, SceneObject
+from manim_studio.model.fields import field_expressions
 from manim_studio.model.latex import colored_parts, colorize
 from manim_studio.model.schema import is_vector_image_path
 from manim_studio.model.three_d import THREE_D_KINDS, is_3d
@@ -248,6 +250,13 @@ def _special_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> tupl
         if target not in names or target == obj.id:
             raise CodegenError("highlight_target_missing", obj.name)
         return highlight_code(obj, variable, names[str(target)]), False
+    if obj.kind == ObjectKind.VECTOR_FIELD:
+        expressions = field_expressions(scene, obj)
+        if expressions is None:
+            raise CodegenError("expression_invalid", obj.name)
+        rename = renames(scene, names)
+        x_code, y_code = (expression.to_numpy(rename) for expression in expressions)
+        return vector_field_code(obj, variable, x_code, y_code, bool(graphs.parameter_users(scene, obj))), False
     if obj.kind == ObjectKind.TRACE:
         target = trace_target(scene, obj)
         if target is None or target.id not in names:

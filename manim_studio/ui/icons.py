@@ -134,6 +134,19 @@ def _trace(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QCol
     p.drawEllipse(QPointF(s * 0.78, s * 0.3), s * 0.09, s * 0.09)
 
 
+def _vector_field(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    colors = ("#236B8E", "#83C167", "#F7D96F", "#FC6255")
+    for row in range(3):
+        for column in range(3):
+            cx, cy = m + (s - 2 * m) * (column + 0.5) / 3, m + (s - 2 * m) * (row + 0.5) / 3
+            dx, dy = -(cy - s / 2), cx - s / 2
+            norm = max(1e-6, math.hypot(dx, dy))
+            length = s * 0.13
+            ex, ey = cx + dx / norm * length, cy - dy / norm * length
+            p.setPen(QPen(QColor(colors[min(3, int(norm / (s * 0.18)))]), w * 0.8))
+            p.drawLine(QPointF(cx, cy), QPointF(ex, ey))
+
+
 def _polygon(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
     p.drawPolygon(QPolygonF([QPointF(m, s * 0.7), QPointF(s * 0.32, m), QPointF(s - m, s * 0.35), QPointF(s * 0.7, s - m)]))
 
@@ -396,6 +409,7 @@ _EXTRA_DRAWERS = {
     ObjectKind.HIGHLIGHT: _highlight,
     ObjectKind.ANGLE: _angle,
     ObjectKind.TRACE: _trace,
+    ObjectKind.VECTOR_FIELD: _vector_field,
     ObjectKind.POLYGON: _polygon,
     ObjectKind.REGULAR_POLYGON: _regular_polygon,
     ObjectKind.STAR: _star,

@@ -541,3 +541,24 @@ def test_copy_transform_into_an_arrow_keeps_it_usable(tmp_path) -> None:
     )
     result = run_manim(tmp_path, generate_script(make_project(scene)), "Kopie", "--dry_run")
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+
+
+def test_vector_fields_and_parameter_surfaces_render(tmp_path) -> None:
+    parameter = make_object(ObjectKind.PARAMETER, "a", "k", symbol="a", value=1.0)
+    arrows = make_object(ObjectKind.VECTOR_FIELD, "Feld", "f", x_expression="-a y", y_expression="x", x_min=-3.0, x_max=3.0, y_min=-2.0, y_max=2.0, step=1.0)
+    stream = make_object(ObjectKind.VECTOR_FIELD, "Strom", "s", display="stream", x_min=-3.0, x_max=3.0, y_min=-2.0, y_max=2.0, step=1.0, colored=False)
+    flat = Scene(
+        id="f",
+        name="Felder",
+        objects=[parameter, arrows, stream],
+        steps=[play(make_animation(AnimationKind.CREATE, "f", run_time=0.3)), play(make_animation(AnimationKind.SET_VALUE, "k", value=2.0, run_time=0.3)), play(make_animation(AnimationKind.FADE_OUT, "s", run_time=0.3))],
+    )
+    axes = make_object(ObjectKind.AXES_3D, "Achsen", "ax")
+    surface = make_object(ObjectKind.SURFACE, "Flaeche", "fl", axes_id="ax", expression="a sin(x) cos(y)", resolution=4)
+    tracker = make_object(ObjectKind.PARAMETER, "a", "k2", symbol="a", value=1.0)
+    space = Scene(id="r", name="Welle", objects=[tracker, axes, surface], steps=[play(make_animation(AnimationKind.SET_VALUE, "k2", value=-1.0, run_time=0.3))])
+    script = generate_script(make_project(flat, space))
+    assert "always_redraw(" in script.split("class Welle")[1]
+    for name in ("Felder", "Welle"):
+        result = run_manim(tmp_path, script, name, "--dry_run")
+        assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]

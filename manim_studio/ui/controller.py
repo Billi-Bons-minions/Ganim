@@ -141,6 +141,13 @@ class EditorController(QObject):
                 self.statusMessage.emit(tr("status.angle_needs_lines"))
                 return None
             params["first_line"], params["second_line"] = lines
+        if kind == ObjectKind.BOOLEAN_SHAPE and not (params.get("first_shape") and params.get("second_shape")):
+            from manim_studio.model.booleans import OPERAND_KINDS
+
+            # two selected shapes are combined; otherwise two overlapping circles come along
+            shapes = [i for i in self.editor.selected_objects if (o := scene.object_by_id(i)) is not None and o.kind in OPERAND_KINDS]
+            if len(shapes) >= 2:
+                params["first_shape"], params["second_shape"] = shapes[:2]
         if kind in (ObjectKind.HIGHLIGHT, ObjectKind.TRACE) and not params.get("target"):
             target = next((o for o in (scene.object_by_id(i) for i in self.editor.selected_objects) if o is not None and o.kind not in UNGROUPABLE and o.kind != kind), None)
             if target is None:
@@ -189,6 +196,11 @@ class EditorController(QObject):
             obj.params["axes_id"] = new(ObjectKind.AXES_3D).id
         elif obj.kind == ObjectKind.DATA_PLOT and not obj.params.get("axes_id"):
             obj.params["axes_id"] = new(ObjectKind.AXES, show_numbers=True).id
+        elif obj.kind == ObjectKind.BOOLEAN_SHAPE and not (obj.params.get("first_shape") and obj.params.get("second_shape")):
+            first, second = new(ObjectKind.CIRCLE, radius=1.2), new(ObjectKind.CIRCLE, radius=1.2)
+            first.x, second.x = obj.x - 0.7, obj.x + 0.7
+            second.stroke_color = second.fill_color = "#FC6255"
+            obj.params["first_shape"], obj.params["second_shape"] = first.id, second.id
         elif obj.kind in GRAPH_TOOL_KINDS and not obj.params.get("graph_id"):
             axes = [o for o in self.scene().objects if o.kind in (ObjectKind.AXES, ObjectKind.NUMBER_PLANE)]
             axes_id = axes[-1].id if axes else new(ObjectKind.AXES).id

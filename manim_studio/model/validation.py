@@ -137,6 +137,13 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
             add(ERROR, "angle_lines_missing")
         elif angle_geometry(scene, obj, refresh_attached_states(scene, {line.id: initial_state(scene, line) for line in lines})) is None:
             add(WARNING, "angle_parallel")
+    if obj.kind == ObjectKind.BOOLEAN_SHAPE:
+        from manim_studio.model.booleans import operands, start_bounds
+
+        if operands(scene, obj) is None:
+            add(ERROR, "boolean_shapes_missing")
+        elif start_bounds(scene, obj) is None:
+            add(WARNING, "boolean_empty")
     if obj.kind == ObjectKind.HIGHLIGHT:
         target = scene.object_by_id(obj.params.get("target"))
         if target is None or target.id == obj.id or target.kind in UNGROUPABLE or target.kind == ObjectKind.HIGHLIGHT:

@@ -121,6 +121,20 @@ def _angle(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QCol
     p.drawArc(QRectF(corner.x() - radius, corner.y() - radius, 2 * radius, 2 * radius), 0, 46 * 16)
 
 
+def _boolean_shape(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    radius = (s - 2 * m) * 0.34
+    left, right = QPainterPath(), QPainterPath()
+    left.addEllipse(QPointF(s / 2 - radius * 0.55, s / 2), radius, radius)
+    right.addEllipse(QPointF(s / 2 + radius * 0.55, s / 2), radius, radius)
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QColor("#F7D96F"))
+    p.drawPath(left.intersected(right))
+    p.setPen(QPen(neutral, w))
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawPath(left)
+    p.drawPath(right)
+
+
 def _trace(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
     path = QPainterPath(QPointF(m, s - m))
     path.cubicTo(QPointF(s * 0.3, s * 0.2), QPointF(s * 0.6, s * 0.9), QPointF(s * 0.78, s * 0.3))
@@ -490,6 +504,7 @@ _EXTRA_DRAWERS = {
     ObjectKind.BRACE: _brace,
     ObjectKind.HIGHLIGHT: _highlight,
     ObjectKind.ANGLE: _angle,
+    ObjectKind.BOOLEAN_SHAPE: _boolean_shape,
     ObjectKind.TRACE: _trace,
     ObjectKind.VECTOR_FIELD: _vector_field,
     ObjectKind.SOLID: _solid,

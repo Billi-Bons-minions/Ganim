@@ -60,6 +60,8 @@ class ObjectState:
     matrix: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 1.0)
     #: Colors of single vertices and edges of a network (``(part, color)`` pairs).
     part_colors: tuple[tuple[tuple[str, str, str], str], ...] = ()
+    #: Where the shapes of a boolean shape are (see ``model/booleans.py``).
+    parts: tuple = ()
 
 
 def first_reference(scene: Scene, object_id: str) -> tuple[Animation, bool] | None:
@@ -408,6 +410,16 @@ def refresh_attached_states(scene: Scene, states: dict[str, ObjectState]) -> dic
                 states[obj.id] = replace(states[obj.id], geometry=())
             else:
                 states[obj.id] = replace(states[obj.id], x=geometry.x, y=geometry.y, rotation=0.0, scale=1.0, geometry=(geometry.start, geometry.sweep))
+        elif obj.kind == ObjectKind.BOOLEAN_SHAPE:
+            from manim_studio.model.booleans import placements, result_bounds
+
+            parts = placements(scene, obj, states)
+            bounds = result_bounds(scene, obj, parts)
+            if bounds is None:
+                states[obj.id] = replace(states[obj.id], parts=())
+            else:
+                left, bottom, right, top = bounds
+                states[obj.id] = replace(states[obj.id], x=(left + right) / 2, y=(bottom + top) / 2, rotation=0.0, parts=parts)
     return states
 
 

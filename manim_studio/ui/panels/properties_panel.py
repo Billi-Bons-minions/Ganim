@@ -35,6 +35,7 @@ from manim_studio.model.animation_builder import allowed_for_objects, reference_
 from manim_studio.model.arrange import ALIGN_MODES, DISTRIBUTE_MODES
 from manim_studio.model.assets import relative_asset_path
 from manim_studio.model.attach import ATTACH_FOLLOW, ATTACH_FORMULA, ATTACH_SPECS, ATTACHABLE_KINDS, attach_mode, can_follow, is_attached, set_attach_mode
+from manim_studio.model.booleans import OPERAND_KEYS, can_use
 from manim_studio.model.entities import STEP_LAGGED, STEP_MODES, STEP_TOGETHER, Animation, SceneObject, Step
 from manim_studio.model.expression import check_expression
 from manim_studio.model.frame import ASPECTS
@@ -517,6 +518,8 @@ class PropertiesPanel(QScrollArea):
         allowed = graphs.is_function_curve if spec.key in FUNCTION_GRAPH_REFS else (lambda obj: True)
         if spec.key == "attach_target":
             allowed = lambda obj: can_follow(self.editor.scene(), object_id, obj)  # noqa: E731
+        if spec.key in OPERAND_KEYS:
+            allowed = lambda obj: can_use(self.editor.scene(), object_id, obj)  # noqa: E731
         widget, show = self._param_editor(spec, commit, exclude=lambda: object_id, allowed=allowed)
         form.row(label, widget, lambda: self._object(object_id).params.get(spec.key, spec.default), show)
         if spec.type == ParamType.EXPRESSION:
@@ -588,7 +591,7 @@ class PropertiesPanel(QScrollArea):
         if recording >= 0:
             self._step_section(form, object_id, recording)
         bound = is_bound(self.editor.scene(), self._object(object_id))
-        if not bound and kind not in GRAPH_TOOL_KINDS:
+        if not bound and kind not in GRAPH_TOOL_KINDS and kind != ObjectKind.BOOLEAN_SHAPE:
             form.section(tr("section.start_position") if recording >= 0 else tr("section.position"))
             for field, spec in (("x", _POSITION_SPEC), ("y", _POSITION_SPEC), ("rotation", _ROTATION_SPEC)):
                 self._object_field_row(form, object_id, field, spec, tr(f"prop.{field}"))

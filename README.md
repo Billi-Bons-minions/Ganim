@@ -28,7 +28,7 @@ All of these clips were made from the built-in templates and the projects in [ex
 ## Features
 
 **Objects**
-- Shapes: circle, square, rectangle, triangle, ellipse, polygon, regular polygon, star, arc, sector, ring, line, dashed line, arrow, double arrow, curved arrow (`CurvedArrow`, `CurvedDoubleArrow`, `ArcBetweenPoints`), vector, dot, brace, highlight (frame, background, underline, strike-through), angle marks, motion traces
+- Shapes: circle, square, rectangle, triangle, ellipse, polygon, regular polygon, star, arc, sector, ring, **boolean shapes** (union, intersection, difference and exclusion of two shapes, e.g. for Venn diagrams; they follow their shapes when these move), line, dashed line, arrow, double arrow, curved arrow (`CurvedArrow`, `CurvedDoubleArrow`, `ArcBetweenPoints`), vector, dot, brace, highlight (frame, background, underline, strike-through), angle marks, motion traces
 - Text: text with colored words, Markup text, bullet lists, code blocks with syntax highlighting, tables; with LaTeX also formulas (`MathTex`, `Tex`) with colored parts, matrices and an optional computed result (`= 3.50`, live with parameters)
 - Math: number line, number plane (square or polar grid), coordinate system with labels, function graphs (`2x^2 + sin(x)`, piecewise, parametric, polar, implicit `f(x, y) = 0`, derivatives, integral functions F(x) = ∫ f(t) dt), area under a curve, Riemann rectangles, tangents and secants with a live label of their current term (e.g. `t(x) = 1.50x − 0.25`, also while they move along the graph), secants with slope triangle (let h run to 0 and the secant becomes the tangent), points on graphs, zeros/extrema/inflection points/intersections, graph labels, tables of values, data points with regression lines, bar charts (CSV import), vector fields (arrows or stream lines), networks of vertices and edges (Manim's `Graph`/`DiGraph` with several layouts)
 - 3D: 3D axes, surfaces `z = f(x, y)` or parametric `x(u, v), y(u, v), z(u, v)`, 3D curves, solids (sphere, cube, box, cone, cylinder, torus and the Platonic solids tetrahedron, octahedron, icosahedron, dodecahedron), arrows, lines and points in space, camera orbits and camera moves
@@ -57,7 +57,7 @@ All of these clips were made from the built-in templates and the projects in [ex
 - Export of the generated Python script; the code view shows it at any time
 
 **More**
-- 15 templates (e.g. title card, function analysis, secant to tangent, sliding tangent, Pythagorean theorem, orbit, 3D solids, conic sections, presentation slide, graph theory, linear map) and 5 example projects in the welcome dialog
+- 16 templates (e.g. title card, function analysis, secant to tangent, sliding tangent, Pythagorean theorem, orbit, 3D solids, conic sections, presentation slide, graph theory, linear map, sets with a Venn diagram) and 5 example projects in the welcome dialog
 - Interactive tour, hover previews for every animation, a list of all keyboard shortcuts (*F1*)
 - Dark and light theme, adjustable UI scale, German and English
 - Autosave and recovery after a crash, project packages (project and images in one file), your own styles, building blocks and templates
@@ -66,7 +66,7 @@ All of these clips were made from the built-in templates and the projects in [ex
 
 ### What Manim Studio does not do (yet)
 - It has no installer or app bundle yet: you install it with Python (see below).
-- The script import (*File → Import Manim script*) is meant for simple scenes: it reads basic shapes, lines and (curved) arrows, text and formulas, axes and number planes, plain function graphs, numbers, `ValueTracker`s, groups and the common animations. Everything else, including much of what Manim Studio itself writes (graph tools, 3D, networks, vector fields, lists), is skipped and listed. To keep working on a project, save it as `.msproj`.
+- The script import (*File → Import Manim script*) is meant for simple scenes: it reads basic shapes, boolean shapes, lines and (curved) arrows, text and formulas, axes and number planes, plain function graphs, numbers, `ValueTracker`s, groups and the common animations. Everything else, including much of what Manim Studio itself writes (graph tools, 3D, networks, vector fields, lists), is skipped and listed. To keep working on a project, save it as `.msproj`.
 - 3D scenes are limited to the objects listed above; moving and rotating 3D solids is not possible as an animation.
 
 ## Installation

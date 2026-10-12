@@ -26,7 +26,7 @@ from manim_studio.codegen.graph_code import (
 from manim_studio.codegen.literals import LiteralError, fmt_float, py_color
 from manim_studio.codegen.naming import class_names, variable_names
 from manim_studio.codegen.objects import COLOR_TEX, COLOR_TEX_SOURCE, STUDIO_CAMERA, STUDIO_CAMERA_SOURCE, creation_order, object_code
-from manim_studio.codegen.objects_extra import STUDIO_ANGLE, STUDIO_ANGLE_SOURCE
+from manim_studio.codegen.objects_extra import STUDIO_ANGLE, STUDIO_ANGLE_SOURCE, STUDIO_UNION, STUDIO_UNION_SOURCE
 from manim_studio.codegen.three_d_code import camera_setup
 from manim_studio.model.arrange import drawing_order
 from manim_studio.model.entities import Project, Scene
@@ -300,7 +300,7 @@ def generate_script_with_map(project: Project, options: CodegenOptions = DEFAULT
             helpers.add(STUDIO_CAMERA)
         blocks += ["", ""] + joined_class_code(project, names, scenes, options.transition)
     lines = header_lines(JOINED_CLASS if options.joined else names[scenes[0].id], project.aspect)
-    for name, source in ((COLOR_TEX, COLOR_TEX_SOURCE), (STUDIO_PLOT, STUDIO_PLOT_SOURCE), (STUDIO_INTEGRAL, STUDIO_INTEGRAL_SOURCE), (STUDIO_DASHED, STUDIO_DASHED_SOURCE), (STUDIO_LINES, STUDIO_LINES_SOURCE), (STUDIO_TERM, STUDIO_TERM_SOURCE), (STUDIO_BESIDE, STUDIO_BESIDE_SOURCE), (STUDIO_TRANSFORM, STUDIO_TRANSFORM_SOURCE), (STUDIO_SHAPE, STUDIO_SHAPE_SOURCE), (STUDIO_CAMERA, STUDIO_CAMERA_SOURCE), (STUDIO_ANGLE, STUDIO_ANGLE_SOURCE)):
+    for name, source in ((COLOR_TEX, COLOR_TEX_SOURCE), (STUDIO_PLOT, STUDIO_PLOT_SOURCE), (STUDIO_INTEGRAL, STUDIO_INTEGRAL_SOURCE), (STUDIO_DASHED, STUDIO_DASHED_SOURCE), (STUDIO_LINES, STUDIO_LINES_SOURCE), (STUDIO_TERM, STUDIO_TERM_SOURCE), (STUDIO_BESIDE, STUDIO_BESIDE_SOURCE), (STUDIO_TRANSFORM, STUDIO_TRANSFORM_SOURCE), (STUDIO_SHAPE, STUDIO_SHAPE_SOURCE), (STUDIO_CAMERA, STUDIO_CAMERA_SOURCE), (STUDIO_ANGLE, STUDIO_ANGLE_SOURCE), (STUDIO_UNION, STUDIO_UNION_SOURCE)):
         if name in helpers:
             lines += ["", ""] + source.split("\n")
     source_map = SourceMap()

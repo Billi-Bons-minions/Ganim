@@ -14,7 +14,13 @@ All notable changes to Manim Studio are listed here. The format follows
 - Integral function of a graph: F(x) = C + ∫ f(t) dt from a to x, computed numerically like Manim's `plot_antiderivative_graph` (button *∫ Integral function* on a graph).
 - A number can show a formula of parameters (e.g. `a^2/2` or `sin(a) + 1`); it updates live while the parameters change.
 
+- Boolean shapes: union, intersection, difference and exclusion (symmetric difference) of two closed shapes, also nested. They follow their shapes while these move, turn or change (Manim's `Union`, `Intersection`, `Difference`, `Exclusion` with `always_redraw`). Select two shapes and click *Boolean shape*, or get two overlapping circles with it.
+- Template "Sets: intersection and difference" with a Venn diagram (now 16 templates).
+- The script import reads `Union`, `Intersection`, `Difference` and `Exclusion`.
+
 ### Fixed
+- Manim's `Union` leaves a hole where two shapes drawn in opposite directions overlap (e.g. a sector and a triangle). Generated scripts unite the two areas themselves (`studio_union`), so the video shows the real union like the stage.
+- Motion paths along a regular polygon with an even number of corners started at the wrong corner (and a square-shaped one was turned by 45°).
 - The label of a point that follows a parameter showed fewer decimals on the stage than in the video.
 
 ## 0.9.0 – first public pre-release (not yet published)

@@ -31,6 +31,7 @@ CATEGORIES: tuple[tuple[str, tuple[ObjectKind, ...]], ...] = (
             ObjectKind.ARC,
             ObjectKind.SECTOR,
             ObjectKind.ANNULUS,
+            ObjectKind.BOOLEAN_SHAPE,
         ),
     ),
     (

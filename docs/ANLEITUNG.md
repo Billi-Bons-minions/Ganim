@@ -62,7 +62,7 @@ Beim Start prüft Manim Studio im Hintergrund, ob Manim, FFmpeg und LaTeX vorhan
 
 Im Raum gibt es 3D-Achsen, Flächen (z = f(x, y) oder als Parameterfläche x(u, v), y(u, v), z(u, v), z. B. Kugel oder Torus), Kurven, Körper (auch die platonischen Körper Tetraeder, Oktaeder, Ikosaeder und Dodekaeder) sowie Pfeile, Strecken und Punkte (Bereich *3D* der Objektbibliothek oder Menü *Einfügen*).
 
-Es geht auch ohne leere Bühne: Im Willkommensdialog gibt es fünf Beispielprojekte, und unter *Szene → Neue Szene aus Vorlage* findest du 15 Vorlagen (z. B. Kurvendiskussion, von der Sekante zur Tangente, Tangente wandert am Graphen, Satz des Pythagoras, Graphentheorie, lineare Abbildung).
+Es geht auch ohne leere Bühne: Im Willkommensdialog gibt es fünf Beispielprojekte, und unter *Szene → Neue Szene aus Vorlage* findest du 16 Vorlagen (z. B. Kurvendiskussion, von der Sekante zur Tangente, Tangente wandert am Graphen, Satz des Pythagoras, Graphentheorie, lineare Abbildung, Mengen im Venn-Diagramm).
 
 ## Wichtige Begriffe
 
@@ -72,6 +72,7 @@ Es geht auch ohne leere Bühne: Im Willkommensdialog gibt es fünf Beispielproje
 - **Parameter:** Ein Parameter (z. B. `a`) ist ein Regler. Du kannst ihn in allen Formeln verwenden (Graphen, Flächen, Tangenten, Flächen im Raum, Vektorfelder, Positionen) und mit *Wert ändern* animieren. Bei einer *Formel* rechnet die Option *Ergebnis ausrechnen* den Inhalt aus und hängt „= …“ an, auch mit Parametern (z. B. `\frac{a^2}{2} + 3 = 3.50`). Eine *Zahl* kann einen Parameter oder eine Formel aus Parametern anzeigen (Feld *Formel*, z. B. `a^2/2`); sie rechnet beim Animieren mit.
 - **Werkzeuge am Graphen:** Wähle einen Funktionsgraphen; im Eigenschaften-Panel fügen Knöpfe unter anderem Ableitung, Integralfunktion (F(x) = ∫ f(t) dt, numerisch berechnet), Nullstellen, Extrema, Tangente, Sekante, Punkt, Fläche, Riemann-Summe, Beschriftung oder Wertetabelle hinzu. Koppelst du die Schrittweite *h* einer Sekante an einen Parameter und lässt ihn gegen 0 laufen, wird die Sekante zur Tangente.
 - **Tangente mit Term:** Koppel bei der Tangente *x folgt Parameter* an einen Parameter und animiere ihn mit *Wert ändern* – die Tangente wandert am Graphen. Unter *Beschriftung* wählst du *Term* (`t(x) = 1.50x − 0.25`), *Gleichung* oder *Steigung*; die Beschriftung läuft mit und zeigt immer den aktuellen Wert. Fertiges Beispiel: Vorlage *Tangente wandert am Graphen*.
+- **Mengenform:** Wähle zwei geschlossene Formen (Kreis, Rechteck, Vieleck, Stern, Ring …) und klicke in der Objektbibliothek auf *Mengenform*. Sie zeigt Vereinigung, Schnittmenge, Differenz oder symmetrische Differenz der beiden Formen und folgt ihnen, wenn sie sich bewegen. Ohne Auswahl bringt sie zwei überlappende Kreise mit. Fertiges Beispiel: Vorlage *Mengen: Schnitt und Differenz*.
 - **Kopplung:** Im Eigenschaften-Panel unter *Kopplung* kann ein Objekt einem anderen folgen (z. B. eine Beschriftung neben einem wandernden Punkt; auch die Kamera kann folgen) oder seine Position aus einer Formel mit Parametern nehmen, etwa `x = 2 cos(w)`, `y = 2 sin(w)`.
 - **Funktionsterme:** erlaubt sind `x`, Zahlen (auch `0,5`), `+ - * / ^`, Klammern, implizite Multiplikation (`2x`, `3sin(x)`), `pi`, `e` und die Funktionen `sin cos tan asin acos atan sinh cosh tanh exp log ln log10 log2 sqrt abs floor ceil sign`.
 

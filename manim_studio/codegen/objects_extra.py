@@ -266,6 +266,49 @@ def highlight_code(obj: SceneObject, variable: str, target_variable: str) -> lis
     return [f"{variable} = always_redraw(lambda: {shape})"]
 
 
+STUDIO_UNION = "studio_union"
+STUDIO_UNION_SOURCE = '''def studio_union(first, second, **style):
+    """The union of two filled areas.
+
+    Manim's Union merges both outlines and keeps what they wind around, so two shapes drawn
+    in opposite directions (a Sector and a Circle, for example) cancel where they overlap.
+    Like Intersection and Difference, this unites the two areas themselves.
+    """
+    import pathops
+
+    result = Union(first, second, **style)
+    united = pathops.op(result._convert_vmobject_to_skia_path(first), result._convert_vmobject_to_skia_path(second), pathops.PathOp.UNION)
+    result.clear_points()
+    result._convert_skia_path_to_vmobject(united)
+    return result'''
+
+
+def boolean_expression(scene, obj: SceneObject, names: dict[str, str], style: Kwargs | None = None) -> str:
+    """``studio_union(a, b)``, ``Intersection(a, b)`` ...; nested boolean shapes are rebuilt from their own shapes.
+
+    A boolean shape that is not on screen is never updated by Manim, so a boolean shape built
+    from another one repeats its operation instead of using its (possibly old) result.
+    """
+    from manim_studio.model.booleans import MANIM_CLASSES, UNION, is_boolean, operands, operation
+
+    parts = [boolean_expression(scene, shape, names) if is_boolean(shape) else names[shape.id] for shape in operands(scene, obj) or ()]
+    parts += [f"{key}={value}" for key, value in style or []]
+    function = STUDIO_UNION if operation(obj) == UNION else MANIM_CLASSES[operation(obj)]
+    return f"{function}({', '.join(parts)})"
+
+
+def uses_union(scene, obj: SceneObject) -> bool:
+    """``True`` if a boolean shape (or one it is built from) unites shapes."""
+    from manim_studio.model.booleans import UNION, is_boolean, operands, operation
+
+    return operation(obj) == UNION or any(is_boolean(shape) and uses_union(scene, shape) for shape in operands(scene, obj) or ())
+
+
+def boolean_code(scene, obj: SceneObject, variable: str, names: dict[str, str]) -> list[str]:
+    """A boolean shape that follows its two shapes (recomputed in every frame)."""
+    return [f"{variable} = always_redraw(lambda: {boolean_expression(scene, obj, names, shape_style(obj))})"]
+
+
 STUDIO_ANGLE = "studio_angle"
 STUDIO_ANGLE_SOURCE = '''def studio_angle(line_1, line_2, radius=0.5, quadrant=(1, 1), other_angle=False, right=False, label="", decimals=-1, font_size=32, **style):
     """Angle mark between two lines with an optional label (used with always_redraw)."""

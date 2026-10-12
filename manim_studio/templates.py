@@ -324,6 +324,34 @@ def moving_tangent() -> Scene:
     return scene
 
 
+def venn_diagram() -> Scene:
+    """Two sets: their intersection follows a moving circle, then A without B."""
+    scene = create_scene(tr("template.venn.name"))
+    first = _add(scene, create_object(ObjectKind.CIRCLE, "A", -1.0, -0.2, radius=1.8))
+    second = _add(scene, create_object(ObjectKind.CIRCLE, "B", 1.0, -0.2, radius=1.8))
+    first.fill_opacity = second.fill_opacity = 0.15
+    second.stroke_color = second.fill_color = "#FC6255"
+    # the letters keep their place above the circles (coupling)
+    label_a = _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " A", -1.0, 2.15, text="A", font_size=44.0, attach="follow", attach_target=first.id))
+    label_b = _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " B", 1.0, 2.15, text="B", font_size=44.0, attach="follow", attach_target=second.id))
+    label_a.fill_color, label_b.fill_color = first.stroke_color, second.stroke_color
+    both = _add(scene, create_object(ObjectKind.BOOLEAN_SHAPE, "A ∩ B", operation="intersection", first_shape=first.id, second_shape=second.id))
+    only_a = _add(scene, create_object(ObjectKind.BOOLEAN_SHAPE, "A ∖ B", operation="difference", first_shape=first.id, second_shape=second.id))
+    only_a.stroke_color = only_a.fill_color = "#83C167"
+    caption_both = _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " 1", 0.0, -2.75, text=tr("template.venn.intersection"), font_size=36.0))
+    caption_only = _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " 2", 0.0, -2.75, text=tr("template.venn.difference"), font_size=36.0))
+    caption_both.fill_color, caption_only.fill_color = both.fill_color, only_a.fill_color
+    _play(scene, *(create_animation(AnimationKind.CREATE, shape.id) for shape in (first, second)), *(create_animation(AnimationKind.WRITE, label.id) for label in (label_a, label_b)))
+    _play(scene, create_animation(AnimationKind.FADE_IN, both.id), create_animation(AnimationKind.FADE_IN, caption_both.id))
+    # the intersection shrinks while B moves away (and grows when it comes back)
+    _play(scene, create_animation(AnimationKind.MOVE, second.id, run_time=1.5, x=2.4, y=-0.2))
+    _play(scene, create_animation(AnimationKind.MOVE, second.id, run_time=1.5, x=1.0, y=-0.2))
+    _play(scene, create_animation(AnimationKind.FADE_OUT, both.id), create_animation(AnimationKind.FADE_OUT, caption_both.id))
+    _play(scene, create_animation(AnimationKind.FADE_IN, only_a.id), create_animation(AnimationKind.FADE_IN, caption_only.id))
+    scene.steps.append(create_wait_step(1.5))
+    return scene
+
+
 BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("title", "text", title_and_subtitle),
     BuiltinTemplate("analysis", "graph", analyze_function),
@@ -340,4 +368,5 @@ BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("linear_map", "a_apply_matrix", linear_map),
     BuiltinTemplate("secant", "graph", secant_to_tangent),
     BuiltinTemplate("tangent", "graph", moving_tangent),
+    BuiltinTemplate("venn", "a_fade_in", venn_diagram),
 )

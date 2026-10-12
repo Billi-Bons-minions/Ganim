@@ -101,6 +101,11 @@ def base_size(scene: Scene, obj: SceneObject) -> tuple[float, float]:
     if kind == ObjectKind.ANGLE:
         radius = param_float(p, "radius", 0.6)
         return 2 * radius, 2 * radius
+    if kind == ObjectKind.BOOLEAN_SHAPE:
+        from manim_studio.model.booleans import start_bounds
+
+        bounds = start_bounds(scene, obj)
+        return (bounds[2] - bounds[0], bounds[3] - bounds[1]) if bounds is not None else (0.5, 0.5)
     if kind == ObjectKind.HIGHLIGHT:
         box = highlight_box(scene, obj)
         if box is None:

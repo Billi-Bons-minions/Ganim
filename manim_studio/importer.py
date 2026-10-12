@@ -340,7 +340,35 @@ def build_object(call: ast.Call, name: str, objects: dict[str, SceneObject]) -> 
         members = [objects[arg.id].id for arg in call.args if isinstance(arg, ast.Name) and arg.id in objects]
         if len(members) == len(call.args) and members:
             return create_object(ObjectKind.GROUP, name, members=members)
+    if function == "always_redraw" and call.args and isinstance(call.args[0], ast.Lambda) and isinstance(call.args[0].body, ast.Call):
+        if _call_name(call.args[0].body) in BOOLEAN_FUNCTIONS:
+            return build_object(call.args[0].body, name, objects)
+    if function in BOOLEAN_FUNCTIONS and len(call.args) == 2:
+        first, second = (_boolean_operand(arg, objects) for arg in call.args)
+        obj = create_object(ObjectKind.BOOLEAN_SHAPE, name, operation=BOOLEAN_FUNCTIONS[function], first_shape=first, second_shape=second)
+        obj.stroke_color = obj.fill_color = "#FFFFFF"  # Manim's defaults: a white outline, no filling
+        obj.fill_opacity = 0.0
+        _style(obj, kwargs)
+        return obj
     raise ImportProblem(f"object {function}")
+
+
+#: Manim's boolean operations (and the union helper of generated scripts).
+BOOLEAN_FUNCTIONS = {"Union": "union", "studio_union": "union", "Intersection": "intersection", "Difference": "difference", "Exclusion": "exclusion"}
+
+
+def _boolean_operand(node: ast.AST, objects: dict[str, SceneObject]) -> str:
+    """Id of a shape of a boolean operation; a nested operation must exist as an object already."""
+    from manim_studio.model.booleans import OPERAND_KINDS
+
+    if isinstance(node, ast.Name) and node.id in objects and objects[node.id].kind in OPERAND_KINDS:
+        return objects[node.id].id
+    if isinstance(node, ast.Call) and _call_name(node) in BOOLEAN_FUNCTIONS and len(node.args) == 2:
+        wanted = (BOOLEAN_FUNCTIONS[_call_name(node)], *(_boolean_operand(arg, objects) for arg in node.args))
+        for obj in objects.values():
+            if obj.kind == ObjectKind.BOOLEAN_SHAPE and (obj.params.get("operation"), obj.params.get("first_shape"), obj.params.get("second_shape")) == wanted:
+                return obj.id
+    raise ImportProblem("boolean operand")
 
 
 def _graph_range(obj: SceneObject, kwargs: dict[str, ast.AST]) -> None:

@@ -63,6 +63,7 @@ class ObjectKind(str, Enum):
     VECTOR_3D = "vector_3d"
     SECANT = "secant"
     CURVED_ARROW = "curved_arrow"
+    BOOLEAN_SHAPE = "boolean_shape"
 
 
 class AnimationKind(str, Enum):

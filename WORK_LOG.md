@@ -354,3 +354,20 @@ Jede Funktion ist mit einem Vergleich Bühne ↔ Manim-Bild und mit echten Manim
   - Bei einem live gerechneten Ergebnis entfallen eingefärbte Teile.
   - LaTeX setzt für jeden neuen Wert die Formel neu; lange Animationen mit Parametern rendern dadurch langsamer.
 
+
+---
+
+# Abendschicht 12.10. (lokale Session)
+
+Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests grün (Python 3.12, Manim 0.22). Für Manim 0.19 habe ich lokal eine zweite venv (Python 3.12) außerhalb des Repos angelegt; jedes neue Feature läuft mit seinen Manim-Tests in beiden Versionen.
+
+**Reihenfolge:** wie in deiner Liste (Nutzen für Mathe-Erklärvideos). Bühne und Video vergleiche ich jeweils mit einem Hilfsskript, das die Bühne als Bild zeichnet und neben `manim -s` legt (liegt nicht im Repo).
+
+## 1. Mengenformen (boolesche Operationen)
+- **Was:** Neue Objektart *Mengenform* (Vereinigung, Schnittmenge, Differenz, symmetrische Differenz) aus zwei geschlossenen Formen: Kreis, Quadrat, Rechteck, Dreieck, Ellipse, Vieleck, regelmäßiges Vieleck, Stern, Sektor, Ring oder eine andere Mengenform (verschachtelt). Vorlage *Mengen: Schnitt und Differenz* (jetzt 16 Vorlagen), Skript-Import.
+- **Entscheidung: folgt den Formen.** Die Mengenform wird wie Winkel und Markierung in jedem Bild neu berechnet (`always_redraw`). Bewegt, dreht oder verwandelt sich eine Form, ändert sich das Ergebnis mit (z. B. wird die Schnittmenge kleiner, wenn ein Kreis wegrückt). Dafür kann man die Mengenform selbst nicht bewegen, drehen oder umfärben (Meldung wie beim Winkel). Ein- und Ausblenden, Hervorheben usw. gehen.
+- **Entscheidung: Bedienung.** Zwei gewählte Formen werden verknüpft; ohne Auswahl bringt die Mengenform zwei überlappende Kreise mit (wie die Graph-Werkzeuge ihre Achsen). Voreinstellung ist die Schnittmenge. Wird eine Form gelöscht, verschwindet die Mengenform mit.
+- **Gefunden: Manims `Union` ist fehlerhaft.** Die Funktion legt beide Umrisse zusammen und füllt nach der Umlaufrichtung. Manim zeichnet einen Sektor im Uhrzeigersinn, Kreis, Dreieck und Vielecke gegen den Uhrzeigersinn. Wo sich solche Formen überlappen, entsteht deshalb ein Loch. `Intersection`, `Difference` und `Exclusion` haben das Problem nicht. Das Skript vereinigt deshalb mit einer kleinen Hilfsfunktion `studio_union` (`pathops.op(…, UNION)`, wie Manims übrige Operationen). Video und Bühne zeigen damit die echte Vereinigung. Geprüft mit Manim 0.19 und 0.22.
+- **Bühne:** rechnet mit Qt-Pfadoperationen auf den echten Umrissen (Bildvergleich mit Manim: deckungsgleich). Das Modell (ohne Qt) bestimmt den Mittelpunkt des Ergebnisses exakt für Vielecke und Kreise mit 64 Ecken; ein Manim-Test vergleicht Mittelpunkt und Größe (Abweichung < 0,03).
+- **Nebenbei behoben:** Bewegungspfade entlang eines regelmäßigen Vielecks mit gerader Eckenzahl begannen an der falschen Ecke, ein Viereck war um 45° gedreht (`paths.py`).
+- **Grenzen:** Texte und Formeln können keine Operanden sein (Manim verknüpft nur Formen mit eigenen Punkten, ein Text ist eine Gruppe). Wird die Mengenform im selben Schritt eingeblendet, in dem sich eine ihrer Formen bewegt, folgt sie in Manim erst nach dem Einblenden (Manim pausiert Updater während einer Animation); auf der Bühne folgt sie sofort.

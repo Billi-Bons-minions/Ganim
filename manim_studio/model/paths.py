@@ -50,7 +50,7 @@ def local_outline(scene: Scene, obj: SceneObject) -> list[Point] | None:
         return _closed(_regular(3, param_float(p, "radius", 1.0), 90.0))
     if kind == ObjectKind.REGULAR_POLYGON:
         n = max(3, int(p.get("n", 6)))
-        return _closed(_regular(n, param_float(p, "radius", 1.0), 90.0 if n % 2 else 90.0 - 180.0 / n))
+        return _closed(_regular(n, param_float(p, "radius", 1.0), 90.0 if n % 2 else 0.0))  # like Manim's RegularPolygon
     if kind == ObjectKind.POLYGON:
         return _closed([(float(x), float(y)) for x, y in p.get("points", [])])
     if kind == ObjectKind.STAR:

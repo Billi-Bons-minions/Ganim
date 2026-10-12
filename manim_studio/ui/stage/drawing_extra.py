@@ -19,6 +19,7 @@ from PySide6.QtGui import (
     QPen,
     QPolygonF,
     QTextDocument,
+    QTransform,
 )
 
 from manim_studio.model.curved import curved_bounds, curved_parts
@@ -163,6 +164,65 @@ def curved_arrow_primitives(obj: SceneObject, state: ObjectState) -> list[Primit
         brush = QBrush(_color(state.stroke_color))
         primitives += [Primitive(path=_polygon(tip), brush=brush) for tip in parts.tips]
     return primitives
+
+
+def placement_transform(placement: tuple) -> QTransform:
+    """Scene-pixel transform of a shape placed at ``center + R · M · (scale · point)`` (y down)."""
+    _object_id, _shape_id, x, y, rotation, scale, (m11, m12, m21, m22) = placement
+    cos, sin = math.cos(math.radians(rotation)), math.sin(math.radians(rotation))
+    a11, a12 = scale * (cos * m11 - sin * m21), scale * (cos * m12 - sin * m22)
+    a21, a22 = scale * (sin * m11 + cos * m21), scale * (sin * m12 + cos * m22)
+    # flip y on both sides: (x, y) -> (a11 x - a12 y, -a21 x + a22 y)
+    return QTransform(a11, -a21, -a12, a22, x * PX, -y * PX)
+
+
+def _placed_shape_path(scene: Scene, shape: SceneObject, placement: tuple, resources: StageResources) -> QPainterPath:
+    """The outline of a basic shape where it currently is (scene pixels)."""
+    from manim_studio.ui.stage.drawing import build_drawing
+
+    geometry = scene.object_by_id(placement[1]) or shape
+    drawing = build_drawing(scene, geometry, initial_state(scene, geometry), resources)
+    path = QPainterPath()
+    for primitive in drawing.primitives:
+        if primitive.path is not None:
+            path.addPath(primitive.path)
+    return placement_transform(placement).map(path)
+
+
+def _boolean_path(scene: Scene, obj: SceneObject, where: dict[str, tuple], resources: StageResources) -> QPainterPath | None:
+    from manim_studio.model.booleans import DIFFERENCE, INTERSECTION, UNION, is_boolean, operands, operation
+
+    paths = []
+    for shape in operands(scene, obj) or ():
+        if is_boolean(shape):
+            path = _boolean_path(scene, shape, where, resources)
+        else:
+            path = _placed_shape_path(scene, shape, where[shape.id], resources) if shape.id in where else None
+        if path is None:
+            return None
+        paths.append(path)
+    if len(paths) != 2:
+        return None
+    first, second = paths
+    op = operation(obj)
+    if op == UNION:
+        return first.united(second)
+    if op == INTERSECTION:
+        return first.intersected(second)
+    if op == DIFFERENCE:
+        return first.subtracted(second)
+    return first.united(second).subtracted(first.intersected(second))
+
+
+def boolean_primitives(scene: Scene, obj: SceneObject, state: ObjectState, resources: StageResources) -> list[Primitive]:
+    """Union, intersection, difference or exclusion of the two shapes where they are now (see ``model/booleans.py``)."""
+    if not state.parts:
+        return []
+    path = _boolean_path(scene, obj, {placement[0]: placement for placement in state.parts}, resources)
+    if path is None or path.isEmpty():
+        return []
+    path.translate(-state.x * PX, state.y * PX)
+    return [_shape_primitive(path, obj, state)]
 
 
 def sector_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
@@ -656,6 +716,8 @@ def extra_drawing(scene: Scene, obj: SceneObject, state: ObjectState, resources:
         return highlight_primitives(scene, obj, state), False
     if kind == ObjectKind.ANGLE:
         return angle_primitives(obj, state), False
+    if kind == ObjectKind.BOOLEAN_SHAPE:
+        return boolean_primitives(scene, obj, state, resources), False
     if kind == ObjectKind.TRACE:
         return trace_primitives(obj, state), False
     if kind == ObjectKind.VECTOR_FIELD:

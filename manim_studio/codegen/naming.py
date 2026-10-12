@@ -29,6 +29,7 @@ HELPER_FUNCTIONS = frozenset(
         "studio_shape",
         "studio_camera_frame",
         "studio_angle",
+        "studio_union",
     }
 )
 

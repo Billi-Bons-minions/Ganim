@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
+from manim_studio.model.booleans import OPERAND_KINDS
 from manim_studio.model.data import DATA_STYLES, REGRESSIONS
 from manim_studio.model.types import (
     CAMERA_ANIMATIONS,
@@ -343,6 +344,16 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         ),
         _LINE_STYLE,
         (("stroke_color", "#F7D96F"),),
+    ),
+    ObjectKind.BOOLEAN_SHAPE: KindInfo(
+        ObjectKind.BOOLEAN_SHAPE,
+        (
+            ParamSpec("operation", ParamType.CHOICE, "intersection", choices=("union", "intersection", "difference", "exclusion")),
+            ParamSpec("first_shape", ParamType.OBJECT_REF, None, ref_kinds=tuple(sorted(OPERAND_KINDS, key=lambda kind: kind.value))),
+            ParamSpec("second_shape", ParamType.OBJECT_REF, None, ref_kinds=tuple(sorted(OPERAND_KINDS, key=lambda kind: kind.value))),
+        ),
+        _SHAPE_STYLE,
+        (("stroke_color", _YELLOW), ("fill_color", _YELLOW), ("fill_opacity", 0.6)),
     ),
     ObjectKind.NETWORK: KindInfo(
         ObjectKind.NETWORK,
@@ -942,7 +953,7 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
 
         if obj_kind in ATTACHABLE_KINDS:
             return False
-    if obj_kind in (ObjectKind.HIGHLIGHT, ObjectKind.ANGLE, ObjectKind.VECTOR_FIELD) and anim_kind in _NOT_FOR_HIGHLIGHTS:
+    if obj_kind in (ObjectKind.HIGHLIGHT, ObjectKind.ANGLE, ObjectKind.VECTOR_FIELD, ObjectKind.BOOLEAN_SHAPE) and anim_kind in _NOT_FOR_HIGHLIGHTS:
         return False
     if obj_kind in (ObjectKind.SOLID, ObjectKind.VECTOR_3D) and anim_kind in (
         {AnimationKind.MOVE, AnimationKind.ROTATE, AnimationKind.SET_VALUE, AnimationKind.ORBIT} | TRANSFORM_ANIMATIONS | MOTION_ANIMATIONS

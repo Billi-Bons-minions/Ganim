@@ -147,3 +147,20 @@ def test_a_new_3d_vector_brings_its_axes(window) -> None:
     scene = window.editor.scene()
     axes = [obj for obj in scene.objects if obj.kind == ObjectKind.AXES_3D]
     assert len(axes) == 1 and scene.object_by_id(vector).params["axes_id"] == axes[0].id
+
+
+def test_shaded_objects_are_drawn_back_to_front() -> None:
+    """Like Manim's ThreeDCamera: shaded objects sorted by depth, curves and texts not ranked (drawn above)."""
+    from manim_studio.model.three_d import depth_order
+
+    axes = make_object(ObjectKind.AXES_3D, "Raum", "r")
+    near = make_object(ObjectKind.SOLID, "Nah", "n", axes_id="r", center_x=3.0)
+    far = make_object(ObjectKind.SOLID, "Fern", "f", axes_id="r", center_x=-3.0)
+    curve = make_object(ObjectKind.CURVE_3D, "Kurve", "c", axes_id="r")
+    scene = Scene(id="s", name="S", objects=[near, axes, far, curve])
+    # the default camera (phi 70°, theta -45°) looks from +x/-y, so x = 3 is in front of the origin and of x = -3
+    ranks = depth_order(scene, View())
+    assert ranks["f"] < ranks["r"] < ranks["n"] and "c" not in ranks
+    # seen from the other side the order turns around
+    behind = depth_order(scene, View(theta=135.0))
+    assert behind["n"] < behind["r"] < behind["f"]

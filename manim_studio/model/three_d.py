@@ -229,6 +229,39 @@ def view_of(scene: Scene, states: dict | None = None) -> View:
     return View(param_float(camera.params, "phi", DEFAULT_PHI), param_float(camera.params, "theta", DEFAULT_THETA), 1.0)
 
 
+# --- drawing order --------------------------------------------------------------------------------
+
+#: Kinds whose parts Manim shades in 3D and sorts by depth (``ThreeDAxes`` cuts its axes into
+#: shaded pieces); everything else, e.g. 3D curves and texts, is drawn above them.
+SHADED_KINDS = frozenset({ObjectKind.AXES_3D, ObjectKind.SURFACE, ObjectKind.SOLID, ObjectKind.VECTOR_3D})
+
+
+def depth_order(scene: Scene, view: View, values: dict[str, float] | None = None) -> dict[str, int]:
+    """Rank of each shaded 3D object from back to front, like ``ThreeDCamera.get_mobjects_to_display``.
+
+    Manim sorts every face by its own depth; the stage sorts whole objects by their center.
+    """
+    row = _matrix(view)[2]
+    depths = []
+    for obj in scene.objects:
+        if obj.kind not in SHADED_KINDS:
+            continue
+        if obj.kind == ObjectKind.AXES_3D:
+            points = [(obj.x, obj.y, 0.0)]
+        elif obj.kind == ObjectKind.SOLID:
+            center = solid_center(scene, obj)
+            points = [center] if center is not None else []
+        elif obj.kind == ObjectKind.VECTOR_3D:
+            points = vector_points(scene, obj)
+        else:
+            points = [point for line in surface_grid(scene, obj, values) for point in line]
+        if not points:
+            continue
+        middle = [(min(p[i] for p in points) + max(p[i] for p in points)) / 2 for i in range(3)]
+        depths.append((sum(row[i] * middle[i] for i in range(3)), obj.id))
+    return {object_id: rank for rank, (_depth, object_id) in enumerate(sorted(depths, key=lambda item: item[0]))}
+
+
 # --- solids --------------------------------------------------------------------------------------
 
 Quad = list[Point3]

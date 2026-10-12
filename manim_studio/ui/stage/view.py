@@ -15,6 +15,7 @@ from manim_studio.model import groups
 from manim_studio.model.entities import Scene
 from manim_studio.model.stage_edits import MOVE, ROTATE, SCALE
 from manim_studio.model.state import ObjectState
+from manim_studio.model.three_d import View, depth_order, is_3d
 from manim_studio.model.types import FRAME_HEIGHT, FRAME_WIDTH, INVISIBLE_KINDS, LINE_KINDS, ObjectKind
 from manim_studio.ui.stage.drawing import PX, StageResources, build_drawing, pt
 from manim_studio.ui.stage.effects import Effects
@@ -260,6 +261,8 @@ class StageView(QGraphicsView):
         if self._entered_group is not None and not groups.is_group(scene.object_by_id(self._entered_group)):
             self._entered_group = None
         known = set()
+        # in 3D scenes Manim draws shaded objects sorted by depth and everything else above them
+        depth_ranks = depth_order(scene, resources.view3d or View(), resources.values) if is_3d(scene) else {}
         for index, obj in enumerate(scene.objects):
             state = states.get(obj.id)
             if state is None or obj.kind in INVISIBLE_KINDS:
@@ -285,7 +288,12 @@ class StageView(QGraphicsView):
             item.setRotation(-state.rotation)
             item.setScale(state.scale)
             item.setTransform(local_matrix(state.matrix, state.rotation))
-            item.setZValue(9_000_000 if obj.kind == ObjectKind.CAMERA else obj.z_index * 10_000 + index)
+            if obj.kind == ObjectKind.CAMERA:
+                item.setZValue(9_000_000)
+            elif obj.id in depth_ranks:
+                item.setZValue(-900_000 + depth_ranks[obj.id])  # above the exact frame (-1 000 000)
+            else:
+                item.setZValue(obj.z_index * 10_000 + index)
             item.content_hidden = self._exact_item is not None
         self._sync_groups(scene, known)
         for object_id in [object_id for object_id in self._items if object_id not in known]:

@@ -52,6 +52,12 @@ ANIMATION_CLASSES: dict[AnimationKind, str] = {
     AnimationKind.TRANSFORM_MATCHING: "TransformMatchingShapes",
     AnimationKind.MOVE_ALONG_PATH: "MoveAlongPath",
     AnimationKind.SWAP: "Swap",
+    AnimationKind.GROW_FROM_EDGE: "GrowFromEdge",
+    AnimationKind.UNWRITE: "Unwrite",
+    AnimationKind.TRANSFORM_FROM_COPY: "TransformFromCopy",
+    AnimationKind.PASSING_FLASH: "ShowPassingFlash",
+    AnimationKind.BROADCAST: "Broadcast",
+    AnimationKind.TYPE_WITH_CURSOR: "TypeWithCursor",
 }
 
 SHIFT_DIRECTIONS = {"up": "UP", "down": "DOWN", "left": "LEFT", "right": "RIGHT"}
@@ -126,7 +132,15 @@ def _extra_arguments(anim: Animation, scene: Scene, names: dict[str, str]) -> li
         return [names[str(target)]]
     if anim.kind in (AnimationKind.FADE_IN, AnimationKind.FADE_OUT):
         direction = SHIFT_DIRECTIONS.get(str(params.get("shift", "none")))
-        return [f"shift={direction}"] if direction else []
+        arguments = [f"shift={direction}"] if direction else []
+        zoom = float(params.get("scale", 1.0))
+        if abs(zoom - 1.0) > 1e-9:
+            arguments.append(f"scale={fmt_float(zoom)}")
+        return arguments
+    if anim.kind == AnimationKind.GROW_FROM_EDGE:
+        return [SHIFT_DIRECTIONS.get(str(params.get("edge", "down")), "DOWN")]
+    if anim.kind == AnimationKind.BROADCAST:
+        return [f"focal_point={_variable(names, anim.target_id)}.get_center()", f"n_mobs={int(params.get('rings', 5))}"]
     if anim.kind == AnimationKind.ROTATE:
         return [f"angle={py_degrees(float(params.get('angle', 0.0)))}"]
     if anim.kind == AnimationKind.INDICATE:
@@ -162,6 +176,18 @@ def simple_animation_code(anim: Animation, scene: Scene, names: dict[str, str], 
         if target is not None and target.kind == ObjectKind.DECIMAL_NUMBER:
             return f"ChangeDecimalToValue({variable}, {value}, {', '.join(timing.args())})"
         return f"{variable}.animate({', '.join(timing.args())}).set_value({value})"
+    if anim.kind == AnimationKind.PASSING_FLASH:
+        # a copy of the outline runs along the object as a short flash of light
+        color = py_color(str(anim.params.get("color", "")))
+        width = fmt_float(float(anim.params.get("time_width", 0.3)))
+        variable = f"{variable}.copy().set_fill(opacity=0).set_stroke({color}, width=8)"
+        return f"ShowPassingFlash({', '.join([variable, f'time_width={width}'] + timing.args())})"
+    if anim.kind == AnimationKind.BROADCAST:
+        # rings (copies of the object) spread out from its center; the object itself stays
+        variable = f"{variable}.copy()"
+    if anim.kind == AnimationKind.TYPE_WITH_CURSOR:
+        cursor = f"Rectangle(height={variable}.height * 1.1, width=0.06, fill_opacity=1, stroke_width=0, color={variable}.get_color()).move_to({variable}[0])"
+        return f"TypeWithCursor({', '.join([variable, cursor, 'leave_cursor_on=False'] + timing.args())})"
     arguments = [variable] + _extra_arguments(anim, scene, names) + timing.args()
     return f"{ANIMATION_CLASSES[anim.kind]}({', '.join(arguments)})"
 

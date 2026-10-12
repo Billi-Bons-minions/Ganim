@@ -15,7 +15,9 @@ ANIMATION_GROUPS: tuple[tuple[str, tuple[AnimationKind, ...]], ...] = (
             AnimationKind.SPIN_IN,
             AnimationKind.DRAW_BORDER_THEN_FILL,
             AnimationKind.ADD_LETTERS,
+            AnimationKind.TYPE_WITH_CURSOR,
             AnimationKind.GROW_ARROW,
+            AnimationKind.GROW_FROM_EDGE,
         ),
     ),
     (
@@ -31,7 +33,16 @@ ANIMATION_GROUPS: tuple[tuple[str, tuple[AnimationKind, ...]], ...] = (
             AnimationKind.ORBIT,
         ),
     ),
-    ("transform", (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM, AnimationKind.FADE_TRANSFORM, AnimationKind.TRANSFORM_MATCHING)),
+    (
+        "transform",
+        (
+            AnimationKind.TRANSFORM,
+            AnimationKind.REPLACEMENT_TRANSFORM,
+            AnimationKind.FADE_TRANSFORM,
+            AnimationKind.TRANSFORM_MATCHING,
+            AnimationKind.TRANSFORM_FROM_COPY,
+        ),
+    ),
     (
         "emphasize",
         (
@@ -41,10 +52,14 @@ ANIMATION_GROUPS: tuple[tuple[str, tuple[AnimationKind, ...]], ...] = (
             AnimationKind.WIGGLE,
             AnimationKind.APPLY_WAVE,
             AnimationKind.FOCUS_ON,
+            AnimationKind.PASSING_FLASH,
+            AnimationKind.BROADCAST,
         ),
     ),
-    ("disappear", (AnimationKind.FADE_OUT, AnimationKind.UNCREATE, AnimationKind.SHRINK_TO_CENTER)),
+    ("disappear", (AnimationKind.FADE_OUT, AnimationKind.UNCREATE, AnimationKind.UNWRITE, AnimationKind.SHRINK_TO_CENTER)),
 )
 
 #: Buttons that are hidden (instead of disabled) where they do not apply.
-ONLY_WHEN_ALLOWED = frozenset({AnimationKind.SET_VALUE, AnimationKind.ADD_LETTERS, AnimationKind.GROW_ARROW, AnimationKind.ORBIT})
+ONLY_WHEN_ALLOWED = frozenset(
+    {AnimationKind.SET_VALUE, AnimationKind.ADD_LETTERS, AnimationKind.TYPE_WITH_CURSOR, AnimationKind.GROW_ARROW, AnimationKind.ORBIT}
+)

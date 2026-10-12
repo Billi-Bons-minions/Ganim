@@ -249,6 +249,72 @@ class AnimationPreview(QWidget):
         painter.setBrush(YELLOW)
         painter.drawPolygon([end, left, right])
 
+    def _draw_grow_from_edge(self, painter: QPainter, t: float, unit: float) -> None:
+        height = unit * 2.2 * max(t, 0.01)
+        painter.setPen(self._pen(BLUE))
+        fill = QColor(BLUE)
+        fill.setAlphaF(0.35)
+        painter.setBrush(fill)
+        painter.drawRect(QRectF(-unit * 0.6, unit * 1.1 - height, unit * 1.2, height))
+
+    def _draw_type_with_cursor(self, painter: QPainter, t: float, unit: float) -> None:
+        font = QFont()
+        font.setPixelSize(round(unit * 1.2))
+        font.setBold(True)
+        full = QPainterPath()
+        full.addText(QPointF(0, 0), font, "Manim")
+        bounds = full.boundingRect()
+        shown = "Manim"[: max(0, min(5, math.floor(t * 5.999)))]
+        visible = QPainterPath()
+        visible.addText(QPointF(-bounds.center().x(), -bounds.center().y()), font, shown)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor("#FFFFFF"))
+        painter.drawPath(visible)
+        x = -bounds.center().x() + (visible.boundingRect().width() + unit * 0.12 if shown else 0.0)
+        if t < 0.98 or int(self._elapsed / 250) % 2 == 0:
+            painter.drawRect(QRectF(x, -bounds.height() / 2 - unit * 0.1, unit * 0.12, bounds.height() + unit * 0.2))
+
+    def _draw_unwrite(self, painter: QPainter, t: float, unit: float) -> None:
+        self._draw_write(painter, 1 - t, unit)
+
+    def _draw_transform_from_copy(self, painter: QPainter, t: float, unit: float) -> None:
+        painter.save()
+        painter.translate(-unit * 1.1, 0)
+        self._circle(painter, unit * 0.6)
+        painter.restore()
+        painter.translate(unit * 1.1 * t - unit * 1.1 * (1 - t), 0)
+        color = _mix(BLUE, RED, t)
+        painter.setPen(self._pen(color))
+        fill = QColor(color)
+        fill.setAlphaF(0.35)
+        painter.setBrush(fill)
+        painter.drawPath(self._square_path(unit * 0.6, 1.0 - t))
+
+    def _draw_passing_flash(self, painter: QPainter, t: float, unit: float) -> None:
+        frame = QPainterPath()
+        frame.addRoundedRect(QRectF(-unit, -unit, 2 * unit, 2 * unit), unit * 0.2, unit * 0.2)
+        painter.setPen(self._pen(BLUE, 2.0))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawPath(frame)
+        start, end = max(0.0, t * 1.3 - 0.3), min(1.0, t * 1.3)
+        if end > start:
+            trimmed = QPainterPath(frame.pointAtPercent(start))
+            for index in range(1, 31):
+                trimmed.lineTo(frame.pointAtPercent(start + (end - start) * index / 30))
+            painter.setPen(self._pen(YELLOW, 5.0))
+            painter.drawPath(trimmed)
+
+    def _draw_broadcast(self, painter: QPainter, t: float, unit: float) -> None:
+        self._circle(painter, unit * 0.5)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        for ring in range(3):
+            local = t * 1.6 - ring * 0.3
+            if 0.0 < local < 1.0:
+                color = QColor(BLUE)
+                color.setAlphaF(1.0 - local)
+                painter.setPen(self._pen(color, 2.0))
+                painter.drawEllipse(QPointF(0, 0), unit * 1.8 * local, unit * 1.8 * local)
+
     def _draw_shrink_to_center(self, painter: QPainter, t: float, unit: float) -> None:
         painter.scale(max(1 - t, 0.001), max(1 - t, 0.001))
         self._circle(painter, unit)

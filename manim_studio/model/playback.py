@@ -89,14 +89,23 @@ def _partial_entrance(state: ObjectState, anim: Animation, progress: float) -> O
         return replace(state, visible=True, scale=state.scale * max(progress, 0.001))
     if kind == AnimationKind.SPIN_IN:
         return replace(state, visible=True, scale=state.scale * max(progress, 0.001), rotation=state.rotation - 90.0 * (1 - progress))
-    if kind in (AnimationKind.ADD_LETTERS, AnimationKind.GROW_ARROW):
+    if kind in (AnimationKind.ADD_LETTERS, AnimationKind.GROW_ARROW, AnimationKind.TYPE_WITH_CURSOR):
         return replace(state, visible=True, draw=max(progress, 0.001))
+    if kind == AnimationKind.UNWRITE:
+        return replace(state, draw=1 - progress, fill=state.fill * (1 - progress))
     if kind == AnimationKind.SHRINK_TO_CENTER:
         return replace(state, scale=state.scale * max(1 - progress, 0.001))
+    if kind == AnimationKind.GROW_FROM_EDGE:
+        # grows out of one edge: shrink towards that edge while the scale is small
+        ex, ey = _SHIFTS.get(str(anim.params.get("edge", "down")), (0.0, -1.0))
+        return replace(state, visible=True, scale=state.scale * max(progress, 0.001), x=state.x + ex * (1 - progress), y=state.y + ey * (1 - progress))
     dx, dy = _SHIFTS.get(str(anim.params.get("shift", "none")), (0.0, 0.0))
+    zoom = float(anim.params.get("scale", 1.0))
     if kind == AnimationKind.FADE_IN:
-        return replace(state, visible=True, opacity=progress, x=state.x - dx * (1 - progress), y=state.y - dy * (1 - progress))
-    return replace(state, opacity=1 - progress, x=state.x + dx * progress, y=state.y + dy * progress)
+        size = state.scale * (zoom + (1 - zoom) * progress)
+        return replace(state, visible=True, opacity=progress, scale=size, x=state.x - dx * (1 - progress), y=state.y - dy * (1 - progress))
+    size = state.scale * (1 + (zoom - 1) * progress)
+    return replace(state, opacity=1 - progress, scale=size, x=state.x + dx * progress, y=state.y + dy * progress)
 
 
 def _partial_transform(states: dict[str, ObjectState], anim: Animation, progress: float) -> None:
@@ -104,8 +113,11 @@ def _partial_transform(states: dict[str, ObjectState], anim: Animation, progress
     target = states.get(str(anim.params.get("target")))
     if target is None:
         return
-    states[anim.target_id] = replace(
+    # TransformFromCopy leaves the source alone; the target appears out of a copy of it
+    key = target.object_id if anim.kind == AnimationKind.TRANSFORM_FROM_COPY else anim.target_id
+    states[key] = replace(
         source,
+        object_id=key,
         visible=True,
         morph_to=target.shape_id,
         morph_t=progress,
@@ -179,7 +191,7 @@ def apply_partial(states: dict[str, ObjectState], anim: Animation, progress: flo
             stroke_color=_mix(state.stroke_color, color, progress),
             fill_color=_mix(state.fill_color, color, progress),
         )
-    elif kind == AnimationKind.CIRCUMSCRIBE:
+    elif kind in (AnimationKind.CIRCUMSCRIBE, AnimationKind.PASSING_FLASH, AnimationKind.BROADCAST):
         states[anim.target_id] = replace(state, outline=progress, outline_color=str(anim.params.get("color", "#F7D96F")))
     elif kind == AnimationKind.SET_VALUE:
         target = float(anim.params.get("value", state.value))

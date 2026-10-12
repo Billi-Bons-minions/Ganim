@@ -50,6 +50,15 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
   - Abhängige Objekte (Tangente, Fläche, Datenpunkte, 3D-Fläche, Ableitung) bringen fehlende Achsen bzw. Graphen beim Einfügen mit und werden mit ihrem Host gelöscht.
   - Manim-Abstürze behoben: Pfeil nach Verwandlung in eine Gruppe (`studio_shape`), Pfad entlang gestrichelter Linie, Gruppe mit Parameter, Inspektor bei veralteter Auswahl.
   - Aufnahme lehnt unpassende Animationen ab (z. B. Bewegen eines Parameters).
+- 6 neue Animationen:
+  - Vom Rand wachsen (GrowFromEdge)
+  - Tippen mit Cursor (TypeWithCursor, nur Text)
+  - Wegschreiben (Unwrite)
+  - Kopie verwandeln (TransformFromCopy)
+  - Lichtlauf (ShowPassingFlash)
+  - Ausbreiten (Broadcast)
+  - Ein- und Ausblenden haben jetzt einen Zoom-Parameter.
+  - Alle sechs sind in der Bühnen-Wiedergabe, der Hover-Vorschau, im Codegen und im Skript-Import enthalten und mit Manim getestet.
 
 ### Halbfertig
 - (nichts)

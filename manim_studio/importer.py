@@ -57,6 +57,9 @@ SIMPLE_ANIMATIONS = {
     "Wiggle": AnimationKind.WIGGLE,
     "ApplyWave": AnimationKind.APPLY_WAVE,
     "FocusOn": AnimationKind.FOCUS_ON,
+    "GrowFromEdge": AnimationKind.GROW_FROM_EDGE,
+    "Unwrite": AnimationKind.UNWRITE,
+    "Broadcast": AnimationKind.BROADCAST,
 }
 TWO_OBJECT_ANIMATIONS = {
     "Transform": (AnimationKind.TRANSFORM, "target"),
@@ -66,6 +69,7 @@ TWO_OBJECT_ANIMATIONS = {
     "TransformMatchingTex": (AnimationKind.TRANSFORM_MATCHING, "target"),
     "MoveAlongPath": (AnimationKind.MOVE_ALONG_PATH, "path"),
     "Swap": (AnimationKind.SWAP, "partner"),
+    "TransformFromCopy": (AnimationKind.TRANSFORM_FROM_COPY, "target"),
 }
 NUMPY_TO_TERM = {"arcsin": "asin", "arccos": "acos", "arctan": "atan", "log": "ln"}
 
@@ -444,6 +448,9 @@ class _SceneReader:
         return anim
 
     def _target(self, node: ast.AST) -> str:
+        # Broadcast(x.copy()), ShowPassingFlash(x.copy().set_color(...)) refer to x
+        while isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr in ("copy", "set_color", "set_fill", "set_stroke"):
+            node = node.func.value
         if isinstance(node, ast.Name) and node.id in self.objects:
             return self.objects[node.id].id
         raise ImportProblem("target")
@@ -460,6 +467,15 @@ class _SceneReader:
                 for key, value in DIRECTIONS.items():
                     if value == vector and key in ("UP", "DOWN", "LEFT", "RIGHT"):
                         anim.params["shift"] = key.lower()
+            if name in ("FadeIn", "FadeOut") and "scale" in kwargs:
+                anim.params["scale"] = _number(kwargs["scale"])
+            if name == "GrowFromEdge" and len(node.args) > 1:
+                vector = _vector(node.args[1])
+                for key, value in DIRECTIONS.items():
+                    if value == vector and key in ("UP", "DOWN", "LEFT", "RIGHT"):
+                        anim.params["edge"] = key.lower()
+            if name == "Broadcast" and "n_mobs" in kwargs:
+                anim.params["rings"] = int(_number(kwargs["n_mobs"]))
             if "color" in kwargs:
                 anim.params["color"] = _color(kwargs["color"])
             return [self._timing(anim, kwargs, run_time)]
@@ -467,6 +483,16 @@ class _SceneReader:
             kind, key = TWO_OBJECT_ANIMATIONS[name]
             anim = create_animation(kind, self._target(node.args[0]), **{key: self._target(node.args[1])})
             return [self._timing(anim, kwargs, run_time)]
+        if name == "ShowPassingFlash" and node.args:
+            anim = create_animation(AnimationKind.PASSING_FLASH, self._target(node.args[0]))
+            chain = node.args[0]
+            if isinstance(chain, ast.Call) and isinstance(chain.func, ast.Attribute) and chain.func.attr in ("set_color", "set_stroke") and chain.args:
+                anim.params["color"] = _color(chain.args[0])
+            if "time_width" in kwargs:
+                anim.params["time_width"] = _number(kwargs["time_width"])
+            return [self._timing(anim, kwargs, run_time)]
+        if name == "TypeWithCursor" and node.args:
+            return [self._timing(create_animation(AnimationKind.TYPE_WITH_CURSOR, self._target(node.args[0])), kwargs, run_time)]
         if name == "Rotate" and node.args:
             angle = math.degrees(_number(kwargs["angle"])) if "angle" in kwargs else 180.0
             anim = create_animation(AnimationKind.ROTATE, self._target(node.args[0]), angle=round(angle, 6))

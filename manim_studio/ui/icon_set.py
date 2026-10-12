@@ -700,6 +700,69 @@ def _a_grow(p: QPainter) -> None:
     _poly(p, [(21, 17.5), (21, 21), (17.5, 21)])
 
 
+def _a_grow_edge(p: QPainter) -> None:
+    _line(p, 3, 21, 21, 21)
+    _rect(p, 8, 11, 8, 10, 1)
+    _line(p, 12, 9, 12, 3)
+    _poly(p, [(9.5, 5.5), (12, 3), (14.5, 5.5)])
+
+
+def _a_type_cursor(p: QPainter) -> None:
+    _text(p, "Ab", size=11, rect=QRectF(1, 4, 15, 14))
+    _rect(p, 17, 5, 2.4, 14, 0.5, fill=True)
+
+
+def _a_unwrite(p: QPainter) -> None:
+    _text(p, "A", size=12, rect=QRectF(1, 3, 11, 14))
+    p.save()
+    pen = p.pen()
+    pen.setStyle(Qt.PenStyle.DotLine)
+    p.setPen(pen)
+    _line(p, 13, 15, 21, 15)
+    p.restore()
+    _line(p, 21, 19, 13, 19)
+    _poly(p, [(15, 17), (13, 19), (15, 21)])
+
+
+def _a_from_copy(p: QPainter) -> None:
+    _circle(p, 6, 7, 3.5)
+    p.save()
+    pen = p.pen()
+    pen.setStyle(Qt.PenStyle.DotLine)
+    p.setPen(pen)
+    _circle(p, 6, 17, 3.5)
+    p.restore()
+    _rect(p, 15, 13, 7, 7, 1)
+    _line(p, 10, 17, 14, 17)
+    _poly(p, [(12.5, 15.5), (14, 17), (12.5, 18.5)])
+
+
+def _a_passing_flash(p: QPainter) -> None:
+    p.save()
+    pen = p.pen()
+    pen.setStyle(Qt.PenStyle.DotLine)
+    p.setPen(pen)
+    _rect(p, 4, 4, 16, 16, 3)
+    p.restore()
+    p.save()
+    pen = p.pen()
+    pen.setWidthF(pen.widthF() * 2.2)
+    p.setPen(pen)
+    _line(p, 7, 4, 15, 4)
+    p.restore()
+
+
+def _a_broadcast(p: QPainter) -> None:
+    _circle(p, 12, 12, 2, fill=True)
+    _circle(p, 12, 12, 5.5)
+    p.save()
+    pen = p.pen()
+    pen.setStyle(Qt.PenStyle.DotLine)
+    p.setPen(pen)
+    _circle(p, 12, 12, 9)
+    p.restore()
+
+
 def _a_transform(p: QPainter) -> None:
     _circle(p, 6.5, 12, 4)
     _rect(p, 14, 8, 8, 8, 1)
@@ -845,6 +908,12 @@ ICONS: dict[str, Drawer] = {
     "a_change_color": _a_color,
     "a_set_value": _a_value,
     "a_spin_in": _a_spin_in,
+    "a_grow_from_edge": _a_grow_edge,
+    "a_type_with_cursor": _a_type_cursor,
+    "a_unwrite": _a_unwrite,
+    "a_transform_from_copy": _a_from_copy,
+    "a_passing_flash": _a_passing_flash,
+    "a_broadcast": _a_broadcast,
     "a_add_letters": _a_add_letters,
     "a_grow_arrow": _a_grow_arrow,
     "a_shrink_to_center": _a_shrink,

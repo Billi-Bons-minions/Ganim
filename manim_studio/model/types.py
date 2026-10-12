@@ -87,6 +87,12 @@ class AnimationKind(str, Enum):
     MOVE_ALONG_PATH = "move_along_path"
     SWAP = "swap"
     ORBIT = "orbit"
+    GROW_FROM_EDGE = "grow_from_edge"
+    TYPE_WITH_CURSOR = "type_with_cursor"
+    UNWRITE = "unwrite"
+    TRANSFORM_FROM_COPY = "transform_from_copy"
+    PASSING_FLASH = "passing_flash"
+    BROADCAST = "broadcast"
 
 
 class StepKind(str, Enum):
@@ -116,24 +122,35 @@ ENTRANCE_ANIMATIONS = frozenset(
         AnimationKind.SPIN_IN,
         AnimationKind.ADD_LETTERS,
         AnimationKind.GROW_ARROW,
+        AnimationKind.GROW_FROM_EDGE,
+        AnimationKind.TYPE_WITH_CURSOR,
     }
 )
 
 #: Animations that remove an object from the screen.
-EXIT_ANIMATIONS = frozenset({AnimationKind.FADE_OUT, AnimationKind.UNCREATE, AnimationKind.SHRINK_TO_CENTER})
+EXIT_ANIMATIONS = frozenset({AnimationKind.FADE_OUT, AnimationKind.UNCREATE, AnimationKind.SHRINK_TO_CENTER, AnimationKind.UNWRITE})
 
 #: Transforms after which the target object takes the place of the source.
 REPLACING_TRANSFORMS = frozenset({AnimationKind.REPLACEMENT_TRANSFORM, AnimationKind.FADE_TRANSFORM, AnimationKind.TRANSFORM_MATCHING})
 
-#: Animations that morph one object into another object.
-TRANSFORM_ANIMATIONS = frozenset({AnimationKind.TRANSFORM}) | REPLACING_TRANSFORMS
+#: Animations that morph one object into another object (a copy of the source for TransformFromCopy).
+TRANSFORM_ANIMATIONS = frozenset({AnimationKind.TRANSFORM, AnimationKind.TRANSFORM_FROM_COPY}) | REPLACING_TRANSFORMS
 
 #: Animations that move an object along a path or swap two objects.
 MOTION_ANIMATIONS = frozenset({AnimationKind.MOVE_ALONG_PATH, AnimationKind.SWAP})
 
 #: Animations with a second object: parameter key that names it.
 REFERENCE_PARAMS = {
-    **{kind: "target" for kind in (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM, AnimationKind.FADE_TRANSFORM, AnimationKind.TRANSFORM_MATCHING)},
+    **{
+        kind: "target"
+        for kind in (
+            AnimationKind.TRANSFORM,
+            AnimationKind.REPLACEMENT_TRANSFORM,
+            AnimationKind.FADE_TRANSFORM,
+            AnimationKind.TRANSFORM_MATCHING,
+            AnimationKind.TRANSFORM_FROM_COPY,
+        )
+    },
     AnimationKind.MOVE_ALONG_PATH: "path",
     AnimationKind.SWAP: "partner",
 }
@@ -159,7 +176,9 @@ COMBINABLE_EFFECTS = frozenset(
 
 
 #: Highlights that draw extra shapes but leave the object itself untouched.
-DETACHED_EFFECTS = frozenset({AnimationKind.FLASH, AnimationKind.CIRCUMSCRIBE, AnimationKind.FOCUS_ON})
+DETACHED_EFFECTS = frozenset(
+    {AnimationKind.FLASH, AnimationKind.CIRCUMSCRIBE, AnimationKind.FOCUS_ON, AnimationKind.PASSING_FLASH, AnimationKind.BROADCAST}
+)
 
 
 def _participants(animations) -> dict[str, list[AnimationKind]]:
@@ -200,6 +219,8 @@ EMPHASIS_ANIMATIONS = frozenset(
         AnimationKind.WIGGLE,
         AnimationKind.APPLY_WAVE,
         AnimationKind.FOCUS_ON,
+        AnimationKind.PASSING_FLASH,
+        AnimationKind.BROADCAST,
     }
 )
 

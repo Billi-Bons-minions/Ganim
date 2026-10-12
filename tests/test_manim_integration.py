@@ -417,3 +417,36 @@ def test_fuzzing_regressions_render(tmp_path) -> None:
     assert "studio_shape(pfeil)" in script and "Line(strich.get_start(), strich.get_end())" in script
     result = run_manim(tmp_path, script, "Regression", "--dry_run")
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+
+
+def test_new_animations_render_and_import(tmp_path) -> None:
+    from manim_studio.importer import import_script
+
+    objects = [
+        make_object(ObjectKind.RECTANGLE, "Balken", "b", -4.0, -1.0, width=1.0, height=3.0),
+        make_object(ObjectKind.TEXT, "Gruss", "t", 0.0, 2.5, text="Hallo Welt"),
+        make_object(ObjectKind.MATH_TEX if shutil.which("latex") else ObjectKind.TEXT, "Links", "l", -2.0, 0.0, latex="a+b", text="a+b"),
+        make_object(ObjectKind.CIRCLE, "Ziel", "z", 2.0, 0.0),
+        make_object(ObjectKind.STAR, "Stern", "s", 4.0, -2.0),
+    ]
+    steps = [
+        play(make_animation(AnimationKind.GROW_FROM_EDGE, "b", edge="down", run_time=0.5), make_animation(AnimationKind.TYPE_WITH_CURSOR, "t", run_time=0.8)),
+        play(make_animation(AnimationKind.FADE_IN, "l", shift="up", scale=0.5, run_time=0.4), make_animation(AnimationKind.FADE_IN, "s", run_time=0.4)),
+        play(make_animation(AnimationKind.TRANSFORM_FROM_COPY, "l", target="z", run_time=0.5)),
+        play(make_animation(AnimationKind.PASSING_FLASH, "s", color="#FFFF00", time_width=0.4, run_time=0.5), make_animation(AnimationKind.BROADCAST, "z", rings=3, run_time=0.6)),
+        play(make_animation(AnimationKind.UNWRITE, "t", run_time=0.5), make_animation(AnimationKind.FADE_OUT, "b", scale=2.0, run_time=0.5)),
+    ]
+    project = make_project(Scene(id="s", name="Neu", objects=objects, steps=steps))
+    script = generate_script(project)
+    for snippet in ("GrowFromEdge(balken, DOWN", "TypeWithCursor(gruss, Rectangle(", "scale=0.5", "TransformFromCopy(links, ziel",
+                    "ShowPassingFlash(stern.copy().set_fill(opacity=0).set_stroke(", "Broadcast(ziel.copy(), focal_point=ziel.get_center(), n_mobs=3", "Unwrite(gruss"):
+        assert snippet in script, snippet
+    result = run_manim(tmp_path, script, "Neu", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+    report = import_script(script)
+    imported = report.project.scenes[0]
+    kinds = [anim.kind for step in imported.steps for anim in step.animations]
+    assert kinds == [anim.kind for step in steps for anim in step.animations], report.skipped
+    params = {anim.kind: anim.params for step in imported.steps for anim in step.animations}
+    assert params[AnimationKind.GROW_FROM_EDGE]["edge"] == "down" and params[AnimationKind.BROADCAST]["rings"] == 3
+    assert params[AnimationKind.PASSING_FLASH]["time_width"] == 0.4 and params[AnimationKind.PASSING_FLASH]["color"] == "#FFFF00"

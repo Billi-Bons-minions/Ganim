@@ -10,6 +10,7 @@ from manim_studio.model.entities import Animation, Scene, SceneObject
 from manim_studio.model.extents import base_size, rotated_extent
 from manim_studio.model.graphs import bound_anchor, is_bound
 from manim_studio.model.types import (
+    DETACHED_EFFECTS,
     ENTRANCE_ANIMATIONS,
     EXIT_ANIMATIONS,
     MODIFIER_ANIMATIONS,
@@ -211,6 +212,10 @@ def apply_animation(states: dict[str, ObjectState], anim: Animation, scene: Scen
         states[anim.target_id] = replace(current, visible=not returns)
     elif kind in EXIT_ANIMATIONS:
         states[anim.target_id] = replace(current, visible=False)
+    elif kind == AnimationKind.TRANSFORM_FROM_COPY:
+        target_id = str(anim.params.get("target"))
+        if target_id in states and not returns:
+            states[target_id] = replace(states[target_id], visible=True)
     elif kind == AnimationKind.TRANSFORM:
         target = states.get(str(anim.params.get("target")))
         if target is not None and not returns:
@@ -222,7 +227,7 @@ def apply_animation(states: dict[str, ObjectState], anim: Animation, scene: Scen
             states[target_id] = replace(states[target_id], visible=True)
     elif kind in (AnimationKind.INDICATE, AnimationKind.WIGGLE, AnimationKind.APPLY_WAVE):
         states[anim.target_id] = replace(current, visible=True)
-    elif kind in (AnimationKind.CIRCUMSCRIBE, AnimationKind.FLASH, AnimationKind.FOCUS_ON):
+    elif kind in DETACHED_EFFECTS:
         return
     elif kind == AnimationKind.MOVE_ALONG_PATH:
         if scene is not None and not returns:

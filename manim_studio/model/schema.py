@@ -568,9 +568,25 @@ SHIFT_CHOICES = ("none", "up", "down", "left", "right")
 #: Which colors a color change affects.
 COLOR_TARGET_CHOICES = ("both", "stroke", "fill")
 
+#: Edges an object can grow from.
+EDGE_CHOICES = ("down", "up", "left", "right")
+
 ANIMATION_PARAMS: dict[AnimationKind, tuple[ParamSpec, ...]] = {
-    AnimationKind.FADE_IN: (ParamSpec("shift", ParamType.CHOICE, "none", choices=SHIFT_CHOICES),),
-    AnimationKind.FADE_OUT: (ParamSpec("shift", ParamType.CHOICE, "none", choices=SHIFT_CHOICES),),
+    AnimationKind.FADE_IN: (
+        ParamSpec("shift", ParamType.CHOICE, "none", choices=SHIFT_CHOICES),
+        ParamSpec("scale", ParamType.FLOAT, 1.0, minimum=0.05, maximum=10.0, step=0.1),
+    ),
+    AnimationKind.FADE_OUT: (
+        ParamSpec("shift", ParamType.CHOICE, "none", choices=SHIFT_CHOICES),
+        ParamSpec("scale", ParamType.FLOAT, 1.0, minimum=0.05, maximum=10.0, step=0.1),
+    ),
+    AnimationKind.GROW_FROM_EDGE: (ParamSpec("edge", ParamType.CHOICE, "down", choices=EDGE_CHOICES),),
+    AnimationKind.TRANSFORM_FROM_COPY: (ParamSpec("target", ParamType.OBJECT_REF, None),),
+    AnimationKind.PASSING_FLASH: (
+        ParamSpec("color", ParamType.COLOR, _YELLOW),
+        ParamSpec("time_width", ParamType.FLOAT, 0.3, minimum=0.05, maximum=1.0, step=0.05),
+    ),
+    AnimationKind.BROADCAST: (ParamSpec("rings", ParamType.INT, 5, minimum=1, maximum=20, step=1),),
     AnimationKind.TRANSFORM: (ParamSpec("target", ParamType.OBJECT_REF, None),),
     AnimationKind.REPLACEMENT_TRANSFORM: (ParamSpec("target", ParamType.OBJECT_REF, None),),
     AnimationKind.MOVE: (
@@ -609,6 +625,9 @@ DEFAULT_RATE_FUNC: dict[AnimationKind, str] = {
     AnimationKind.MOVE_ALONG_PATH: "linear",
     AnimationKind.WIGGLE: "linear",
     AnimationKind.APPLY_WAVE: "linear",
+    AnimationKind.UNWRITE: "linear",
+    AnimationKind.TYPE_WITH_CURSOR: "linear",
+    AnimationKind.PASSING_FLASH: "linear",
 }
 
 #: Animations that require a vector object (not a raster image).
@@ -625,6 +644,9 @@ _VECTOR_ONLY = frozenset(
         AnimationKind.TRANSFORM_MATCHING,
         AnimationKind.SPIN_IN,
         AnimationKind.APPLY_WAVE,
+        AnimationKind.UNWRITE,
+        AnimationKind.TRANSFORM_FROM_COPY,
+        AnimationKind.PASSING_FLASH,
     }
 )
 #: Arrow kinds that ``GrowArrow`` supports.
@@ -670,7 +692,7 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
         return anim_kind in CAMERA_ANIMATIONS
     if anim_kind == AnimationKind.ORBIT:
         return False
-    if anim_kind == AnimationKind.ADD_LETTERS:
+    if anim_kind in (AnimationKind.ADD_LETTERS, AnimationKind.TYPE_WITH_CURSOR):
         return obj_kind == ObjectKind.TEXT
     if anim_kind == AnimationKind.GROW_ARROW:
         return obj_kind in ARROW_KINDS

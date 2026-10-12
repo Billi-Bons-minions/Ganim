@@ -24,7 +24,7 @@ jobs:
           python-version: "3.13"
       - run: pip install "ruff>=0.5"
       # pyproject.toml limits the rules to real errors (F) and import order (I)
-      - run: ruff check manim_studio tests tools examples
+      - run: ruff check manim_studio tests tools examples packaging
 
   test:
     name: Tests (Python ${{ matrix.python }}${{ matrix.latex && ', LaTeX' || '' }})

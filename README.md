@@ -179,7 +179,7 @@ Every scene becomes a class, every object a variable, every step one `self.play(
 pip install -e ".[dev]"
 QT_QPA_PLATFORM=offscreen pytest -q          # all tests, including real Manim renders (a few minutes)
 QT_QPA_PLATFORM=offscreen pytest -q -m "not manim"   # without Manim renders (about a minute)
-ruff check manim_studio tests tools examples
+ruff check manim_studio tests tools examples packaging
 ```
 
 `tools/fuzz_sessions.py` plays random editing sessions through the real app and checks every result with Manim. How the code is organized and how to add an object or animation is described in [CONTRIBUTING.md](CONTRIBUTING.md). Changes are listed in [CHANGELOG.md](CHANGELOG.md).

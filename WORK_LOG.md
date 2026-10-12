@@ -148,3 +148,36 @@ Alle Features sind mit echten Manim-Läufen getestet. Wo die Bühne etwas nachze
 ### Push nach Ganim (Stand am Morgen)
 - **Ergebnis:** Weiterhin blockiert, keine GitHub-Zugangsdaten auf dem Rechner. Alle Commits liegen lokal auf `main`.
 - **Hochladen:** nach der Anmeldung mit `git push ganim main` (siehe Hinweis oben).
+
+---
+
+# Tagschicht 12.10. (Cloud-Session)
+
+## Rückfragen am Morgen
+Ich habe vier Fragen gestellt; ohne Antwort gelten diese Entscheidungen (änderbar):
+1. **LICENSE:** MIT mit „Copyright (c) 2026 Billi-Bons-minions“.
+2. **Version:** 0.9.0 als erste öffentliche Vorabversion. Die 1.0.0 vergibst du bei der Freigabe.
+3. **Installationspakete:** GitHub-Actions-Workflow für PyInstaller, **nur manuell startbar**, veröffentlicht nichts.
+4. **README:** auf Englisch (internationale Sichtbarkeit), mit Hinweis auf die deutsche Oberfläche.
+
+## Bestandsaufnahme
+- **Umgebung:** Python 3.13, Manim 0.22.0, PySide6 6.12, TeX Live, FFmpeg 9.
+- **Tests:** 354 grün. Die Suite brauchte 10 Minuten, weil geschlossene Testfenster nie gelöscht wurden und jedes neue Stylesheet alle alten Fenster neu stylte. Behoben, jetzt ca. 4 Minuten.
+- **App-Start:** Die App startet mit Willkommensdialog und lässt sich sauber schließen; das gilt auch für eine frische Installation per `pip install .` in eine leere venv.
+- **Alle 10 Vorlagen** über die echte App als Vorschau gerendert; Endbilder angesehen.
+- **Fehlerfälle geprüft:**
+  - Manim fehlt im Interpreter → klare Meldung mit Lösung.
+  - LaTeX fehlt → wird vor dem Rendern erkannt und erklärt (Deutsch und Englisch).
+  - Ungültige Formel → Meldung nennt jetzt LaTeX-Fehler **und** Formel (vorher nur „Prüfe die Formeln“).
+
+### Gefunden und behoben
+- Beschriftungen von Null- und Extrempunkten überlappten sich und die Kurve. Jetzt: Hochpunkt oben, Tiefpunkt unten, sonst auf der Seite ohne Kurve. Bühne und Video gleich.
+- Zeitleiste zeigte „+ + Schritt“ und „+ + Warten“ (Symbol plus Text).
+- Vorlagen „Parameter“ und „Kegelschnitte“: Zahl klebte an „a =“ bzw. „r =“.
+- Die App startete immer auf Deutsch. Jetzt folgt die Sprache beim ersten Start der Systemsprache (Deutsch oder sonst Englisch).
+
+### Offen aus der Bestandsaufnahme
+- Das README beschreibt noch den Stand von Version 1 (viele Funktionen fehlen darin, Testzeiten stimmen nicht).
+- `pyproject.toml` hat Version 1.0.0, es fehlen Lizenz, Projekt-URLs und Klassifizierer.
+- `examples/` enthält nur ein Erweiterungsbeispiel, keine Beispielprojekte.
+- Kein CI, keine LICENSE, kein CHANGELOG, kein CONTRIBUTING.

@@ -49,3 +49,6 @@ credentials*.json
 *.swp
 .DS_Store
 Thumbs.db
+
+# Fuzzer output (tools/fuzz_sessions.py)
+fuzz_failures/

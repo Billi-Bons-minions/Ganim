@@ -71,6 +71,9 @@ def build_arguments(job: RenderJob) -> list[str]:
         arguments += ["-r", f"{int(job.width)},{int(job.height)}", "--fps", str(int(job.fps))]
     if job.from_animation:
         arguments += ["-n", str(int(job.from_animation))]
+    if job.manim_format() == "png":
+        # one picture of the end (without -s, Manim 0.19 writes every frame as out0000.png ...)
+        arguments.append("-s")
     if job.transparent:
         arguments.append("--transparent")
     if job.save_sections:

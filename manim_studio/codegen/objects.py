@@ -275,10 +275,12 @@ STUDIO_CAMERA_SOURCE = '''def studio_camera_frame(scene):
     """A frame that steers the 3D camera like the camera frame of a 2D scene.
 
     Moving, scaling and rotating this (invisible) rectangle moves, zooms and
-    rolls the camera.
+    rolls the camera. It is also available as ``self.camera.frame``.
     """
-    frame = Rectangle(width=config.frame_width, height=config.frame_height, stroke_opacity=0, fill_opacity=0)
     camera = scene.renderer.camera
+    if getattr(camera, "studio_frame", None) is not None:
+        return camera.studio_frame
+    frame = Rectangle(width=config.frame_width, height=config.frame_height, stroke_opacity=0, fill_opacity=0)
 
     def follow(_dt):
         right, left = frame.get_vertices()[0], frame.get_vertices()[1]
@@ -288,6 +290,7 @@ STUDIO_CAMERA_SOURCE = '''def studio_camera_frame(scene):
 
     scene.add(frame)
     scene.add_updater(follow)
+    camera.studio_frame = camera.frame = frame
     return frame'''
 
 

@@ -52,7 +52,7 @@ def test_three_d_code() -> None:
     assert "achsen = ThreeDAxes(" in code and "lambda x, y: achsen.c2p(x, y, x * y)" in code
     assert "self.renderer.camera.add_fixed_in_frame_mobjects(titel)" in code
     assert "self.move_camera(phi=80.0 * DEGREES, theta=30.0 * DEGREES, run_time=2.0, rate_func=smooth, added_anims=[Create(" in code
-    assert "self.camera.frame" not in code
+    assert "self.camera.frame.animate" not in code and "self.camera.frame.move_to" not in code
 
 
 def test_three_d_checks() -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Callable
 
@@ -64,8 +65,15 @@ def explore_parameter() -> Scene:
     axes = _add(scene, create_object(ObjectKind.AXES, tr("kind.axes") + " 1", 0.0, -0.3))
     graph = _add(scene, create_object(ObjectKind.FUNCTION_GRAPH, "f", expression="a sin(x)", axes_id=axes.id))
     point = _add(scene, create_object(ObjectKind.GRAPH_POINT, tr("kind.graph_point") + " 1", graph_id=graph.id, x_parameter=parameter.id, show_label=True))
-    number = _add(scene, create_object(ObjectKind.DECIMAL_NUMBER, "a =", -5.0, 3.3, parameter_id=parameter.id, font_size=40.0))
-    _play(scene, create_animation(AnimationKind.CREATE, axes.id), create_animation(AnimationKind.CREATE, graph.id), create_animation(AnimationKind.FADE_IN, number.id))
+    caption = _add(scene, create_object(ObjectKind.TEXT, "a =", -5.9, 3.3, text="a =", font_size=40.0))
+    number = _add(scene, create_object(ObjectKind.DECIMAL_NUMBER, tr("kind.decimal_number") + " a", -4.9, 3.3, parameter_id=parameter.id, font_size=40.0))
+    _play(
+        scene,
+        create_animation(AnimationKind.CREATE, axes.id),
+        create_animation(AnimationKind.CREATE, graph.id),
+        create_animation(AnimationKind.FADE_IN, caption.id),
+        create_animation(AnimationKind.FADE_IN, number.id),
+    )
     _play(scene, create_animation(AnimationKind.FADE_IN, point.id))
     _play(scene, create_animation(AnimationKind.SET_VALUE, parameter.id, run_time=3.0, value=3.0))
     _play(scene, create_animation(AnimationKind.SET_VALUE, parameter.id, run_time=2.0, value=1.0))
@@ -100,10 +108,121 @@ def data_analysis() -> Scene:
     return scene
 
 
+def _line(scene: Scene, name: str, start: tuple[float, float], end: tuple[float, float]) -> SceneObject:
+    """A line from ``start`` to ``end`` (stored as center, length and angle)."""
+    dx, dy = end[0] - start[0], end[1] - start[1]
+    line = _add(scene, create_object(ObjectKind.LINE, name, (start[0] + end[0]) / 2, (start[1] + end[1]) / 2, length=round(math.hypot(dx, dy), 6)))
+    line.rotation = round(math.degrees(math.atan2(dy, dx)), 6)
+    return line
+
+
+def pythagoras() -> Scene:
+    scene = create_scene(tr("template.pythagoras.name"))
+    a_start, b_end, c_end = (-4.0, -1.5), (-1.0, -1.5), (-4.0, 0.5)
+    side_a = _line(scene, "a", a_start, b_end)
+    side_b = _line(scene, "b", a_start, c_end)
+    side_c = _line(scene, "c", b_end, c_end)
+    side_c.stroke_color = "#FC6255"
+    corner = _add(scene, create_object(ObjectKind.ANGLE, tr("kind.angle") + " 1", first_line=side_a.id, second_line=side_b.id, right_angle=True, radius=0.4))
+    labels = [
+        _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " a", -2.5, -2.0, text="a", font_size=40.0)),
+        _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " b", -4.45, -0.5, text="b", font_size=40.0)),
+        _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " c", -2.25, -0.2, text="c", font_size=40.0)),
+    ]
+    labels[2].fill_color = "#FC6255"
+    formula = _add(scene, create_object(ObjectKind.TEXT, tr("template.pythagoras.formula_name"), 2.8, 0.0, text="a² + b² = c²", font_size=56.0))
+    frame = _add(scene, create_object(ObjectKind.HIGHLIGHT, tr("kind.highlight") + " 1", target=formula.id))
+    _play(scene, *(create_animation(AnimationKind.CREATE, line.id, run_time=1.0) for line in (side_a, side_b, side_c)))
+    _play(scene, create_animation(AnimationKind.CREATE, corner.id), *(create_animation(AnimationKind.WRITE, label.id) for label in labels))
+    _play(scene, *(create_animation(AnimationKind.TRANSFORM_FROM_COPY, label.id, run_time=1.5, target=formula.id) for label in labels[:1]))
+    _play(scene, create_animation(AnimationKind.CREATE, frame.id), create_animation(AnimationKind.INDICATE, formula.id))
+    scene.steps.append(create_wait_step(1.0))
+    return scene
+
+
+def orbit_with_trace() -> Scene:
+    scene = create_scene(tr("template.orbit.name"))
+    title = _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " 1", 0.0, 3.3, text=tr("template.orbit.title"), font_size=40.0))
+    orbit = _add(scene, create_object(ObjectKind.ELLIPSE, tr("template.orbit.path"), 0.0, -0.3, width=8.0, height=4.4))
+    orbit.stroke_opacity = 0.35
+    orbit.fill_opacity = 0.0
+    sun = _add(scene, create_object(ObjectKind.DOT, tr("template.orbit.sun"), 1.2, -0.3, radius=0.35))
+    sun.fill_color = sun.stroke_color = "#F7D96F"
+    planet = _add(scene, create_object(ObjectKind.DOT, tr("template.orbit.planet"), 4.0, -0.3, radius=0.15))
+    planet.fill_color = planet.stroke_color = "#58C4DD"
+    trace = _add(scene, create_object(ObjectKind.TRACE, tr("kind.trace") + " 1", target=planet.id, dissipating_time=1.5))
+    trace.stroke_color = "#58C4DD"
+    _play(scene, create_animation(AnimationKind.WRITE, title.id), create_animation(AnimationKind.CREATE, orbit.id), create_animation(AnimationKind.GROW_FROM_CENTER, sun.id))
+    _play(scene, create_animation(AnimationKind.FADE_IN, planet.id))
+    _play(scene, create_animation(AnimationKind.MOVE_ALONG_PATH, planet.id, run_time=4.0, path=orbit.id))
+    _play(scene, create_animation(AnimationKind.FLASH, sun.id))
+    return scene
+
+
+def flow_field() -> Scene:
+    scene = create_scene(tr("template.flow.name"))
+    field = _add(scene, create_object(ObjectKind.VECTOR_FIELD, tr("kind.vector_field") + " 1", display="stream", x_expression="sin(y)", y_expression="cos(x) - 0.3 y", step=0.6))
+    field.stroke_width = 2.0
+    title = _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " 1", 0.0, 3.3, text="v(x, y) = (sin y, cos x − 0.3 y)", font_size=34.0))
+    back = _add(scene, create_object(ObjectKind.HIGHLIGHT, tr("kind.highlight") + " 1", target=title.id, style="background"))
+    scene.objects.remove(back)
+    scene.objects.insert(scene.objects.index(title), back)
+    _play(scene, create_animation(AnimationKind.FADE_IN, field.id, run_time=1.5))
+    _play(scene, create_animation(AnimationKind.FADE_IN, back.id), create_animation(AnimationKind.WRITE, title.id))
+    scene.steps.append(create_wait_step(3.0))
+    return scene
+
+
+def solids_in_space() -> Scene:
+    scene = create_scene(tr("template.solids.name"))
+    axes = _add(scene, create_object(ObjectKind.AXES_3D, tr("kind.axes_3d") + " 1"))
+    shapes = [("sphere", -2.5, 0.0, "#58C4DD"), ("cube", 0.0, 0.0, "#83C167"), ("torus", 2.5, 0.0, "#FC6255")]
+    solids = []
+    for shape, x, y, color in shapes:
+        solid = _add(scene, create_object(ObjectKind.SOLID, tr(f"choice.shape.{shape}"), axes_id=axes.id, shape=shape, center_x=x, center_y=y, radius=0.9, minor_radius=0.3, side=1.4, resolution=12))
+        solid.fill_color = color
+        solid.stroke_color = color
+        solids.append(solid)
+    camera = _add(scene, create_object(ObjectKind.CAMERA, tr("kind.camera") + " 1", phi=70.0, theta=-60.0))
+    title = _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " 1", 0.0, 3.3, text=tr("template.solids.title"), font_size=40.0))
+    _play(scene, create_animation(AnimationKind.CREATE, axes.id), create_animation(AnimationKind.WRITE, title.id))
+    _play(scene, *(create_animation(AnimationKind.GROW_FROM_CENTER, solid.id) for solid in solids))
+    _play(scene, create_animation(AnimationKind.ORBIT, camera.id, run_time=4.0, phi=55.0, theta=30.0))
+    return scene
+
+
+def conic_sections() -> Scene:
+    scene = create_scene(tr("template.conics.name"))
+    radius = _add(scene, create_object(ObjectKind.PARAMETER, "r", symbol="r", value=1.0, minimum=0.5, maximum=3.0))
+    axes = _add(scene, create_object(ObjectKind.AXES, tr("kind.axes") + " 1", 0.0, -0.3))
+    circle = _add(scene, create_object(ObjectKind.FUNCTION_GRAPH, "x² + y² = r²", axes_id=axes.id, curve="implicit", implicit_expression="x^2 + y^2 - r^2"))
+    circle.stroke_color = "#FC6255"
+    hyperbola = _add(scene, create_object(ObjectKind.FUNCTION_GRAPH, "x²/4 − y² = 1", axes_id=axes.id, curve="implicit", implicit_expression="x^2/4 - y^2 - 1"))
+    hyperbola.stroke_color = "#83C167"
+    caption = _add(scene, create_object(ObjectKind.TEXT, "r =", -5.9, 3.3, text="r =", font_size=40.0))
+    number = _add(scene, create_object(ObjectKind.DECIMAL_NUMBER, tr("kind.decimal_number") + " r", -4.9, 3.3, parameter_id=radius.id, font_size=40.0))
+    _play(scene, create_animation(AnimationKind.CREATE, axes.id))
+    _play(
+        scene,
+        create_animation(AnimationKind.CREATE, circle.id),
+        create_animation(AnimationKind.CREATE, hyperbola.id),
+        create_animation(AnimationKind.FADE_IN, caption.id),
+        create_animation(AnimationKind.FADE_IN, number.id),
+    )
+    _play(scene, create_animation(AnimationKind.SET_VALUE, radius.id, run_time=3.0, value=2.5))
+    _play(scene, create_animation(AnimationKind.SET_VALUE, radius.id, run_time=2.0, value=1.5))
+    return scene
+
+
 BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("title", "text", title_and_subtitle),
     BuiltinTemplate("analysis", "graph", analyze_function),
     BuiltinTemplate("parameter", "a_set_value", explore_parameter),
     BuiltinTemplate("columns", "layers", two_columns),
     BuiltinTemplate("data", "graph", data_analysis),
+    BuiltinTemplate("pythagoras", "a_transform_from_copy", pythagoras),
+    BuiltinTemplate("orbit", "a_move_along_path", orbit_with_trace),
+    BuiltinTemplate("flow", "a_apply_wave", flow_field),
+    BuiltinTemplate("solids", "a_orbit", solids_in_space),
+    BuiltinTemplate("conics", "a_set_value", conic_sections),
 )

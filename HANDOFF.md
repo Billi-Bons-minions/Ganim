@@ -93,6 +93,8 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
   - Manim: `plot_implicit_curve` bzw. `ImplicitFunction`.
   - Bühne: Marching Squares, gecacht.
   - Mit Parametern wird die Kurve per `always_redraw` mitgezogen.
+- 5 neue Vorlagen: Satz des Pythagoras, Umlaufbahn mit Spur, Strömung (Vektorfeld), 3D-Körper mit Kamerafahrt, Kegelschnitte (implizit). Alle gerendert und geprüft.
+- Verbundener Export (alle Szenen in einem Video) funktioniert jetzt auch mit 3D-Szenen. Basis ist dann `ThreeDScene`, 2D-Teile laufen in der Draufsicht.
 
 ### Halbfertig
 - (nichts)

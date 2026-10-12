@@ -200,20 +200,28 @@ JOINED_CLASS = "AllScenes"
 def joined_class_code(project: Project, class_names_by_id: dict[str, str], scenes: list[Scene], transition: str) -> list[str]:
     """A scene that runs the ``construct`` of every scene one after another."""
     camera = any(obj.kind == ObjectKind.CAMERA for scene in scenes for obj in scene.objects)
+    three_d = any(is_3d(scene) for scene in scenes)
     names = ", ".join(class_names_by_id[scene.id] for scene in scenes)
+    base = "ThreeDScene" if three_d else "MovingCameraScene" if camera else "Scene"
     lines = [
-        f"class {JOINED_CLASS}({'MovingCameraScene' if camera else 'Scene'}):",
+        f"class {JOINED_CLASS}({base}):",
         '    """All scenes of the project, one after another."""',
         "",
         "    def construct(self):",
     ]
-    if camera:
+    if three_d:
+        # the 3D camera gets a steerable frame, so 2D camera moves keep working
+        lines.append(f"        {STUDIO_CAMERA}(self)")
+    if camera or three_d:
         lines.append("        self.camera.frame.save_state()")
-    lines += [f"        for scene_class in ({names},):", "            scene_class.construct(self)"]
+    lines.append(f"        for scene_class in ({names},):")
+    if three_d:
+        lines.append("            self.set_camera_orientation(phi=0, theta=-90 * DEGREES)")
+    lines.append("            scene_class.construct(self)")
     if transition == "fade":
         lines += ["            if self.mobjects:", "                self.play(*[FadeOut(mobject) for mobject in self.mobjects], run_time=0.5)"]
     lines.append("            self.clear()")
-    if camera:
+    if camera or three_d:
         lines.append("            self.camera.frame.restore()")
     return lines
 
@@ -242,6 +250,8 @@ def generate_script_with_map(project: Project, options: CodegenOptions = DEFAULT
         local.append((scene, len(blocks), spans))
         blocks += scene_class_code(scene, names[scene.id], options, helpers, spans)
     if options.joined:
+        if any(is_3d(scene) for scene in scenes):
+            helpers.add(STUDIO_CAMERA)
         blocks += ["", ""] + joined_class_code(project, names, scenes, options.transition)
     lines = header_lines(JOINED_CLASS if options.joined else names[scenes[0].id], project.aspect)
     for name, source in ((COLOR_TEX, COLOR_TEX_SOURCE), (STUDIO_PLOT, STUDIO_PLOT_SOURCE), (STUDIO_TRANSFORM, STUDIO_TRANSFORM_SOURCE), (STUDIO_SHAPE, STUDIO_SHAPE_SOURCE), (STUDIO_CAMERA, STUDIO_CAMERA_SOURCE), (STUDIO_ANGLE, STUDIO_ANGLE_SOURCE)):

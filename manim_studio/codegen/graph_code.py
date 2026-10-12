@@ -85,7 +85,7 @@ def is_dynamic(scene: Scene, obj: SceneObject) -> bool:
         return _graph_uses_parameters(scene, obj)
     if obj.kind not in GRAPH_TOOL_KINDS or obj.kind == ObjectKind.GRAPH_MARKERS:
         return False
-    if scene.object_by_id(obj.params.get("x_parameter")) is not None:
+    if any(scene.object_by_id(obj.params.get(key)) is not None for key in ("x_parameter", "h_parameter")):
         return True
     graph = scene.object_by_id(obj.params.get("graph_id"))
     other = scene.object_by_id(obj.params.get("other_graph_id")) if obj.params.get("mode") == "between" else None
@@ -310,6 +310,70 @@ def tangent_code(scene: Scene, obj: SceneObject, names: dict[str, str], variable
     return lines, f"always_redraw({variable}_build)"
 
 
+def _h_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> str:
+    parameter = scene.object_by_id(obj.params.get("h_parameter"))
+    if parameter is not None and parameter.kind == ObjectKind.PARAMETER and parameter.id in names:
+        return f"{names[parameter.id]}.get_value()"
+    return fmt_float(param_float(obj.params, "h", 1.0))
+
+
+def _secant_parts(axes_variable: str, obj: SceneObject, x0: str, y0: str, x1: str, y1: str, left: tuple[str, str], right: tuple[str, str]) -> list[str]:
+    """The pieces of a secant: line, the two points and the dashed slope triangle."""
+    color = py_color(obj.stroke_color)
+    opacity = fmt_float(obj.stroke_opacity)
+
+    def point(x: str, y: str) -> str:
+        return f"{axes_variable}.c2p({x}, {y})"
+
+    parts = [
+        f"Line({point(*left)}, {point(*right)}, color={color}, stroke_width={fmt_float(obj.stroke_width)}, stroke_opacity={opacity})",
+    ]
+    radius = param_float(obj.params, "radius", 0.07)
+    if radius > 0:
+        parts += [f"Dot({point(x, y)}, radius={fmt_float(radius)}, color={color}, fill_opacity={opacity})" for x, y in ((x0, y0), (x1, y1))]
+    if obj.params.get("show_triangle", True):
+        legs = (((x0, y0), (x1, y0)), ((x1, y0), (x1, y1)))
+        parts += [f"DashedLine({point(*start)}, {point(*end)}, color={color}, stroke_width=2, stroke_opacity={opacity})" for start, end in legs]
+    return parts
+
+
+def secant_code(scene: Scene, obj: SceneObject, names: dict[str, str], variable: str, dynamic: bool) -> tuple[list[str], str]:
+    """Return ``(definition lines, expression)`` of a secant through f(x0) and f(x0 + h)."""
+    graph, _graph_variable, axes_variable = _tool_parts(scene, obj, names)
+    extend = param_float(obj.params, "extend", 1.0)
+    if not dynamic:
+        found = graphs.secant(scene, obj)
+        if found is None:
+            raise CodegenError("secant_undefined", obj.name)
+        (left_x, left_y), (right_x, right_y) = found.line
+        numbers = [fmt_float(value) for value in (found.x0, found.y0, found.x1, found.y1)]
+        parts = _secant_parts(axes_variable, obj, *numbers, (fmt_float(left_x), fmt_float(left_y)), (fmt_float(right_x), fmt_float(right_y)))
+        return [], "\n".join(["VGroup("] + [f"{INDENT}{part}," for part in parts] + [")"])
+    rename = renames(scene, names)
+    function_code = pieces_code(_function_pieces(scene, graph), rename)
+    parts = _secant_parts(axes_variable, obj, "x0", "y0", "x1", "y1", ("left", "y0 + slope * (left - x0)"), ("right", "y0 + slope * (right - x0)"))
+    lines = [
+        "",
+        f"def {variable}_build():",
+        f"{INDENT}x0 = {_x_code(scene, obj, names)}",
+        f"{INDENT}dx = {_h_code(scene, obj, names)}",
+        f"{INDENT}y0 = (lambda x: {function_code})(x0)",
+        f"{INDENT}if abs(dx) < {graphs.SECANT_MIN_H!r}:",
+        f"{INDENT * 2}# h = 0: the secant has become the tangent",
+        f"{INDENT * 2}x1, y1 = x0, y0",
+        f"{INDENT * 2}slope = (lambda x: {_slope_code(scene, graph, rename)})(x0)",
+        f"{INDENT}else:",
+        f"{INDENT * 2}x1 = x0 + dx",
+        f"{INDENT * 2}y1 = (lambda x: {function_code})(x1)",
+        f"{INDENT * 2}slope = (y1 - y0) / dx",
+        f"{INDENT}left, right = min(x0, x1) - {fmt_float(extend)}, max(x0, x1) + {fmt_float(extend)}",
+        f"{INDENT}return VGroup(",
+    ]
+    lines += [f"{INDENT * 2}{part}," for part in parts]
+    lines += [f"{INDENT})", ""]
+    return lines, f"always_redraw({variable}_build)"
+
+
 _DIRECTIONS = {(1.0, 1.0): "UR", (1.0, -1.0): "DR", (0.0, 1.0): "UP", (0.0, -1.0): "DOWN"}
 
 
@@ -427,8 +491,9 @@ def graph_object_code(scene: Scene, obj: SceneObject, names: dict[str, str], hel
     if obj.kind not in GRAPH_TOOL_KINDS:
         return None
     dynamic = is_dynamic(scene, obj)
-    if obj.kind == ObjectKind.TANGENT:
-        definition, expression = tangent_code(scene, obj, names, variable, dynamic)
+    if obj.kind in (ObjectKind.TANGENT, ObjectKind.SECANT):
+        build = tangent_code if obj.kind == ObjectKind.TANGENT else secant_code
+        definition, expression = build(scene, obj, names, variable, dynamic)
         return definition + _assign(variable, expression.split("\n")), False
     if obj.kind == ObjectKind.GRAPH_POINT:
         definition, expression = graph_point_code(scene, obj, names, variable, dynamic)

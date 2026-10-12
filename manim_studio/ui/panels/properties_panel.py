@@ -116,6 +116,7 @@ GRAPH_ACTIONS: tuple[tuple[str, str, dict], ...] = (
     ("inflection", ObjectKind.GRAPH_MARKERS.value, {"feature": "inflection"}),
     ("intersections", ObjectKind.GRAPH_MARKERS.value, {"feature": "intersections"}),
     ("tangent", ObjectKind.TANGENT.value, {}),
+    ("secant", ObjectKind.SECANT.value, {}),
     ("point", ObjectKind.GRAPH_POINT.value, {}),
     ("area", ObjectKind.GRAPH_AREA.value, {}),
     ("riemann", ObjectKind.RIEMANN.value, {}),
@@ -666,6 +667,12 @@ class PropertiesPanel(QScrollArea):
         if kind == ObjectKind.TANGENT:
             slope = graphs.tangent_slope(scene, obj)
             return tr("prop.tangent_slope", slope=graphs.format_coordinate(slope)) if slope is not None else tr("prop.tool_undefined")
+        if kind == ObjectKind.SECANT:
+            found = graphs.secant(scene, obj)
+            if found is None:
+                return tr("prop.tool_undefined")
+            key = "prop.secant_tangent" if found.x1 == found.x0 else "prop.secant_slope"
+            return tr(key, slope=graphs.format_coordinate(found.slope))
         if kind == ObjectKind.GRAPH_POINT:
             point = graphs.graph_point(scene, obj)
             return tr("prop.point_value", point=graphs.point_label(*point)) if point is not None else tr("prop.tool_undefined")

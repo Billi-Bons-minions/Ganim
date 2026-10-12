@@ -58,6 +58,7 @@ CATEGORIES: tuple[tuple[str, tuple[ObjectKind, ...]], ...] = (
             ObjectKind.PARAMETER,
             ObjectKind.GRAPH_POINT,
             ObjectKind.TANGENT,
+            ObjectKind.SECANT,
             ObjectKind.GRAPH_AREA,
             ObjectKind.RIEMANN,
             ObjectKind.GRAPH_MARKERS,

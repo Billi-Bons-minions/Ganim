@@ -201,7 +201,7 @@ def test_parameter_code_uses_value_trackers_and_always_redraw() -> None:
     assert code.index("a = ValueTracker") < code.index("achsen = Axes")
     assert "graph = always_redraw(" in code and "lambda x: a.get_value() * x ** 2," in code
     assert "def p_build():" in code and "p = always_redraw(p_build)" in code
-    assert "zahl.add_updater(lambda number: number.set_value(a.get_value()), call_updater=True)" in code
+    assert "zahl.add_updater(lambda mob: mob.set_value(a.get_value()), call_updater=True)" in code
     assert "self.play(a.animate(run_time=1.0, rate_func=smooth).set_value(3.0))" in code
     assert "self.add(" in code and " a," not in code.split("self.add(")[1].split(")")[0]
 
@@ -215,6 +215,55 @@ def test_graph_tool_code() -> None:
     assert "graph = studio_plot(" in code
     assert "flaeche = achsen.get_area(graph, x_range=(-1, 2)" in code
     assert "tangente = achsen.plot(" in code and "lambda x: 0.0 + 1.0 * (x - 0.0)," in code
+
+
+def secant_scene(**params) -> Scene:
+    g = graph(expression="x^2")
+    h = make_object(ObjectKind.PARAMETER, "h", "h", symbol="h", value=1.0, minimum=0.0, maximum=2.0)
+    fixed = make_object(ObjectKind.SECANT, "Sekante", "s", graph_id="g", x_value=1.0, h=2.0)
+    linked = make_object(ObjectKind.SECANT, "Sekante 2", "s2", graph_id="g", x_value=1.0, h_parameter="h", **params)
+    return axes_scene(h, g, fixed, linked)
+
+
+def test_secant_difference_quotient_and_limit() -> None:
+    scene = secant_scene()
+    fixed, linked = scene.objects[3], scene.objects[4]
+    found = graphs.secant(scene, fixed)
+    assert (found.x0, found.y0, found.x1, found.y1, found.slope) == pytest.approx((1.0, 1.0, 3.0, 9.0, 4.0))
+    assert [value for point in found.line for value in point] == pytest.approx([0.0, -3.0, 4.0, 13.0])  # extended by 1
+    assert graphs.secant(scene, linked).slope == pytest.approx(3.0)
+    assert graphs.secant(scene, linked, {"h": 0.5}).slope == pytest.approx(2.5)
+    assert graphs.secant(scene, linked, {"h": -1.0}).slope == pytest.approx(1.0)
+    limit = graphs.secant(scene, linked, {"h": 0.0})  # h = 0: the secant is the tangent
+    assert (limit.x1, limit.y1, limit.slope) == pytest.approx((1.0, 1.0, 2.0))
+    assert graphs.parameter_users(scene, linked) == {"h"} and graphs.parameter_users(scene, fixed) == set()
+    log = graph("l", expression="ln(x)")
+    broken = make_object(ObjectKind.SECANT, "S", "b", graph_id="l", x_value=-1.0)
+    assert "secant_undefined" in {issue.code for issue in validate_scene(axes_scene(log, broken))}
+
+
+def test_secant_code() -> None:
+    scene = secant_scene()
+    code = generate_script(make_project(scene), CodegenOptions())
+    static = code.split("sekante = VGroup(")[1].split("def sekante_2_build")[0]
+    assert "Line(achsen.c2p(0.0, -3.0), achsen.c2p(4.0, 13.0), color=" in static
+    assert static.count("Dot(") == 2 and static.count("DashedLine(") == 2
+    assert "def sekante_2_build():" in code and "dx = h.get_value()" in code
+    assert "sekante_2 = always_redraw(sekante_2_build)" in code
+    compile(code, "secant.py", "exec")
+    plain = secant_scene(show_triangle=False, radius=0.0)
+    code = generate_script(make_project(plain), CodegenOptions())
+    build = code.split("def sekante_2_build():")[1].split("sekante_2 = ")[0]
+    assert "Dot(" not in build and "DashedLine(" not in build
+
+
+def test_objects_named_like_build_locals_are_renamed() -> None:
+    """A parameter called x0 must not be shadowed inside the tangent's build function."""
+    g = graph(expression="x^2")
+    x0 = make_object(ObjectKind.PARAMETER, "x0", "p", symbol="a", value=1.0)
+    tangent = make_object(ObjectKind.TANGENT, "Tangente", "t", graph_id="g", x_parameter="p")
+    code = generate_script(make_project(axes_scene(x0, g, tangent)), CodegenOptions())
+    assert "x0_obj = ValueTracker(1.0)" in code and "x0 = x0_obj.get_value()" in code
 
 
 def test_graph_validation() -> None:

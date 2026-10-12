@@ -519,6 +519,59 @@ def tangent_points(scene: Scene, obj: SceneObject, values: Values | None = None)
     return [(x0 - half, y0 - slope * half), (x0 + half, y0 + slope * half)]
 
 
+#: Below this step the secant is drawn as the tangent (like the generated script).
+SECANT_MIN_H = 1e-9
+
+
+@dataclass(frozen=True)
+class Secant:
+    """A secant through (x0, f(x0)) and (x0 + h, f(x0 + h)) in axes coordinates."""
+
+    x0: float
+    y0: float
+    x1: float
+    y1: float
+    slope: float
+    line: list[Point]
+
+
+def secant_h(scene: Scene, obj: SceneObject, values: Values | None) -> float:
+    """The step h of a secant (a parameter's value if linked)."""
+    parameter = scene.object_by_id(obj.params.get("h_parameter"))
+    if parameter is not None and parameter.kind == ObjectKind.PARAMETER:
+        symbol = parameter_symbol(parameter)
+        if values is not None and symbol in values:
+            return float(values[symbol])
+        return param_float(parameter.params, "value", 0.0)
+    return param_float(obj.params, "h", 1.0)
+
+
+def secant(scene: Scene, obj: SceneObject, values: Values | None = None) -> Secant | None:
+    """The secant of a graph tool (``None`` where f is undefined); for h = 0 it is the tangent."""
+    graph = tool_graph(scene, obj)
+    pieces = function_pieces(scene, graph) if graph is not None else None
+    if pieces is None:
+        return None
+    values = scene_values(scene, values)
+    x0 = tool_x(scene, obj, values)
+    h = secant_h(scene, obj, values)
+    x1 = x0 + h
+    y0, y1 = evaluate_pieces(pieces, x0, values), evaluate_pieces(pieces, x1, values)
+    if not (math.isfinite(y0) and math.isfinite(y1)):
+        return None
+    if abs(h) < SECANT_MIN_H:
+        # h = 0: the secant has become the tangent
+        slope = tangent_slope(scene, obj, values)
+        if slope is None:
+            return None
+        x1, y1 = x0, y0
+    else:
+        slope = (y1 - y0) / h
+    extend = param_float(obj.params, "extend", 1.0)
+    low, high = min(x0, x1) - extend, max(x0, x1) + extend
+    return Secant(x0, y0, x1, y1, slope, [(low, y0 + slope * (low - x0)), (high, y0 + slope * (high - x0))])
+
+
 def tangent_slope(scene: Scene, obj: SceneObject, values: Values | None = None) -> float | None:
     """Return the slope of a tangent (for labels and code generation)."""
     points = tangent_points(scene, obj, values)
@@ -712,6 +765,9 @@ def tool_axes_points(scene: Scene, obj: SceneObject, values: Values | None = Non
         return [point for rectangle in riemann_rectangles(scene, obj, values) for point in rectangle]
     if kind == ObjectKind.TANGENT:
         return tangent_points(scene, obj, values)
+    if kind == ObjectKind.SECANT:
+        found = secant(scene, obj, values)
+        return [*found.line, (found.x1, found.y0)] if found is not None else []
     if kind == ObjectKind.GRAPH_POINT:
         point = graph_point(scene, obj, values)
         return [point] if point is not None else []
@@ -826,7 +882,7 @@ def parameter_users(scene: Scene, obj: SceneObject, _seen: frozenset[str] = froz
     seen = _seen | {obj.id}
     by_symbol = {parameter_symbol(p): p.id for p in parameter_objects(scene)}
     used: set[str] = set()
-    for key in ("x_parameter", "parameter_id"):
+    for key in ("x_parameter", "parameter_id", "h_parameter"):
         reference = scene.object_by_id(obj.params.get(key))
         if reference is not None and reference.kind == ObjectKind.PARAMETER:
             used.add(reference.id)

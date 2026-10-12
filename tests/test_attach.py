@@ -52,9 +52,9 @@ def test_followers_and_formulas_on_the_stage() -> None:
 
 def test_code_uses_updaters() -> None:
     code = generate_script(make_project(_scene()))
-    assert "p.add_updater(lambda m: m.move_to(punkt.get_center() + np.array([0.0, 0.6, 0.0])), call_updater=True)" in code
-    assert "q.add_updater(lambda m: m.move_to([2 * np.cos(w.get_value()), 2 * np.sin(w.get_value()), 0.0]), call_updater=True)" in code
-    assert "q_text.add_updater(lambda m: m.move_to(q.get_center() + np.array([0.4, 0.0, 0.0])), call_updater=True)" in code
+    assert "p.add_updater(lambda mob: mob.move_to(punkt.get_center() + np.array([0.0, 0.6, 0.0])), call_updater=True)" in code
+    assert "q.add_updater(lambda mob: mob.move_to([2 * np.cos(w.get_value()), 2 * np.sin(w.get_value()), 0.0]), call_updater=True)" in code
+    assert "q_text.add_updater(lambda mob: mob.move_to(q.get_center() + np.array([0.4, 0.0, 0.0])), call_updater=True)" in code
 
 
 def test_rules_for_coupled_objects() -> None:

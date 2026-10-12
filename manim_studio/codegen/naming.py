@@ -13,6 +13,10 @@ from manim_studio.model.types import RATE_FUNCTIONS, ObjectKind
 
 _TRANSLITERATION = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss"})
 
+#: Local names of generated build functions and updaters; an object with such a
+#: name would be shadowed inside them (``x0 = x0.get_value()``).
+BUILD_LOCALS = frozenset({"mob", "x0", "y0", "x1", "y1", "dx", "slope", "left", "right"})
+
 #: Lower-case names used by the generated code or Python itself.
 RESERVED_VARIABLES = (
     frozenset(keyword.kwlist)
@@ -20,6 +24,7 @@ RESERVED_VARIABLES = (
     | frozenset(RATE_FUNCTIONS)
     | frozenset(name for name in dir(builtins) if name.islower())
     | {"self", "np", "x", "config", "rate_functions", "manim", "numpy"}
+    | BUILD_LOCALS
 )
 
 #: Class names the generated code relies on.

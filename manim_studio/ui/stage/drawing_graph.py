@@ -115,6 +115,8 @@ def tool_primitives(scene: Scene, obj: SceneObject, state: ObjectState, values: 
     if kind == ObjectKind.TANGENT:
         line = _scene(axes, graphs.tangent_points(scene, obj, values))
         return [_stroke_primitive(_path([line], offset), obj, state)], False
+    if kind == ObjectKind.SECANT:
+        return _secant_primitives(scene, obj, state, values, axes, offset), False
     if kind == ObjectKind.GRAPH_POINT:
         return _graph_point_primitives(scene, obj, state, values, axes, offset), False
     if kind == ObjectKind.GRAPH_MARKERS:
@@ -128,6 +130,27 @@ def _placeholder(obj: SceneObject, state: ObjectState) -> Primitive:
     path.addRect(QRectF(-0.3 * PX, -0.3 * PX, 0.6 * PX, 0.6 * PX))
     pen = QPen(_color(state.fill_color if obj.stroke_width == 0 else state.stroke_color, 0.6), 2, Qt.PenStyle.DashLine)
     return Primitive(path=path, pen=pen)
+
+
+def _secant_primitives(scene: Scene, obj: SceneObject, state: ObjectState, values, axes: SceneObject, offset: Point) -> list[Primitive]:
+    """Line, the two points and the dashed slope triangle, like ``graph_code.secant_code``."""
+    found = graphs.secant(scene, obj, values)
+    if found is None:
+        return []
+    primitives = [_stroke_primitive(_path([_scene(axes, found.line)], offset), obj, state)]
+    if obj.params.get("show_triangle", True):
+        corner = (found.x1, found.y0)
+        legs = _path([_scene(axes, [(found.x0, found.y0), corner]), _scene(axes, [corner, (found.x1, found.y1)])], offset)
+        primitives.append(Primitive(path=legs, pen=_dashed(_pen(state.stroke_color, 2.0, obj.stroke_opacity, state.scale))))
+    radius = param_float(obj.params, "radius", 0.07)
+    if radius > 0:
+        brush = QBrush(_color(state.stroke_color, obj.stroke_opacity))
+        for x, y in ((found.x0, found.y0), (found.x1, found.y1)):
+            sx, sy = axes_to_scene(axes, x, y)
+            path = QPainterPath()
+            path.addEllipse(pt(sx - offset[0], sy - offset[1]), radius * PX, radius * PX)
+            primitives.append(Primitive(path=path, brush=brush))
+    return primitives
 
 
 def _graph_point_primitives(scene: Scene, obj: SceneObject, state: ObjectState, values, axes: SceneObject, offset: Point) -> list[Primitive]:

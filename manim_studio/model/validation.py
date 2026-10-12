@@ -292,6 +292,8 @@ def _tool_issues(scene: Scene, obj: SceneObject, add) -> None:
         add(ERROR, "riemann_dx_invalid")
     if obj.kind == ObjectKind.TANGENT and not graphs.tangent_points(scene, obj):
         add(ERROR, "tangent_undefined")
+    if obj.kind == ObjectKind.SECANT and graphs.secant(scene, obj) is None:
+        add(ERROR, "secant_undefined")
     if obj.kind == ObjectKind.GRAPH_POINT and graphs.graph_point(scene, obj) is None:
         add(ERROR, "point_undefined")
     if obj.kind == ObjectKind.GRAPH_MARKERS and not graphs.marker_points(scene, obj):

@@ -728,3 +728,35 @@ def test_polar_grid_renders(tmp_path) -> None:
     scene = Scene(id="s", name="Polar", objects=[plane, rose], steps=[play(make_animation(AnimationKind.CREATE, "e")), play(make_animation(AnimationKind.CREATE, "r"))])
     result = run_manim(tmp_path, generate_script(make_project(scene)), "Polar")
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_secant_becomes_the_tangent_in_manim(tmp_path) -> None:
+    """h runs to 0: the drawn secant ends as the tangent; a parameter called x0 is not shadowed."""
+    from manim import Dot, Line, tempconfig
+
+    from tests.test_graphs import secant_scene
+
+    scene = secant_scene()
+    scene.name = "Sekante"
+    scene.objects.append(make_object(ObjectKind.PARAMETER, "x0", "p0", symbol="b", value=1.0))
+    scene.objects.append(make_object(ObjectKind.TANGENT, "Tangente", "t", graph_id="g", x_parameter="p0"))
+    scene.steps = [
+        play(make_animation(AnimationKind.CREATE, "s"), make_animation(AnimationKind.FADE_IN, "s2"), make_animation(AnimationKind.FADE_IN, "t")),
+        play(make_animation(AnimationKind.SET_VALUE, "h", "v", value=0.0, run_time=0.5)),
+    ]
+    script = generate_script(make_project(scene))
+    result = run_manim(tmp_path, script, "Sekante")
+    assert result.returncode == 0, result.stdout + result.stderr + script
+    namespace: dict = {}
+    exec(compile(script, "sekante.py", "exec"), namespace)
+    with tempconfig({"dry_run": True, "quality": "low_quality", "media_dir": str(tmp_path / "dry")}):
+        rendered = namespace["Sekante"]()
+        rendered.render()
+    axes = next(m for m in rendered.mobjects if type(m).__name__ == "Axes")
+    # the linked secant: line, two dots (now on top of each other) and the two legs
+    groups = [m for m in rendered.mobjects if len(m.submobjects) == 5 and all(isinstance(d, Dot) for d in m.submobjects[1:3])]
+    secant = next(m for m in groups if m.submobjects[1].get_center()[0] == pytest.approx(m.submobjects[2].get_center()[0]))
+    line = secant.submobjects[0]
+    assert isinstance(line, Line)
+    (x_start, y_start), (x_end, y_end) = (axes.p2c(point)[:2] for point in (line.get_start(), line.get_end()))
+    assert (y_end - y_start) / (x_end - x_start) == pytest.approx(2.0)  # tangent slope of x² at 1

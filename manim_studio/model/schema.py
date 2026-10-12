@@ -577,6 +577,21 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         _LINE_STYLE,
         (("stroke_color", "#FF862F"), ("stroke_width", 3.0)),
     ),
+    ObjectKind.SECANT: KindInfo(
+        ObjectKind.SECANT,
+        (
+            _GRAPH_REF,
+            ParamSpec("x_value", ParamType.FLOAT, 1.0, minimum=-1000.0, maximum=1000.0, step=0.25, decimals=3),
+            ParamSpec("x_parameter", ParamType.OBJECT_REF, None, ref_kinds=(ObjectKind.PARAMETER,), optional=True),
+            ParamSpec("h", ParamType.FLOAT, 1.0, minimum=-1000.0, maximum=1000.0, step=0.1, decimals=3),
+            ParamSpec("h_parameter", ParamType.OBJECT_REF, None, ref_kinds=(ObjectKind.PARAMETER,), optional=True),
+            ParamSpec("extend", ParamType.FLOAT, 1.0, minimum=0.0, maximum=1000.0, step=0.25),
+            ParamSpec("show_triangle", ParamType.BOOL, True),
+            ParamSpec("radius", ParamType.FLOAT, 0.07, minimum=0.0, maximum=1.0, step=0.01),
+        ),
+        _LINE_STYLE,
+        (("stroke_color", "#9CDCEB"), ("stroke_width", 3.0)),
+    ),
     ObjectKind.GRAPH_POINT: KindInfo(
         ObjectKind.GRAPH_POINT,
         (

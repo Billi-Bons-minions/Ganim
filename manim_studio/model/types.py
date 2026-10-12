@@ -61,6 +61,7 @@ class ObjectKind(str, Enum):
     BULLET_LIST = "bullet_list"
     NETWORK = "network"
     VECTOR_3D = "vector_3d"
+    SECANT = "secant"
 
 
 class AnimationKind(str, Enum):
@@ -288,6 +289,7 @@ GRAPH_TOOL_KINDS = frozenset(
         ObjectKind.GRAPH_AREA,
         ObjectKind.RIEMANN,
         ObjectKind.TANGENT,
+        ObjectKind.SECANT,
         ObjectKind.GRAPH_POINT,
         ObjectKind.GRAPH_MARKERS,
         ObjectKind.GRAPH_LABEL,

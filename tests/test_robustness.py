@@ -288,7 +288,7 @@ def test_objects_rebuilt_from_a_parameter_wait_for_it() -> None:
         generate_script(make_project(scene))
     step.mode = STEP_SEQUENCE  # one after another is fine
     assert "parameter_conflict" not in {issue.code for issue in validate_scene(scene)}
-    assert "number.set_value(a.get_value()), call_updater=True)" in generate_script(make_project(scene))
+    assert "mob.set_value(a.get_value()), call_updater=True)" in generate_script(make_project(scene))
 
 
 def test_adding_a_value_change_next_to_a_dependent_object_gets_its_own_step(window) -> None:

@@ -349,6 +349,25 @@ def _tangent(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QC
     p.drawEllipse(QPointF(s * 0.62, s * 0.62), w * 1.6, w * 1.6)
 
 
+def _secant(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    curve = _parabola(s, m)
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    p.setPen(QPen(neutral, w))
+    p.drawPath(curve)
+    first, second = curve.pointAtPercent(0.55), curve.pointAtPercent(0.85)
+    direction = second - first
+    p.setPen(QPen(stroke, w * 0.7, Qt.PenStyle.DashLine))
+    corner = QPointF(second.x(), first.y())
+    p.drawLine(first, corner)
+    p.drawLine(corner, second)
+    p.setPen(QPen(stroke, w * 1.1))
+    p.drawLine(first - direction * 0.6, second + direction * 0.35)
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(stroke)
+    for point in (first, second):
+        p.drawEllipse(point, w * 1.4, w * 1.4)
+
+
 def _graph_point(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
     _axes_hint(p, s, m, w, neutral)
     p.setBrush(Qt.BrushStyle.NoBrush)
@@ -479,6 +498,7 @@ _EXTRA_DRAWERS = {
     ObjectKind.GRAPH_AREA: _area,
     ObjectKind.RIEMANN: _riemann,
     ObjectKind.TANGENT: _tangent,
+    ObjectKind.SECANT: _secant,
     ObjectKind.GRAPH_POINT: _graph_point,
     ObjectKind.GRAPH_MARKERS: _markers,
     ObjectKind.GRAPH_LABEL: _graph_label,

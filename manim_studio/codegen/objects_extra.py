@@ -322,6 +322,21 @@ def vector_field_code(obj: SceneObject, variable: str, x_code: str, y_code: str,
     return lines
 
 
+def bullet_list_code(obj: SceneObject, variable: str) -> list[str]:
+    """``VGroup`` of ``Text`` lines arranged like a bulleted list."""
+    from manim_studio.model.lists import list_lines
+
+    options = [f"font_size={fmt_float(_f(obj, 'font_size', 36.0))}", f"color={py_color(obj.fill_color)}", f"fill_opacity={fmt_float(obj.fill_opacity)}"]
+    font = str(obj.params.get("font", "")).strip()
+    if font:
+        options.append(f"font={py_str(font)}")
+    if obj.params.get("bold"):
+        options.append("weight=BOLD")
+    lines = list_lines(obj) or [" "]
+    items = [f"    Text({py_str(line)}, {', '.join(options)})," for line in lines]
+    return [f"{variable} = VGroup(", *items, f").arrange(DOWN, aligned_edge=LEFT, buff={fmt_float(_f(obj, 'buff', 0.25))})"]
+
+
 def trace_code(obj: SceneObject, variable: str, target_variable: str) -> list[str]:
     """``TracedPath`` that records the center of its target from the moment it is added."""
     arguments = [

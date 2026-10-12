@@ -591,3 +591,20 @@ def test_implicit_curves_render(tmp_path) -> None:
     )
     result = run_manim(tmp_path, generate_script(make_project(scene)), "Implizit", "--dry_run")
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+
+
+def test_lists_and_one_by_one_render(tmp_path) -> None:
+    items = make_object(ObjectKind.BULLET_LIST, "Liste", "l", -3.0, 1.0, items="Erster Punkt\nZweiter Punkt", bullet="number")
+    a = make_object(ObjectKind.CIRCLE, "A", "a", 2.0, 0.0)
+    b = make_object(ObjectKind.SQUARE, "B", "b", 4.0, 0.0)
+    group = make_object(ObjectKind.GROUP, "Gruppe", "g", members=["a", "b"])
+    scene = Scene(
+        id="s",
+        name="Listen",
+        objects=[items, a, b, group],
+        steps=[play(make_animation(AnimationKind.ONE_BY_ONE, "l", run_time=0.5)), play(make_animation(AnimationKind.ONE_BY_ONE, "g", run_time=0.5, shift="none"))],
+    )
+    script = generate_script(make_project(scene))
+    assert 'Text("1. Erster Punkt"' in script and "LaggedStart(*[FadeIn(item) for item in gruppe]" in script
+    result = run_manim(tmp_path, script, "Listen", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]

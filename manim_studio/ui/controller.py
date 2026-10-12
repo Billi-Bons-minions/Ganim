@@ -147,6 +147,8 @@ class EditorController(QObject):
                 return None
             params["target"] = target.id
             x, y = 0.0, 0.0
+        if kind == ObjectKind.BULLET_LIST and "items" not in params:
+            params["items"] = tr("default.list_items")
         if kind == ObjectKind.PARAMETER and "symbol" not in params:
             params["symbol"] = self._free_symbol()
         names = [obj.name for obj in scene.objects]

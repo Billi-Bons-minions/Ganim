@@ -89,6 +89,8 @@ def _partial_entrance(state: ObjectState, anim: Animation, progress: float) -> O
         return replace(state, visible=True, scale=state.scale * max(progress, 0.001))
     if kind == AnimationKind.SPIN_IN:
         return replace(state, visible=True, scale=state.scale * max(progress, 0.001), rotation=state.rotation - 90.0 * (1 - progress))
+    if kind == AnimationKind.ONE_BY_ONE:
+        return replace(state, visible=True, draw=max(progress, 0.001), opacity=min(1.0, 0.3 + progress))
     if kind in (AnimationKind.ADD_LETTERS, AnimationKind.GROW_ARROW, AnimationKind.TYPE_WITH_CURSOR):
         return replace(state, visible=True, draw=max(progress, 0.001))
     if kind == AnimationKind.UNWRITE:

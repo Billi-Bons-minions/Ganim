@@ -763,6 +763,16 @@ def _a_broadcast(p: QPainter) -> None:
     p.restore()
 
 
+def _a_one_by_one(p: QPainter) -> None:
+    for row, alpha in enumerate((1.0, 0.65, 0.3)):
+        p.save()
+        p.setOpacity(alpha)
+        y = 6 + row * 6
+        _circle(p, 5, y, 1.3, fill=True)
+        _line(p, 9, y, 20 - row * 2, y)
+        p.restore()
+
+
 def _a_transform(p: QPainter) -> None:
     _circle(p, 6.5, 12, 4)
     _rect(p, 14, 8, 8, 8, 1)
@@ -914,6 +924,7 @@ ICONS: dict[str, Drawer] = {
     "a_transform_from_copy": _a_from_copy,
     "a_passing_flash": _a_passing_flash,
     "a_broadcast": _a_broadcast,
+    "a_one_by_one": _a_one_by_one,
     "a_add_letters": _a_add_letters,
     "a_grow_arrow": _a_grow_arrow,
     "a_shrink_to_center": _a_shrink,

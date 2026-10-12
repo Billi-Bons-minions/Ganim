@@ -37,7 +37,7 @@ CATEGORIES: tuple[tuple[str, tuple[ObjectKind, ...]], ...] = (
         "lines",
         (ObjectKind.LINE, ObjectKind.ARROW, ObjectKind.DOUBLE_ARROW, ObjectKind.DASHED_LINE, ObjectKind.VECTOR, ObjectKind.BRACE, ObjectKind.HIGHLIGHT, ObjectKind.ANGLE, ObjectKind.TRACE),
     ),
-    ("text", (ObjectKind.TEXT, ObjectKind.MARKUP_TEXT, ObjectKind.MATH_TEX, ObjectKind.TEX, ObjectKind.CODE)),
+    ("text", (ObjectKind.TEXT, ObjectKind.BULLET_LIST, ObjectKind.MARKUP_TEXT, ObjectKind.MATH_TEX, ObjectKind.TEX, ObjectKind.CODE)),
     (
         "math",
         (

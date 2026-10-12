@@ -161,6 +161,15 @@ def _solid(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QCol
     p.drawPolygon(side)
 
 
+def _bullet_list(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
+    p.setPen(QPen(neutral, w))
+    for row in range(3):
+        y = m + (s - 2 * m) * (row + 0.5) / 3
+        p.setBrush(neutral)
+        p.drawEllipse(QPointF(m + s * 0.06, y), s * 0.05, s * 0.05)
+        p.drawLine(QPointF(m + s * 0.22, y), QPointF(s - m - s * 0.1 * row, y))
+
+
 def _polygon(p: QPainter, s: float, m: float, w: float, stroke: QColor, fill: QColor, neutral: QColor) -> None:
     p.drawPolygon(QPolygonF([QPointF(m, s * 0.7), QPointF(s * 0.32, m), QPointF(s - m, s * 0.35), QPointF(s * 0.7, s - m)]))
 
@@ -425,6 +434,7 @@ _EXTRA_DRAWERS = {
     ObjectKind.TRACE: _trace,
     ObjectKind.VECTOR_FIELD: _vector_field,
     ObjectKind.SOLID: _solid,
+    ObjectKind.BULLET_LIST: _bullet_list,
     ObjectKind.POLYGON: _polygon,
     ObjectKind.REGULAR_POLYGON: _regular_polygon,
     ObjectKind.STAR: _star,

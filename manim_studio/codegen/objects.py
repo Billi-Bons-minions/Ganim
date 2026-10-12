@@ -25,6 +25,7 @@ from manim_studio.codegen.objects_extra import (
     STUDIO_ANGLE,
     angle_code,
     brace_code,
+    bullet_list_code,
     group_code,
     highlight_code,
     trace_code,
@@ -329,6 +330,8 @@ def object_code(
             lines, place = special
         elif obj.kind == ObjectKind.AXES_3D:
             lines, place = assign(variable, axes_3d_code(obj)), True
+        elif obj.kind == ObjectKind.BULLET_LIST:
+            lines, place = bullet_list_code(obj, variable), True
         elif obj.kind == ObjectKind.SOLID:
             lines, place = assign(variable, solid_code(scene, obj, names)), False
         elif obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D):

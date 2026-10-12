@@ -58,6 +58,7 @@ class ObjectKind(str, Enum):
     TRACE = "trace"
     VECTOR_FIELD = "vector_field"
     SOLID = "solid"
+    BULLET_LIST = "bullet_list"
 
 
 class AnimationKind(str, Enum):
@@ -98,6 +99,7 @@ class AnimationKind(str, Enum):
     TRANSFORM_FROM_COPY = "transform_from_copy"
     PASSING_FLASH = "passing_flash"
     BROADCAST = "broadcast"
+    ONE_BY_ONE = "one_by_one"
 
 
 class StepKind(str, Enum):
@@ -129,6 +131,7 @@ ENTRANCE_ANIMATIONS = frozenset(
         AnimationKind.GROW_ARROW,
         AnimationKind.GROW_FROM_EDGE,
         AnimationKind.TYPE_WITH_CURSOR,
+        AnimationKind.ONE_BY_ONE,
     }
 )
 

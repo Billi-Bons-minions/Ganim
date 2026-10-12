@@ -61,6 +61,7 @@ ANIMATION_CLASSES: dict[AnimationKind, str] = {
     AnimationKind.PASSING_FLASH: "ShowPassingFlash",
     AnimationKind.BROADCAST: "Broadcast",
     AnimationKind.TYPE_WITH_CURSOR: "TypeWithCursor",
+    AnimationKind.ONE_BY_ONE: "LaggedStart",
 }
 
 SHIFT_DIRECTIONS = {"up": "UP", "down": "DOWN", "left": "LEFT", "right": "RIGHT"}
@@ -195,6 +196,12 @@ def simple_animation_code(anim: Animation, scene: Scene, names: dict[str, str], 
         # (TransformFromCopy breaks arrows that are the target)
         target = _extra_arguments(anim, scene, names)[0]
         return f"ReplacementTransform({', '.join([f'{variable}.copy()', target] + timing.args())})"
+    if anim.kind == AnimationKind.ONE_BY_ONE:
+        # the entries (list lines, group members) appear one after another
+        direction = SHIFT_DIRECTIONS.get(str(anim.params.get("shift", "up")))
+        shift = f", shift={direction} * 0.3" if direction else ""
+        lag = fmt_float(float(anim.params.get("lag_ratio", 0.6)))
+        return f"LaggedStart(*[FadeIn(item{shift}) for item in {variable}], {', '.join([f'lag_ratio={lag}'] + timing.args())})"
     if anim.kind == AnimationKind.TYPE_WITH_CURSOR:
         cursor = f"Rectangle(height={variable}.height * 1.1, width=0.06, fill_opacity=1, stroke_width=0, color={variable}.get_color()).move_to({variable}[0])"
         return f"TypeWithCursor({', '.join([variable, cursor, 'leave_cursor_on=False'] + timing.args())})"

@@ -278,6 +278,23 @@ def highlight_primitives(scene: Scene, obj: SceneObject, state: ObjectState) -> 
     return [_shape_primitive(path, obj, state)]
 
 
+def list_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
+    """Lines stacked like ``arrange(DOWN, aligned_edge=LEFT, buff=...)``."""
+    from manim_studio.model.lists import list_lines
+
+    font = text_font(obj, param_float(obj.params, "font_size", 36.0))
+    path = QPainterPath()
+    top = 0.0
+    for line in list_lines(obj) or [" "]:
+        single = QPainterPath()
+        single.addText(QPointF(0, 0), font, line)
+        bounds = single.boundingRect()
+        single.translate(-bounds.left(), top - bounds.top())
+        path.addPath(single)
+        top += bounds.height() + param_float(obj.params, "buff", 0.25) * PX
+    return [Primitive(path=path, brush=QBrush(_color(state.fill_color, obj.fill_opacity)))]
+
+
 def field_primitives(scene: Scene, obj: SceneObject, state: ObjectState, resources: StageResources) -> list[Primitive]:
     """Arrows or stream lines of a vector field (relative to the object's position)."""
     from manim_studio.model.fields import field_arrows, magnitude_color, stream_lines
@@ -566,6 +583,8 @@ def extra_drawing(scene: Scene, obj: SceneObject, state: ObjectState, resources:
         return trace_primitives(obj, state), False
     if kind == ObjectKind.VECTOR_FIELD:
         return field_primitives(scene, obj, state, resources), False
+    if kind == ObjectKind.BULLET_LIST:
+        return list_primitives(obj, state), True
     if kind == ObjectKind.GROUP:
         return [], False
     return None

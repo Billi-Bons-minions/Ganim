@@ -78,6 +78,13 @@ def base_size(scene: Scene, obj: SceneObject) -> tuple[float, float]:
     """Return the estimated width and height of an unrotated, unscaled object."""
     p = obj.params
     kind = obj.kind
+    if kind == ObjectKind.BULLET_LIST:
+        from manim_studio.model.lists import list_lines
+
+        lines = list_lines(obj) or [" "]
+        size = param_float(p, "font_size", 36.0)
+        width = max(_text_size(line, size)[0] for line in lines)
+        return width, len(lines) * _text_size("X", size)[1] + (len(lines) - 1) * param_float(p, "buff", 0.25)
     if kind == ObjectKind.VECTOR_FIELD:
         return param_float(p, "x_max", 7.0) - param_float(p, "x_min", -7.0) + 0.5, param_float(p, "y_max", 4.0) - param_float(p, "y_min", -4.0) + 0.5
     if kind == ObjectKind.TRACE:

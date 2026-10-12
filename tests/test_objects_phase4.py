@@ -201,3 +201,16 @@ def test_validation_of_new_kinds() -> None:
     scene = Scene(id="s", name="S", objects=[polygon, star, tex, group])
     codes = {issue.code for issue in validate_scene(scene, latex_available=False)}
     assert {"polygon_points", "radii_invalid", "latex_unavailable", "group_empty"} <= codes
+
+
+def test_bullet_lists() -> None:
+    from manim_studio.model.lists import list_lines
+    from manim_studio.model.schema import animation_allowed
+
+    plain = make_object(ObjectKind.BULLET_LIST, "Liste", "l", items="Eins\n\n Zwei ")
+    assert list_lines(plain) == ["• Eins", "• Zwei"]
+    plain.params["bullet"] = "letter"
+    assert list_lines(plain) == ["a) Eins", "b) Zwei"]
+    plain.params["bullet"] = "none"
+    assert list_lines(plain) == ["Eins", "Zwei"]
+    assert animation_allowed(AnimationKind.ONE_BY_ONE, ObjectKind.BULLET_LIST, {}) and not animation_allowed(AnimationKind.ONE_BY_ONE, ObjectKind.CIRCLE, {})

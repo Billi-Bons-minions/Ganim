@@ -135,6 +135,9 @@ def _font_size(default: float, key: str = "font_size") -> ParamSpec:
     return ParamSpec(key, ParamType.FLOAT, default, minimum=1.0, maximum=500.0, step=1.0, decimals=1, scalable=True)
 
 
+#: Bullets of a list: dot, dash, numbers, letters or nothing.
+BULLET_CHOICES = ("dot", "dash", "number", "letter", "none")
+
 _WHITE = "#FFFFFF"
 _YELLOW = "#F7D96F"
 
@@ -319,6 +322,19 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         ),
         _LINE_STYLE,
         (("stroke_color", "#F7D96F"),),
+    ),
+    ObjectKind.BULLET_LIST: KindInfo(
+        ObjectKind.BULLET_LIST,
+        (
+            ParamSpec("items", ParamType.TEXT, "1\n2\n3"),
+            ParamSpec("bullet", ParamType.CHOICE, "dot", choices=BULLET_CHOICES),
+            _font_size(36.0),
+            ParamSpec("font", ParamType.FONT, ""),
+            ParamSpec("bold", ParamType.BOOL, False),
+            ParamSpec("buff", ParamType.FLOAT, 0.25, minimum=0.0, maximum=5.0, step=0.05, scalable=True),
+        ),
+        _TEXT_STYLE,
+        (("fill_color", _WHITE), ("fill_opacity", 1.0)),
     ),
     ObjectKind.SOLID: KindInfo(
         ObjectKind.SOLID,
@@ -670,6 +686,10 @@ ANIMATION_PARAMS: dict[AnimationKind, tuple[ParamSpec, ...]] = {
         ParamSpec("time_width", ParamType.FLOAT, 0.3, minimum=0.05, maximum=1.0, step=0.05),
     ),
     AnimationKind.BROADCAST: (ParamSpec("rings", ParamType.INT, 5, minimum=1, maximum=20, step=1),),
+    AnimationKind.ONE_BY_ONE: (
+        ParamSpec("lag_ratio", ParamType.FLOAT, 0.6, minimum=0.05, maximum=1.0, step=0.05),
+        ParamSpec("shift", ParamType.CHOICE, "up", choices=SHIFT_CHOICES),
+    ),
     AnimationKind.TRANSFORM: (ParamSpec("target", ParamType.OBJECT_REF, None),),
     AnimationKind.REPLACEMENT_TRANSFORM: (ParamSpec("target", ParamType.OBJECT_REF, None),),
     AnimationKind.MOVE: (
@@ -794,6 +814,8 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
         return False
     if anim_kind in (AnimationKind.ADD_LETTERS, AnimationKind.TYPE_WITH_CURSOR):
         return obj_kind == ObjectKind.TEXT
+    if anim_kind == AnimationKind.ONE_BY_ONE:
+        return obj_kind in (ObjectKind.BULLET_LIST, ObjectKind.GROUP)
     if anim_kind == AnimationKind.GROW_ARROW:
         return obj_kind in ARROW_KINDS
     if anim_kind in _VECTOR_ONLY:

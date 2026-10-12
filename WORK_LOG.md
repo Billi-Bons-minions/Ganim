@@ -1,14 +1,8 @@
 # Arbeitsprotokoll (Nachtschicht)
 
-> **WICHTIG – Push blockiert:** Dieser Rechner hat keine GitHub-Zugangsdaten.
-> Es gibt keinen SSH-Schlüssel für GitHub, kein `gh` und keinen Credential-Helper.
-> `git push` endet mit „could not read Username“.
-> Alles ist lokal auf `main` committet und mit `ganim/main` zusammengeführt.
-> Zum Hochladen genügt nach dem Anmelden ein Befehl (Fast-Forward, kein Force nötig):
->
->     cd ~/Documents/manim-gui && git push ganim main
->
-> Ohne diesen Push sieht die Cloud-Session den neuen Stand nicht.
+> **Push erledigt (12.10., morgens):** Nach `gh auth login` wurde `main` nach
+> `Billi-Bons-minions/Ganim` gepusht. Der Push war ein Fast-Forward, alle Commits der Nacht sind auf GitHub.
+> Die Abschnitte zu „Push blockiert“ weiter unten beschreiben den Stand während der Nacht.
 
 Hier stehen Entscheidungen, die ich ohne Rückfrage getroffen habe, mit Begründung
 und den Punkten, die du prüfen solltest. Neueste Einträge unten.

@@ -20,6 +20,7 @@ from manim_studio.model.types import (
     ObjectKind,
     StepKind,
     Visibility,
+    pivot_of,
 )
 
 START = -1
@@ -196,7 +197,10 @@ def _apply_modifier(state: ObjectState, anim: Animation) -> ObjectState:
     if anim.kind == AnimationKind.SCALE:
         return replace(state, scale=state.scale * float(params.get("factor", 1.0)), visible=True)
     if anim.kind == AnimationKind.ROTATE:
-        return replace(state, rotation=state.rotation + float(params.get("angle", 0.0)), visible=True)
+        angle = float(params.get("angle", 0.0))
+        pivot = pivot_of(anim)
+        x, y = _rotate_about(state.x, state.y, pivot[0], pivot[1], angle) if pivot else (state.x, state.y)
+        return replace(state, rotation=state.rotation + angle, x=x, y=y, visible=True)
     return _apply_color(state, anim)
 
 
@@ -287,7 +291,8 @@ def apply_to_group(states: dict[str, ObjectState], scene: Scene, anim: Animation
                 states[leaf] = replace(state, scale=state.scale * factor, x=cx + (state.x - cx) * factor, y=cy + (state.y - cy) * factor, visible=True)
             else:
                 angle = float(params.get("angle", 0.0)) * progress
-                x, y = _rotate_about(state.x, state.y, cx, cy, angle)
+                px, py = pivot_of(anim) or (cx, cy)
+                x, y = _rotate_about(state.x, state.y, px, py, angle)
                 states[leaf] = replace(state, rotation=state.rotation + angle, x=x, y=y, visible=True)
     else:
         for leaf in leaf_ids:

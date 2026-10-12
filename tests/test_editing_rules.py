@@ -74,7 +74,7 @@ def test_dragging_in_a_step_records_new_animations() -> None:
     kinds = {anim.kind: anim for anim in scene.steps[2].animations}
     assert kinds[AnimationKind.MOVE].params == {"x": 2.0, "y": 0.5}
     assert kinds[AnimationKind.SCALE].params == {"factor": 2.0}
-    assert kinds[AnimationKind.ROTATE].params == {"angle": 45.0}
+    assert kinds[AnimationKind.ROTATE].params["angle"] == 45.0 and kinds[AnimationKind.ROTATE].params.get("pivot", "center") == "center"
     assert kinds[AnimationKind.CHANGE_COLOR].params == {"color": "#FF0000", "apply_to": "fill"}
     assert all(anim.run_time == 1.0 for anim in scene.steps[2].animations)
 

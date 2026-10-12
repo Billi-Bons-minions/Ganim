@@ -99,6 +99,7 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
   - Aus Text gebaut, braucht also kein LaTeX.
   - Zeichen wählbar: •, –, 1., a) oder keins.
 - Neue Animation „Nacheinander zeigen“ für Listen und Gruppen (`LaggedStart`).
+- „Drehen“ kann jetzt um einen festen Punkt drehen (`Rotate(..., about_point=...)`), z. B. für Uhrzeiger, Pendel oder den Einheitskreis.
 
 ### Halbfertig
 - (nichts)

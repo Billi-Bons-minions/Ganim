@@ -25,6 +25,7 @@ from manim_studio.model.types import (
     AnimationKind,
     ObjectKind,
     StepKind,
+    pivot_of,
     simultaneous_conflicts,
     transform_conflicts,
 )
@@ -148,7 +149,11 @@ def _extra_arguments(anim: Animation, scene: Scene, names: dict[str, str]) -> li
     if anim.kind == AnimationKind.BROADCAST:
         return [f"focal_point={_variable(names, anim.target_id)}.get_center()", f"n_mobs={int(params.get('rings', 5))}"]
     if anim.kind == AnimationKind.ROTATE:
-        return [f"angle={py_degrees(float(params.get('angle', 0.0)))}"]
+        arguments = [f"angle={py_degrees(float(params.get('angle', 0.0)))}"]
+        pivot = pivot_of(anim)
+        if pivot is not None:
+            arguments.append(f"about_point={py_point(*pivot)}")
+        return arguments
     if anim.kind == AnimationKind.INDICATE:
         return [
             f"color={py_color(str(params.get('color', '')))}",
@@ -266,6 +271,8 @@ def modifier_group_code(group: list[Animation], scene: Scene, names: dict[str, s
     timing = delayed_timing(first, total)
     if len(group) == 1 and first.kind == AnimationKind.ROTATE:
         return simple_animation_code(first, scene, names, timing)
+    if any(pivot_of(anim) for anim in group):
+        raise CodegenError("animation_conflict", names.get(first.target_id, ""))
     options = timing.args()
     angle = sum(float(anim.params.get("angle", 0.0)) for anim in group if anim.kind == AnimationKind.ROTATE)
     if any(anim.kind == AnimationKind.ROTATE for anim in group) and round(angle, 6) != 0:
@@ -377,7 +384,9 @@ def _ordered_codes(step: Step, scene: Scene, names: dict[str, str], helpers: set
     for anim in step.animations:
         if step.mode == STEP_SEQUENCE and anim.delay > 0:
             codes.append(f"Wait(run_time={fmt_float(anim.delay)})")
-        if anim.kind in MODIFIER_ANIMATIONS:
+        if pivot_of(anim):
+            codes.append(simple_animation_code(anim, scene, names))
+        elif anim.kind in MODIFIER_ANIMATIONS:
             _check_allowed(anim, scene, names)
             if anim.target_id in seen:
                 codes.append(studio_transform_code([anim], names, [0.0], helpers))

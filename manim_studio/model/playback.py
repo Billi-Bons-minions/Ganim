@@ -17,7 +17,7 @@ from manim_studio.model.state import (
     refresh_group_states,
     states_after,
 )
-from manim_studio.model.types import ENTRANCE_ANIMATIONS, EXIT_ANIMATIONS, TRANSFORM_ANIMATIONS, AnimationKind, StepKind
+from manim_studio.model.types import ENTRANCE_ANIMATIONS, EXIT_ANIMATIONS, TRANSFORM_ANIMATIONS, AnimationKind, StepKind, pivot_of
 
 _SHIFTS = {"up": (0.0, 1.0), "down": (0.0, -1.0), "left": (-1.0, 0.0), "right": (1.0, 0.0)}
 
@@ -141,7 +141,14 @@ def _partial_modifier(state: ObjectState, anim: Animation, progress: float) -> O
     if kind == AnimationKind.SCALE:
         return replace(state, visible=True, scale=state.scale * (1 + (float(params.get("factor", 1.0)) - 1) * progress))
     if kind == AnimationKind.ROTATE:
-        return replace(state, visible=True, rotation=state.rotation + float(params.get("angle", 0.0)) * progress)
+        angle = float(params.get("angle", 0.0)) * progress
+        pivot = pivot_of(anim)
+        if pivot is None:
+            return replace(state, visible=True, rotation=state.rotation + angle)
+        radians = math.radians(angle)
+        dx, dy = state.x - pivot[0], state.y - pivot[1]
+        x, y = pivot[0] + dx * math.cos(radians) - dy * math.sin(radians), pivot[1] + dx * math.sin(radians) + dy * math.cos(radians)
+        return replace(state, visible=True, rotation=state.rotation + angle, x=x, y=y)
     color = str(params.get("color", state.stroke_color))
     apply_to = params.get("apply_to", "both")
     stroke = _mix(state.stroke_color, color, progress) if apply_to in ("both", "stroke") else state.stroke_color

@@ -1237,4 +1237,9 @@ STRINGS: dict[str, str] = {
     "anim_short.one_by_one": "One by one",
     "anim_help.one_by_one": "The items of a list (or the members of a group) appear one after another.",
     "aparam.lag_ratio": "Overlap",
+    "aparam.pivot": "Pivot",
+    "aparam.pivot_x": "Pivot x",
+    "aparam.pivot_y": "Pivot y",
+    "choice.pivot.center": "own center",
+    "choice.pivot.point": "fixed point",
 }

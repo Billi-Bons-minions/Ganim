@@ -11,8 +11,8 @@ import sys
 import pytest
 
 from manim_studio.codegen import generate_script
-from manim_studio.model.entities import Scene
-from manim_studio.model.types import AnimationKind, ObjectKind
+from manim_studio.model.entities import Scene, Step
+from manim_studio.model.types import AnimationKind, ObjectKind, StepKind
 from tests.helpers import acceptance_scene, make_animation, make_object, make_project, play, wait
 
 pytestmark = [
@@ -607,4 +607,15 @@ def test_lists_and_one_by_one_render(tmp_path) -> None:
     script = generate_script(make_project(scene))
     assert 'Text("1. Erster Punkt"' in script and "LaggedStart(*[FadeIn(item) for item in gruppe]" in script
     result = run_manim(tmp_path, script, "Listen", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+
+
+def test_rotation_around_a_point_renders(tmp_path) -> None:
+    hand = make_object(ObjectKind.ARROW, "Zeiger", "z", 1.0, 0.0)
+    dot = make_object(ObjectKind.DOT, "Punkt", "p", 0.0, 0.0)
+    steps = [
+        play(make_animation(AnimationKind.ROTATE, "z", "r", angle=-270.0, pivot="point", pivot_x=0.0, pivot_y=0.0, run_time=0.4)),
+        Step(id="seq", kind=StepKind.PLAY, mode="sequence", animations=[make_animation(AnimationKind.MOVE, "z", "m", x=2.0, y=1.0, run_time=0.2), make_animation(AnimationKind.ROTATE, "z", "r2", angle=45.0, pivot="point", run_time=0.2)]),
+    ]
+    result = run_manim(tmp_path, generate_script(make_project(Scene(id="s", name="Uhr", objects=[hand, dot], steps=steps))), "Uhr", "--dry_run")
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]

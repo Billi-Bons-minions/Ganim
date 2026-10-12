@@ -189,12 +189,20 @@ DETACHED_EFFECTS = frozenset(
 )
 
 
+def pivot_of(anim) -> tuple[float, float] | None:
+    """The point a rotation turns around (``None`` = the object's own center)."""
+    if anim.kind != AnimationKind.ROTATE or anim.params.get("pivot") != "point":
+        return None
+    return float(anim.params.get("pivot_x", 0.0)), float(anim.params.get("pivot_y", 0.0))
+
+
 def _participants(animations) -> dict[str, list[AnimationKind]]:
     by_object: dict[str, list[AnimationKind]] = {}
     for anim in animations:
         if anim.kind in DETACHED_EFFECTS or anim.kind == AnimationKind.ORBIT:
             continue
-        by_object.setdefault(anim.target_id, []).append(anim.kind)
+        # a rotation around another point cannot be merged with other movements
+        by_object.setdefault(anim.target_id, []).append(AnimationKind.MOVE_ALONG_PATH if pivot_of(anim) else anim.kind)
         if anim.kind in TRANSFORM_ANIMATIONS and anim.params.get("target"):
             by_object.setdefault(str(anim.params["target"]), []).append(anim.kind)
         if anim.kind == AnimationKind.SWAP and anim.params.get("partner"):

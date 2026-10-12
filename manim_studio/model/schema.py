@@ -697,7 +697,12 @@ ANIMATION_PARAMS: dict[AnimationKind, tuple[ParamSpec, ...]] = {
         ParamSpec("y", ParamType.FLOAT, 0.0, minimum=-100.0, maximum=100.0, step=0.25),
     ),
     AnimationKind.SCALE: (ParamSpec("factor", ParamType.FLOAT, 1.5, minimum=0.01, maximum=100.0, step=0.1),),
-    AnimationKind.ROTATE: (ParamSpec("angle", ParamType.FLOAT, 90.0, minimum=-3600.0, maximum=3600.0, step=15.0, decimals=1),),
+    AnimationKind.ROTATE: (
+        ParamSpec("angle", ParamType.FLOAT, 90.0, minimum=-3600.0, maximum=3600.0, step=15.0, decimals=1),
+        ParamSpec("pivot", ParamType.CHOICE, "center", choices=("center", "point")),
+        ParamSpec("pivot_x", ParamType.FLOAT, 0.0, minimum=-100.0, maximum=100.0, step=0.25, visible_when=("pivot", ("point",))),
+        ParamSpec("pivot_y", ParamType.FLOAT, 0.0, minimum=-100.0, maximum=100.0, step=0.25, visible_when=("pivot", ("point",))),
+    ),
     AnimationKind.CHANGE_COLOR: (
         ParamSpec("color", ParamType.COLOR, _YELLOW),
         ParamSpec("apply_to", ParamType.CHOICE, "both", choices=COLOR_TARGET_CHOICES),

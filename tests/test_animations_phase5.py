@@ -93,3 +93,21 @@ def test_colored_formula_parts() -> None:
     formula = make_object(ObjectKind.MATH_TEX, "Formel", "f", latex="a^2", colored_parts=[["a", "#FC6255"]])
     code = generate_script(make_project(Scene(id="s", name="S", objects=[formula])), CodegenOptions())
     assert "COLOR_TEX = TexTemplate()" in code and "tex_template=COLOR_TEX" in code
+
+
+def test_rotation_around_a_point() -> None:
+    from manim_studio.model.playback import state_at_time
+    from manim_studio.model.types import simultaneous_conflicts
+
+    hand = make_object(ObjectKind.LINE, "Zeiger", "z", 1.0, 0.0, length=2.0)
+    turn = make_animation(AnimationKind.ROTATE, "z", "r", angle=90.0, pivot="point", pivot_x=0.0, pivot_y=0.0)
+    scene = Scene(id="s", name="Uhr", objects=[hand], steps=[play(turn)])
+    end = states_after(scene, 0)["z"]
+    assert (end.x, end.y, end.rotation) == pytest.approx((0.0, 1.0, 90.0))
+    middle = state_at_time(scene, 0.5)["z"]
+    assert math.hypot(middle.x, middle.y) == pytest.approx(1.0)  # on the circle around the pivot
+    assert "Rotate(zeiger, angle=90.0 * DEGREES, about_point=[0.0, 0.0, 0.0]" in generate_script(make_project(scene))
+    move = make_animation(AnimationKind.MOVE, "z", "m", x=2.0, y=0.0)
+    assert simultaneous_conflicts([turn, move]) == {"z"}
+    plain = make_animation(AnimationKind.ROTATE, "z", "p", angle=45.0)
+    assert simultaneous_conflicts([plain, move]) == set()

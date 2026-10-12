@@ -1237,4 +1237,9 @@ STRINGS: dict[str, str] = {
     "anim_short.one_by_one": "Nacheinander",
     "anim_help.one_by_one": "Die Punkte einer Aufzählung (oder die Mitglieder einer Gruppe) erscheinen einer nach dem anderen.",
     "aparam.lag_ratio": "Überlappung",
+    "aparam.pivot": "Drehpunkt",
+    "aparam.pivot_x": "Drehpunkt x",
+    "aparam.pivot_y": "Drehpunkt y",
+    "choice.pivot.center": "eigene Mitte",
+    "choice.pivot.point": "fester Punkt",
 }

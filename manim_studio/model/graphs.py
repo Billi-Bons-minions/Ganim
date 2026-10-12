@@ -26,7 +26,7 @@ from manim_studio.model.analysis import (
 )
 from manim_studio.model.calculus import derivative
 from manim_studio.model.entities import Scene, SceneObject
-from manim_studio.model.expression import Expression, ExpressionError, check_expression, evaluate_number, is_valid_name, parse_expression
+from manim_studio.model.expression import Expression, ExpressionError, evaluate_number, is_valid_name, parse_expression
 from manim_studio.model.geometry import (
     GRAPH_SAMPLES,
     GRAPH_VALUE_LIMIT,
@@ -995,19 +995,64 @@ def _expression_texts(obj: SceneObject) -> list[tuple[str, str]]:
     return texts
 
 
-def number_formula(scene: Scene, obj: SceneObject) -> Expression | None:
-    """The formula a number shows (made of parameters only), or ``None`` if there is none or it is invalid."""
-    text = str(obj.params.get("formula", "")).strip()
-    if obj.kind != ObjectKind.DECIMAL_NUMBER or not text:
-        return None
+def formula_functions(scene: Scene) -> dict[str, Expression]:
+    """Function graphs that formulas of numbers and positions may call by their name, e.g. ``f(a)``.
+
+    A graph qualifies if its name is a plain name (``f``, ``g2`` …) that no parameter,
+    built-in function or other graph uses, and it is a single term ``y = f(x)`` or its derivative.
+    """
+    graphs = [obj for obj in scene.objects if obj.kind == ObjectKind.FUNCTION_GRAPH]
+    names = [graph.name.strip() for graph in graphs]
+    symbols = set(parameter_symbols(scene))
+    found: dict[str, Expression] = {}
+    for graph, name in zip(graphs, names):
+        if not is_valid_name(name) or name in symbols or names.count(name) != 1:
+            continue
+        if graph.params.get("curve", CURVE_FUNCTION) not in (CURVE_FUNCTION, CURVE_DERIVATIVE):
+            continue
+        pieces = function_pieces(scene, graph)
+        if pieces is not None and len(pieces) == 1:
+            found[name] = pieces[0].expression
+    return found
+
+
+def parse_formula(scene: Scene, text: str) -> Expression:
+    """Parse a formula of parameters and graph values (``a^2/2``, ``f(a) + 1``); raises :class:`ExpressionError`."""
     from manim_studio.model.attach import FORMULA_VARIABLE
 
     symbols = parameter_symbols(scene)
     try:
-        expression = parse_expression(text, FORMULA_VARIABLE, symbols)
+        expression = parse_expression(text, FORMULA_VARIABLE, symbols, formula_functions(scene))
+    except ExpressionError as error:
+        names = [obj.name.strip() for obj in scene.objects if obj.kind == ObjectKind.FUNCTION_GRAPH]
+        if error.code == "unknown_function" and error.detail in names:
+            raise ExpressionError("graph_not_callable", error.detail) from None
+        if error.code == "unknown_function":
+            raise ExpressionError("unknown_graph", error.detail) from None
+        raise
+    if expression.mentions_variable() and FORMULA_VARIABLE not in symbols:
+        raise ExpressionError("only_parameters")
+    return expression
+
+
+def formula_error(scene: Scene, text: str) -> ExpressionError | None:
+    """Why a formula of parameters and graph values cannot be used (``None`` if it is fine)."""
+    try:
+        parse_formula(scene, text)
+    except ExpressionError as error:
+        return error
+    return None
+
+
+def number_formula(scene: Scene, obj: SceneObject) -> Expression | None:
+    """The formula a number shows (parameters and graph values), or ``None`` if there is none or it is invalid."""
+    text = str(obj.params.get("formula", "")).strip()
+    if obj.kind != ObjectKind.DECIMAL_NUMBER or not text:
+        return None
+    try:
+        return parse_formula(scene, text)
     except ExpressionError:
         return None
-    return None if expression.mentions_variable() and FORMULA_VARIABLE not in symbols else expression
 
 
 def number_formula_error(scene: Scene, obj: SceneObject) -> str | None:
@@ -1015,12 +1060,10 @@ def number_formula_error(scene: Scene, obj: SceneObject) -> str | None:
     text = str(obj.params.get("formula", "")).strip()
     if obj.kind != ObjectKind.DECIMAL_NUMBER or not text:
         return None
-    from manim_studio.model.attach import FORMULA_VARIABLE
-
-    error = check_expression(text, FORMULA_VARIABLE, parameter_symbols(scene))
-    if error is not None:
-        return error.code + (f": {error.detail}" if error.detail else "")
-    return None if number_formula(scene, obj) is not None else "only_parameters"
+    error = formula_error(scene, text)
+    if error is None:
+        return None
+    return error.code + (f": {error.detail}" if error.detail else "")
 
 
 def number_value(scene: Scene, obj: SceneObject, values: Values | None, fallback: float) -> float:

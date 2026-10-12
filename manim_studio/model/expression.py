@@ -14,6 +14,7 @@ together such as ``ax`` are split into known names (``a * x``).
 from __future__ import annotations
 
 import ast
+import copy
 import math
 import re
 from dataclasses import dataclass
@@ -134,30 +135,30 @@ def _implies_multiplication(previous: _Token, token: _Token, values: frozenset[s
     return not (previous.kind == "name" and token.text == "(" and not _is_value_name(previous, values))
 
 
-def _split_name(name: str, values: frozenset[str], call: bool) -> list[str] | None:
+def _split_name(name: str, values: frozenset[str], call: bool, functions: frozenset[str] = frozenset()) -> list[str] | None:
     """Split e.g. ``ax`` into ``["a", "x"]`` (the last part may be a function before ``(``)."""
     if not name:
         return []
     for size in range(len(name), 0, -1):
         head = name[:size]
         rest = name[size:]
-        if head in values or (call and not rest and head in FUNCTIONS):
-            tail = _split_name(rest, values, call)
+        if head in values or (call and not rest and (head in FUNCTIONS or head in functions)):
+            tail = _split_name(rest, values, call, functions)
             if tail is not None:
                 return [head] + tail
     return None
 
 
-def split_names(tokens: list[_Token], values: frozenset[str]) -> list[_Token]:
+def split_names(tokens: list[_Token], values: frozenset[str], functions: frozenset[str] = frozenset()) -> list[_Token]:
     """Replace unknown names that consist of known names by those names."""
     result: list[_Token] = []
     for index, token in enumerate(tokens):
-        known = token.text in values or token.text in FUNCTIONS
+        known = token.text in values or token.text in FUNCTIONS or token.text in functions
         if token.kind != "name" or known:
             result.append(token)
             continue
         call = index + 1 < len(tokens) and tokens[index + 1].text == "("
-        parts = _split_name(token.text, values, call)
+        parts = _split_name(token.text, values, call, functions)
         result += [_Token("name", part) for part in parts] if parts else [token]
     return result
 
@@ -177,10 +178,10 @@ def insert_implicit_multiplication(tokens: list[_Token], values: frozenset[str] 
     return result
 
 
-def normalize(text: str, variable: str = VARIABLE, parameters: tuple[str, ...] = NO_PARAMETERS) -> str:
+def normalize(text: str, variable: str = VARIABLE, parameters: tuple[str, ...] = NO_PARAMETERS, functions: frozenset[str] = frozenset()) -> str:
     """Return the term in explicit Python syntax (before validation)."""
     values = _value_names(variable, parameters)
-    tokens = insert_implicit_multiplication(split_names(tokenize(text), values), values)
+    tokens = insert_implicit_multiplication(split_names(tokenize(text), values, functions), values)
     return " ".join(token.text for token in tokens)
 
 
@@ -275,6 +276,36 @@ class _NumpyTransformer(ast.NodeTransformer):
         return ast.copy_location(ast.Call(func=func, args=args, keywords=[]), node)
 
 
+class _Inliner(ast.NodeTransformer):
+    """Replace calls of user functions (e.g. a graph ``f``) by their term, e.g. ``f(a)`` → ``(a)^2 / 2``.
+
+    The result only uses what every term may use, so the stage evaluates it and the
+    script computes it like any other term (with the function's parameters, if any).
+    """
+
+    def __init__(self, functions: dict[str, Expression]) -> None:
+        self.functions = functions
+
+    def visit_Call(self, node: ast.Call) -> ast.AST:
+        self.generic_visit(node)
+        if not isinstance(node.func, ast.Name) or node.func.id not in self.functions:
+            return node
+        if node.keywords or len(node.args) != 1:
+            raise ExpressionError("wrong_argument_count", node.func.id)
+        function = self.functions[node.func.id]
+        body = _Substitute(function.variable, node.args[0]).visit(_clone(function.tree).body)
+        return ast.copy_location(body, node)
+
+
+class _Substitute(ast.NodeTransformer):
+    def __init__(self, variable: str, replacement: ast.AST) -> None:
+        self.variable = variable
+        self.replacement = replacement
+
+    def visit_Name(self, node: ast.Name) -> ast.AST:
+        return copy.deepcopy(self.replacement) if node.id == self.variable else node
+
+
 @dataclass(frozen=True)
 class Expression:
     """A validated term in one variable (``x`` or ``t``) and optional parameters."""
@@ -361,18 +392,28 @@ def _binary(op: ast.operator, left: float, right: float) -> float:
     return result
 
 
-def parse_expression(text: str, variable: str = VARIABLE, parameters: tuple[str, ...] | list[str] = NO_PARAMETERS) -> Expression:
-    """Parse and validate a term or raise :class:`ExpressionError`."""
+def parse_expression(
+    text: str, variable: str = VARIABLE, parameters: tuple[str, ...] | list[str] = NO_PARAMETERS, functions: dict[str, Expression] | None = None
+) -> Expression:
+    """Parse and validate a term or raise :class:`ExpressionError`.
+
+    ``functions`` are further functions of one argument the term may call (graphs such as
+    ``f``); each call is replaced by the function's term, so ``f(a)`` becomes ``f``'s term in ``a``.
+    """
     if not text or not text.strip():
         raise ExpressionError("empty")
     if len(text) > MAX_LENGTH:
         raise ExpressionError("too_long")
     parameters = tuple(sorted(set(parameters) - {variable}))
-    python_text = normalize(text, variable, parameters)
+    taken = {variable, *parameters, *FUNCTIONS, *CONSTANTS}
+    functions = {name: function for name, function in (functions or {}).items() if name not in taken}
+    python_text = normalize(text, variable, parameters, frozenset(functions))
     try:
         tree = ast.parse(python_text, mode="eval")
     except SyntaxError as error:
         raise ExpressionError("syntax", error.msg or "") from None
+    if functions:
+        tree = ast.fix_missing_locations(_Inliner(functions).visit(tree))
     _Validator(_value_names(variable, parameters)).visit(tree)
     return Expression(source=text, tree=tree, variable=variable, parameters=parameters)
 
@@ -384,10 +425,12 @@ def from_tree(tree: ast.Expression, variable: str = VARIABLE, parameters: tuple[
     return Expression(source=to_text(tree.body), tree=tree, variable=variable, parameters=parameters)
 
 
-def check_expression(text: str, variable: str = VARIABLE, parameters: tuple[str, ...] | list[str] = NO_PARAMETERS) -> ExpressionError | None:
+def check_expression(
+    text: str, variable: str = VARIABLE, parameters: tuple[str, ...] | list[str] = NO_PARAMETERS, functions: dict[str, Expression] | None = None
+) -> ExpressionError | None:
     """Return the validation error of a term or ``None`` if it is valid."""
     try:
-        parse_expression(text, variable, parameters)
+        parse_expression(text, variable, parameters, functions)
     except ExpressionError as error:
         return error
     return None

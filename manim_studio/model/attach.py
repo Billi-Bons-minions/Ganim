@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import Callable
 
 from manim_studio.model.entities import Scene, SceneObject
-from manim_studio.model.expression import Expression, check_expression, parse_expression
+from manim_studio.model.expression import Expression
 from manim_studio.model.schema import ParamSpec, ParamType
 from manim_studio.model.types import ObjectKind
 
@@ -141,31 +141,23 @@ def _start_position(scene: Scene, obj: SceneObject, depth: int = 0) -> tuple[flo
 
 
 def position_formulas(scene: Scene, obj: SceneObject) -> tuple[Expression, Expression] | None:
-    """The parsed ``x``/``y`` formulas (``None`` if one of them is invalid)."""
-    from manim_studio.model.graphs import parameter_symbols
+    """The parsed ``x``/``y`` formulas (``None`` if one of them is invalid); they may use graph values like ``f(a)``."""
+    from manim_studio.model.graphs import parse_formula
 
-    symbols = parameter_symbols(scene)
     try:
-        formulas = tuple(parse_expression(str(obj.params.get(key, "")), FORMULA_VARIABLE, symbols) for key in ("attach_x", "attach_y"))
+        return tuple(parse_formula(scene, str(obj.params.get(key, ""))) for key in ("attach_x", "attach_y"))  # type: ignore[return-value]
     except Exception:  # noqa: BLE001 - any parse problem means "no position"
         return None
-    if any(formula.mentions_variable() for formula in formulas):
-        return None
-    return formulas  # type: ignore[return-value]
 
 
 def formula_error(scene: Scene, obj: SceneObject) -> str | None:
     """A readable reason why a position formula cannot be used (or ``None``)."""
-    from manim_studio.model.graphs import parameter_symbols
+    from manim_studio.model.graphs import formula_error as check_formula
 
-    symbols = parameter_symbols(scene)
     for key in ("attach_x", "attach_y"):
-        text = str(obj.params.get(key, ""))
-        error = check_expression(text, FORMULA_VARIABLE, symbols)
+        error = check_formula(scene, str(obj.params.get(key, "")))
         if error is not None:
             return error.code + (f": {error.detail}" if error.detail else "")
-        if parse_expression(text, FORMULA_VARIABLE, symbols).mentions_variable() and FORMULA_VARIABLE not in symbols:
-            return "only_parameters"
     return None
 
 

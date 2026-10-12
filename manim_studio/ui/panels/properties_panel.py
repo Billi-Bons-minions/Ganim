@@ -108,6 +108,8 @@ TRANSFORM_TARGET_KINDS = (
 )
 #: Object references that must point to graphs of the form y = f(x).
 FUNCTION_GRAPH_REFS = ("graph_id", "other_graph_id", "derive_from")
+#: Formulas of parameters (and graph values such as f(a)) instead of terms in x.
+FORMULA_KEYS = ("formula", "attach_x", "attach_y")
 #: Quick actions on a function graph: (key, kind or special action, extra params).
 GRAPH_ACTIONS: tuple[tuple[str, str, dict], ...] = (
     ("derivative", "derivative", {}),
@@ -540,13 +542,20 @@ class PropertiesPanel(QScrollArea):
             return tr("prop.attach_follow_note")
         if mode == ATTACH_FORMULA:
             symbols = ", ".join(graphs.parameter_symbols(self.editor.scene()))
-            return tr("prop.attach_formula_note", symbols=symbols or "–")
+            functions = ", ".join(f"{name}(…)" for name in sorted(graphs.formula_functions(self.editor.scene())))
+            return tr("prop.attach_formula_note", symbols=symbols or "–", functions=functions or "–")
         return tr("prop.attach_none_note")
 
     def _expression_message(self, object_id: str, spec: ParamSpec) -> str:
         scene = self.editor.scene()
         text = str(self._object(object_id).params.get(spec.key, ""))
-        error = check_expression(text, spec.variable, (*spec.extra_names, *graphs.parameter_symbols(scene)))
+        if spec.key in FORMULA_KEYS:
+            # formulas of parameters may also use values of graphs, e.g. f(a)
+            if spec.key == "formula" and not text.strip():
+                return ""
+            error = graphs.formula_error(scene, text)
+        else:
+            error = check_expression(text, spec.variable, (*spec.extra_names, *graphs.parameter_symbols(scene)))
         if error is None:
             return ""
         return tr(f"expr.{error.code}", detail=error.detail)

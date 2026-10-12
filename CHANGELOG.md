@@ -18,6 +18,8 @@ All notable changes to Manim Studio are listed here. The format follows
 - Template "Sets: intersection and difference" with a Venn diagram (now 16 templates).
 - The script import reads `Union`, `Intersection`, `Difference` and `Exclusion`.
 
+- Formulas of numbers, positions and computed results can use values of function graphs: a graph named `f` can be called as `f(a)`, also with parameters inside `f` and for derivatives. Term errors in the validation list are now explained in words.
+
 ### Fixed
 - Manim's `Union` leaves a hole where two shapes drawn in opposite directions overlap (e.g. a sector and a triangle). Generated scripts unite the two areas themselves (`studio_union`), so the video shows the real union like the stage.
 - Fading out a motion trace before it recorded anything (e.g. in the first step) crashed Manim.

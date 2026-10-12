@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 
 from manim_studio.model.entities import Scene, SceneObject
-from manim_studio.model.expression import Expression, ExpressionError, parse_expression
+from manim_studio.model.expression import Expression, ExpressionError
 from manim_studio.model.geometry import param_float
 from manim_studio.model.types import ObjectKind
 
@@ -37,15 +37,12 @@ def result_term(scene: Scene, obj: SceneObject) -> Expression | None:
     """The term of a formula with "compute result" (``None`` if it is off or not computable)."""
     if obj.kind != ObjectKind.MATH_TEX or not obj.params.get("show_result"):
         return None
-    from manim_studio.model.attach import FORMULA_VARIABLE
-    from manim_studio.model.graphs import parameter_symbols
+    from manim_studio.model.graphs import parse_formula
 
-    symbols = parameter_symbols(scene)
     try:
-        expression = parse_expression(latex_to_term(str(obj.params.get("latex", ""))), FORMULA_VARIABLE, symbols)
+        return parse_formula(scene, latex_to_term(str(obj.params.get("latex", ""))))
     except ExpressionError:
         return None
-    return None if expression.mentions_variable() and FORMULA_VARIABLE not in symbols else expression
 
 
 def result_text(value: float, decimals: int) -> str:

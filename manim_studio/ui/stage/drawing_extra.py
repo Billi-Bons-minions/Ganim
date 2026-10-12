@@ -32,8 +32,8 @@ from manim_studio.model.state import ObjectState, initial_state
 from manim_studio.model.types import ObjectKind
 from manim_studio.ui.stage.drawing import (
     ARROW_TIP,
+    EM_PER_POINT,
     PX,
-    TEXT_CAP_HEIGHT_PER_POINT,
     Primitive,
     StageResources,
     _color,
@@ -55,7 +55,7 @@ def pt(x: float, y: float) -> QPointF:
 
 def _label_font(points: float) -> QFont:
     font = manim_text_font()
-    font.setPixelSize(max(1, round(TEXT_CAP_HEIGHT_PER_POINT * points * PX / 0.7)))
+    font.setPixelSize(max(1, round(EM_PER_POINT * points * PX)))
     return font
 
 

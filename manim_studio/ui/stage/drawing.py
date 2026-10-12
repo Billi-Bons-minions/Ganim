@@ -54,7 +54,6 @@ from manim_studio.render.tex_preview import TexPreviewCache
 
 PX = 100.0
 STROKE_UNIT = 0.01 * PX
-TEXT_CAP_HEIGHT_PER_POINT = 0.47578 / 48.0
 TEX_UNITS_PER_PT_AT_48 = 0.04998
 AXIS_LABEL_SIZE = 24.0
 ARROW_TIP = 0.35
@@ -196,23 +195,32 @@ def manim_text_font() -> QFont:
     return QFont(_MANIM_FAMILY[0])
 
 
+#: Manim's ``Text`` is as big as a font whose em is ``font_size / 72`` units (measured: the same for every font).
+EM_PER_POINT = 1.0 / 72.0
+
+
 def text_font(obj: SceneObject, font_size: float) -> QFont:
-    """Return a Qt font whose cap height matches Manim's ``Text`` at ``font_size``."""
+    """Return a Qt font as large as Manim's ``Text`` at ``font_size`` (by its em, like Pango)."""
     font = QFont(str(obj.params.get("font"))) if obj.params.get("font") else manim_text_font()
     font.setBold(bool(obj.params.get("bold")))
     font.setItalic(bool(obj.params.get("italic")))
-    font.setPixelSize(100)
-    cap = QFontMetricsF(font).capHeight() or 70.0
-    wanted = TEXT_CAP_HEIGHT_PER_POINT * font_size * PX
-    font.setPixelSize(max(1, round(100 * wanted / cap)))
+    font.setPixelSize(max(1, round(EM_PER_POINT * font_size * PX)))
     return font
+
+
+def manim_line_height(font: QFont, line_spacing: float = 0.0) -> float:
+    """Distance between the lines of Manim's ``Text``: ``font_size / 96 · (1 + line_spacing)``, 0.3 by default.
+
+    Measured: the same for every font (Pango leaves the font's own line height aside here).
+    """
+    return font.pixelSize() * 0.75 * (1.0 + (line_spacing if line_spacing > 0 else 0.3))
 
 
 def text_path(text: str, font: QFont, alignment: str = "left", line_spacing: float = 0.0) -> QPainterPath:
     """Return a vector path for (possibly multi-line) text."""
     path = QPainterPath()
     metrics = QFontMetricsF(font)
-    line_height = metrics.lineSpacing() * (line_spacing if line_spacing > 0 else 1.0)
+    line_height = manim_line_height(font, line_spacing)
     lines = text.split("\n")
     widest = max((metrics.horizontalAdvance(line) for line in lines), default=0.0)
     for index, line in enumerate(lines):
@@ -249,7 +257,7 @@ def _text_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
     if not words:
         return [Primitive(path=text_path(text, font, alignment, spacing), brush=base)]
     metrics = QFontMetricsF(font)
-    line_height = metrics.lineSpacing() * (spacing if spacing > 0 else 1.0)
+    line_height = manim_line_height(font, spacing)
     lines = text.split("\n")
     widest = max(metrics.horizontalAdvance(line) for line in lines)
     paths: dict[str | None, QPainterPath] = {}

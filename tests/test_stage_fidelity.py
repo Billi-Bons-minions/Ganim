@@ -113,3 +113,25 @@ def test_grid_lines_like_manim(low: float, high: float, step: float) -> None:
         if abs(start[0] - end[0]) < 1e-6:
             vertical.add(round(float(start[0]), 6) + 0.0)
     assert [round(value, 6) for value in plane_line_values(low, high, step)] == sorted(vertical)
+
+
+@pytest.mark.manim
+@pytest.mark.skipif(not HAS_MANIM, reason="Manim is not installed")
+@pytest.mark.parametrize("family", ["DejaVu Serif", "Liberation Serif", "DejaVu Sans"])
+@pytest.mark.parametrize("lines, spacing", [("Hamburgefonts", 0.0), ("Zeile eins\nZeile zwei\nDrei", 0.0), ("A\nB", 1.5)])
+def test_text_size_like_manim_for_any_font(qapp, family: str, lines: str, spacing: float) -> None:
+    """Manim's Text has an em of font_size / 72 and lines font_size / 96 · (1 + spacing) apart, for every font."""
+    from manim import Text
+    from PySide6.QtGui import QFontDatabase
+
+    from manim_studio.model.types import ObjectKind
+    from manim_studio.ui.stage.drawing import PX, text_font, text_path
+    from tests.helpers import make_object
+
+    if family not in QFontDatabase.families():
+        pytest.skip(f"{family} is not installed")
+    obj = make_object(ObjectKind.TEXT, "T", "t", text=lines, font=family)
+    bounds = text_path(lines, text_font(obj, 36.0), "left", spacing).boundingRect()
+    manim_text = Text(lines, font=family, font_size=36, **({"line_spacing": spacing} if spacing else {}))
+    assert bounds.width() / PX == pytest.approx(manim_text.width, rel=0.02)
+    assert bounds.height() / PX == pytest.approx(manim_text.height, rel=0.03)

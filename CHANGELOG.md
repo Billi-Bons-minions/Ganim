@@ -35,6 +35,7 @@ All notable changes to Manim Studio are listed here. The format follows
 - The stage draws texts in Manim's default font (Pango's serif font) instead of the interface font, so texts and labels are as wide as in the video.
 - Axes and number lines with an arrow tip no longer show the last tick and number on the stage (Manim leaves them out; the tip sits there); ranges that do not contain 0 start their ticks at the first value like Manim.
 - Axis labels (x, y) sit on the stage where Manim puts them: next to the tip (the y label half up, not diagonally) and pushed back onto the screen like `shift_onto_screen`.
+- Texts on the stage have Manim's size and line spacing for every font: Pango sizes a `Text` by its em (font size / 72) and puts lines font size / 96 · (1 + spacing) apart, whatever the font. Before, fonts with other proportions (e.g. DejaVu or Liberation Serif) were up to 9 % too wide or too narrow, and lines of multi-line texts were too far apart.
 - Axes with numbers: the stage centers them with their numbers like Manim's `move_to` (before, the axes and everything on them were up to 0.25 units off), writes the numbers with the decimals of the step (`1.0`, `1.5`) and sets them like `DecimalNumber` (negative x numbers centered on their digits).
 - The stage draws the grid lines of a number plane where Manim does: from the axes outwards, without lines on the far edges (a plane from -7 to 7 has no lines at ±7).
 - Fading out a motion trace before it recorded anything (e.g. in the first step) crashed Manim.

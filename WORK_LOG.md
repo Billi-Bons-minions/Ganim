@@ -445,3 +445,8 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
 - Die CI war seit dem Commit „Achsenbeschriftungen“ rot; ich habe das zu spät bemerkt (lokal war alles grün). Ursache: Auf dem CI-Rechner wählt Pango für Manims `Text` „DejaVu Serif“, Qt löst „serif“ dort aber zu einer anderen Schrift auf, und meine Zeichenbreiten für Achsenzahlen stammten von „Noto Serif“.
 - Lösung: Bühne und Modell fragen fontconfig (`fc-match serif`) wie Pango. Das Modell hat gemessene Zeichenbreiten für Noto Serif, DejaVu Serif und Liberation Serif; mit DejaVu Serif gegen Manim geprüft (Achsenmitte exakt). Ohne fontconfig (Windows/macOS) gilt Qts eigene Wahl.
 - Außerdem war *Kamera dreht dauerhaft* für andere Objekte wählbar (im Commit danach behoben).
+
+## Bühne = Video: Größe und Zeilenabstand von Texten
+- Die Bühne richtete die Schriftgröße nach der Höhe der Großbuchstaben aus (an Noto Serif geeicht). Pango richtet sie aber nach dem Geviert (em) aus: Manims `Text` hat ein em von Schriftgröße/72 Einheiten, gemessen gleich für Noto, DejaVu und Liberation Serif und Sans. Bei anderen Schriften war der Text dadurch bis zu 9 % zu breit oder zu schmal (auf dem CI-Rechner mit DejaVu Serif 2,5 %).
+- Zeilenabstand: Manim setzt mehrzeilige Texte mit Schriftgröße/96 · (1 + Zeilenabstand), Standard 0,3, ebenfalls für jede Schrift gleich. Die Bühne nahm den Zeilenabstand der Schrift; Zeilen lagen dadurch rund 40 % zu weit auseinander.
+- Tests vergleichen Breite und Höhe ein- und mehrzeiliger Texte mit Manim für drei Schriften.

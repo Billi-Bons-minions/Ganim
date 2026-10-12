@@ -11,8 +11,8 @@ from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.geometry import axes_to_scene, param_float
 from manim_studio.model.state import ObjectState
 from manim_studio.ui.stage.drawing import (
+    EM_PER_POINT,
     PX,
-    TEXT_CAP_HEIGHT_PER_POINT,
     Primitive,
     _color,
     _pen,
@@ -28,7 +28,7 @@ TICK = 0.1
 
 def _font(points: float) -> QFont:
     font = manim_text_font()
-    font.setPixelSize(max(1, round(TEXT_CAP_HEIGHT_PER_POINT * points * PX / 0.7)))
+    font.setPixelSize(max(1, round(EM_PER_POINT * points * PX)))
     return font
 
 

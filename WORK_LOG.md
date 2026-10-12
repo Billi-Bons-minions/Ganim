@@ -491,4 +491,4 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
 
 ## Deine Entscheidungen
 - Release/Tag/PyPI: nichts veröffentlicht, wartet auf deine Freigabe.
-- Bogenbahn zusammen mit Skalieren/Drehen desselben Objekts: ich erzeuge `StudioTransform` (nur die Mitte läuft auf dem Bogen, wie auf der Bühne) statt Manims `.animate(path_arc=…)`, das auch Skalierung/Drehung „mitdreht“. Passt das so?
+- Bogenbahn zusammen mit Skalieren/Drehen desselben Objekts: ich erzeuge `StudioTransform` (nur die Mitte läuft auf dem Bogen, wie auf der Bühne) statt Manims `.animate(path_arc=…)`, das auch Skalierung/Drehung „mitdreht“. **Entschieden: bleibt so.**

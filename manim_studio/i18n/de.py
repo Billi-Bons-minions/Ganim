@@ -1263,4 +1263,7 @@ STRINGS: dict[str, str] = {
     "issue.network_empty": "Das Netzwerk hat keine Knoten.",
     "issue.network_unknown_vertex": "Kanten verwenden unbekannte Knoten: {detail}",
     "issue.network_not_tree": "Das Netzwerk ist kein Baum – es wird im Kreis angeordnet.",
+    "settings.preview_quality": "Vorschauqualität",
+    "settings.preview_quality.l": "Schnell (480p, 15 fps)",
+    "settings.preview_quality.m": "Flüssig (720p, 30 fps)",
 }

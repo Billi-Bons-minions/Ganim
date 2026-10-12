@@ -1263,4 +1263,7 @@ STRINGS: dict[str, str] = {
     "issue.network_empty": "The network has no vertices.",
     "issue.network_unknown_vertex": "Edges use unknown vertices: {detail}",
     "issue.network_not_tree": "The network is not a tree – it is laid out on a circle.",
+    "settings.preview_quality": "Preview quality",
+    "settings.preview_quality.l": "Fast (480p, 15 fps)",
+    "settings.preview_quality.m": "Smooth (720p, 30 fps)",
 }

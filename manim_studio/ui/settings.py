@@ -18,6 +18,9 @@ def _to_bool(value: object, default: bool) -> bool:
     return str(value).lower() in ("1", "true", "yes")
 
 
+#: Quality flags offered for the preview.
+PREVIEW_QUALITIES = ("l", "m")
+
 class AppSettings:
     """Typed access to the user's preferences."""
 
@@ -92,6 +95,16 @@ class AppSettings:
     @latex_preview.setter
     def latex_preview(self, value: bool) -> None:
         self._settings.setValue("latex_preview", value)
+
+    @property
+    def preview_quality(self) -> str:
+        """Manim quality flag of the preview: ``"l"`` (fast, 480p15) or ``"m"`` (smooth, 720p30)."""
+        value = str(self._get("preview_quality", "l"))
+        return value if value in PREVIEW_QUALITIES else "l"
+
+    @preview_quality.setter
+    def preview_quality(self, value: str) -> None:
+        self._settings.setValue("preview_quality", value if value in PREVIEW_QUALITIES else "l")
 
     @property
     def hidden_environment_warning(self) -> str:

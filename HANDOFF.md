@@ -110,9 +110,15 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
   - Knoten und Kanten als Text eingeben, gerichtet oder ungerichtet, mit Text-Labels ohne LaTeX.
   - Layouts: Kreis, Federmodell, Kamada-Kawai, Schalen, Spirale, Baum.
   - Die Positionen berechnet die App (networkx) und gibt sie explizit an Manim weiter, daher sind Bühne und Video identisch.
+- Einstellung „Vorschauqualität“: schnell (480p, 15 fps) oder flüssig (720p, 30 fps).
 
 ### Halbfertig
 - (nichts)
 
 ### Als Nächstes
 - Release-Politur (README, Lizenz, CI, PyInstaller-Builds) übernimmt die Cloud-Session.
+- Ideen, die noch offen sind:
+  - Vorlagen für Präsentationsfolie (Titel und Aufzählung) und Graphentheorie (Netzwerk)
+  - Fuzzing-Runde 5 mit allen neuen Objektarten (Liste, Netzwerk, Drehpunkt)
+  - Animationen auf einzelnen Knoten oder Kanten eines Netzwerks
+- Testlauf: Die volle Suite braucht ca. 6–10 Minuten (353 Tests, davon rund 30 echte Manim-Läufe).

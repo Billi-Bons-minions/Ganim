@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from manim_studio.i18n import LANGUAGES, tr
-from manim_studio.ui.settings import AppSettings
+from manim_studio.ui.settings import PREVIEW_QUALITIES, AppSettings
 from manim_studio.ui.theme import SCALES, THEMES
 
 GRID_STEPS = (0.1, 0.25, 0.5, 1.0)
@@ -41,6 +41,7 @@ class SettingsDialog(QDialog):
         self.grid = self._combo([(f"{step:g}", step) for step in GRID_STEPS], settings.grid_step)
         self.latex_preview = QCheckBox(tr("settings.latex_preview_box"))
         self.latex_preview.setChecked(settings.latex_preview)
+        self.preview_quality = self._combo([(tr(f"settings.preview_quality.{key}"), key) for key in PREVIEW_QUALITIES], settings.preview_quality)
         browse = QToolButton()
         browse.setText("…")
         browse.clicked.connect(self._browse)
@@ -61,6 +62,7 @@ class SettingsDialog(QDialog):
         form.addRow("", hint)
         form.addRow(tr("settings.grid"), self.grid)
         form.addRow(tr("settings.latex_preview"), self.latex_preview)
+        form.addRow(tr("settings.preview_quality"), self.preview_quality)
         self.cache_label = QLabel()
         clear = QToolButton()
         clear.setText(tr("settings.cache_clear"))
@@ -115,4 +117,5 @@ class SettingsDialog(QDialog):
         self.settings.python_path = self.python.text().strip() or sys.executable
         self.settings.grid_step = float(self.grid.currentData())
         self.settings.latex_preview = self.latex_preview.isChecked()
+        self.settings.preview_quality = str(self.preview_quality.currentData())
         return rebuild

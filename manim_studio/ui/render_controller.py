@@ -176,7 +176,7 @@ class RenderController(QObject):
 
     def preview(self, from_step: int | None = None) -> None:
         """Render the active scene quickly (optionally from a step) and show it in the player."""
-        settings = RenderSettings(quality="l", format="mp4")
+        settings = RenderSettings(quality=self.settings.preview_quality, format="mp4")
         self._target = None
         scene = self.editor.scene()
         if from_step is not None and (from_step <= 0 or emitted_calls(scene.steps[:from_step]) == 0):

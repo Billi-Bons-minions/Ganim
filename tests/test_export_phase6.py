@@ -89,3 +89,16 @@ def test_transparent_formats(qapp) -> None:
     assert dialog.target_path().suffix == ".webm" and dialog.request().settings.transparent
     dialog.format_combo.setCurrentIndex(dialog.format_combo.findData("gif"))
     assert not dialog.transparent_box.isEnabled() and dialog.target_path().suffix == ".gif"
+
+
+def test_preview_quality_setting(tmp_path, qapp) -> None:
+    from PySide6.QtCore import QSettings
+
+    from manim_studio.ui.settings import AppSettings
+
+    settings = AppSettings(QSettings(str(tmp_path / "s.ini"), QSettings.Format.IniFormat))
+    assert settings.preview_quality == "l"
+    settings.preview_quality = "m"
+    assert settings.preview_quality == "m"
+    settings.preview_quality = "k"  # not offered for the preview
+    assert settings.preview_quality == "l"

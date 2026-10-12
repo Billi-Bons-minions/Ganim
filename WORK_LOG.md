@@ -143,3 +143,14 @@ Alle Features sind mit echten Manim-Läufen getestet. Wo die Bühne etwas nachze
 ### Offene Punkte
 - **Spuren mit „Verblassen“:** Bleibt das Objekt stehen, bleibt in Manim ein kurzer Rest-Schweif sichtbar. Das ist Manims Verhalten.
 - **Riesige Transforms:** Ein Transform eines sehr detaillierten Objekts, etwa einer 3D-Fläche in Achsen, kann in Manim minutenlang dauern. Das wird nicht abgefangen.
+
+### Hinweise zur Commit-Historie
+- **Commit `700809a` (Aufzählungslisten):** Er enthielt einen Zeittest, der unter Last fehlschlug (Stromlinien-Cache < 0,3 s).
+  - Ursache: Mein Commit-Befehl hatte den Exit-Status der Tests verschluckt.
+  - Behoben in `130d284`.
+  - Seitdem wird nur noch committet, wenn Lint und die komplette Suite grün sind.
+- **Fuzzing:** 4 Runden mit je 100 bis 150 zufälligen Sitzungen. Alle gefundenen Abstürze sind behoben; die Details stehen in HANDOFF.md.
+
+### Push nach Ganim (Stand am Morgen)
+- **Ergebnis:** Weiterhin blockiert, keine GitHub-Zugangsdaten auf dem Rechner. Alle Commits liegen lokal auf `main`.
+- **Hochladen:** nach der Anmeldung mit `git push ganim main` (siehe Hinweis oben).

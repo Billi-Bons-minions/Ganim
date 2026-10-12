@@ -363,7 +363,7 @@ def object_code(
             lines += axis_label_lines(obj, variable)
         parameter = scene.object_by_id(obj.params.get("parameter_id")) if obj.kind == ObjectKind.DECIMAL_NUMBER else None
         if parameter is not None and parameter.kind == ObjectKind.PARAMETER and parameter.id in names:
-            lines.append(f"{variable}.add_updater(lambda number: number.set_value({names[parameter.id]}.get_value()))")
+            lines.append(f"{variable}.add_updater(lambda number: number.set_value({names[parameter.id]}.get_value()), call_updater=True)")
     except LiteralError as error:
         raise CodegenError("value_invalid", f"{obj.name}: {error}") from None
     except (KeyError, TypeError, ValueError) as error:

@@ -1310,4 +1310,6 @@ STRINGS: dict[str, str] = {
     "codegen.attach_formula_invalid": "The position formula of “{detail}” is invalid.",
     "lock.coupled": "“{name}” is coupled and placed automatically. Change its coupling in the properties panel instead.",
     "issue.attach_camera_3d": "In 3D scenes the camera cannot be coupled; use camera moves instead.",
+    "issue.parameter_conflict": "“{name}” depends on a parameter that changes in the same step. Manim cannot play both at once – put the animation into a step of its own or set the step to “One after another”.",
+    "codegen.parameter_conflict": "“{detail}” depends on a parameter that changes in the same step. Put the animation into a step of its own.",
 }

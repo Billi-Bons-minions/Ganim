@@ -366,9 +366,13 @@ def _step_issues(scene: Scene, index: int, step: Step) -> list[Issue]:
     for anim in step.animations:
         issues.extend(_animation_issues(scene, index, anim))
     if step.mode in (STEP_TOGETHER, STEP_LAGGED):
+        from manim_studio.model.conflicts import parameter_conflicts
+
         transformed = transform_conflicts(step.animations)
         for target_id in sorted(simultaneous_conflicts(step.animations)):
             issues.append(Issue(ERROR, "transform_conflict" if target_id in transformed else "animation_conflict", scene.id, target_id, index))
+        for target_id in sorted(parameter_conflicts(scene, step.animations) - simultaneous_conflicts(step.animations)):
+            issues.append(Issue(ERROR, "parameter_conflict", scene.id, target_id, index))
     return issues
 
 

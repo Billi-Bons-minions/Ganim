@@ -373,9 +373,15 @@ def needs_combination(animations: list[Animation]) -> bool:
     return bool(effects) and (bool(modifiers) or len(effects) > 1)
 
 
-def _check_conflicts(step: Step, names: dict[str, str]) -> None:
+def _check_conflicts(step: Step, names: dict[str, str], scene: Scene | None = None) -> None:
     """Refuse animations of one object that Manim cannot play at the same time."""
     conflicts = simultaneous_conflicts(step.animations)
+    if not conflicts and scene is not None:
+        from manim_studio.model.conflicts import parameter_conflicts
+
+        changed = parameter_conflicts(scene, step.animations)
+        if changed:
+            raise CodegenError("parameter_conflict", names.get(sorted(changed, key=lambda i: names.get(i, i))[0], ""))
     if conflicts:
         object_id = sorted(conflicts, key=lambda i: names.get(i, i))[0]
         code = "transform_conflict" if object_id in transform_conflicts(step.animations) else "animation_conflict"
@@ -383,7 +389,7 @@ def _check_conflicts(step: Step, names: dict[str, str]) -> None:
 
 
 def _together_codes(step: Step, scene: Scene, names: dict[str, str], helpers: set[str]) -> list[str]:
-    _check_conflicts(step, names)
+    _check_conflicts(step, names, scene)
     total = step.duration()
     by_target: dict[str, list[Animation]] = {}
     for anim in step.animations:
@@ -454,7 +460,7 @@ def step_animation_codes(step: Step, scene: Scene, names: dict[str, str], helper
     helpers = helpers if helpers is not None else set()
     if step.mode in (STEP_LAGGED, STEP_SEQUENCE):
         if step.mode == STEP_LAGGED:
-            _check_conflicts(step, names)
+            _check_conflicts(step, names, scene)
         codes = _ordered_codes(step, scene, names, helpers)
         if not codes:
             return []

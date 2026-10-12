@@ -1310,4 +1310,6 @@ STRINGS: dict[str, str] = {
     "codegen.attach_formula_invalid": "Die Positionsformel von „{detail}“ ist ungültig.",
     "lock.coupled": "„{name}“ ist gekoppelt und wird automatisch platziert. Ändere stattdessen die Kopplung im Eigenschaften-Panel.",
     "issue.attach_camera_3d": "In 3D-Szenen kann die Kamera nicht gekoppelt werden; nutze Kamerafahrten.",
+    "issue.parameter_conflict": "„{name}“ hängt von einem Parameter ab, der sich im selben Schritt ändert. Manim kann das nicht gleichzeitig abspielen – lege die Animation in einen eigenen Schritt oder stelle den Ablauf auf „Nacheinander“.",
+    "codegen.parameter_conflict": "„{detail}“ hängt von einem Parameter ab, der sich im selben Schritt ändert. Lege die Animation in einen eigenen Schritt.",
 }

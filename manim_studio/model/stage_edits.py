@@ -13,12 +13,13 @@ from typing import Callable, Iterable
 
 from manim_studio.model import operations as ops
 from manim_studio.model.attach import ATTACH_FOLLOW, ATTACH_FORMULA, attach_mode
+from manim_studio.model.conflicts import step_conflicts
 from manim_studio.model.entities import STEP_SEQUENCE, Animation, Scene
 from manim_studio.model.factory import create_animation
 from manim_studio.model.graphs import is_bound
 from manim_studio.model.schema import animation_allowed
 from manim_studio.model.state import START, states_after
-from manim_studio.model.types import TRANSFORM_ANIMATIONS, AnimationKind, ObjectKind, StepKind, simultaneous_conflicts
+from manim_studio.model.types import TRANSFORM_ANIMATIONS, AnimationKind, ObjectKind, StepKind
 
 MOVE = "move"
 SCALE = "scale"
@@ -98,7 +99,7 @@ def check_edit(scene: Scene, cursor: int, object_ids: Iterable[str], action: str
         step = scene.steps[cursor]
         if step.mode != STEP_SEQUENCE:
             planned = [create_animation(KIND_FOR_ACTION[action], object_id) for object_id in ids if step_animation(scene, cursor, object_id, action) is None]
-            new_conflicts = simultaneous_conflicts([*step.animations, *planned]) - simultaneous_conflicts(step.animations)
+            new_conflicts = step_conflicts(scene, [*step.animations, *planned]) - step_conflicts(scene, step.animations)
             if new_conflicts:
                 return EditCheck(False, "animation_conflict", sorted(new_conflicts)[0])
     return EditCheck(True)

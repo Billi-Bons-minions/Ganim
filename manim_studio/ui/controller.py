@@ -16,6 +16,7 @@ from manim_studio.model import operations as ops
 from manim_studio.model.animation_builder import allowed_for_objects, build_animations, reference_candidates
 from manim_studio.model.arrange import arrange_deltas, move_layer
 from manim_studio.model.assets import relative_asset_path
+from manim_studio.model.conflicts import step_conflicts
 from manim_studio.model.entities import STEP_SEQUENCE, Scene
 from manim_studio.model.factory import (
     clone_scene,
@@ -48,7 +49,7 @@ from manim_studio.model.stage_edits import (
     would_create,
 )
 from manim_studio.model.state import START, states_after
-from manim_studio.model.types import GRAPH_TOOL_KINDS, LINE_KINDS, REFERENCE_PARAMS, UNADDED_KINDS, UNGROUPABLE, AnimationKind, ObjectKind, StepKind, simultaneous_conflicts
+from manim_studio.model.types import GRAPH_TOOL_KINDS, LINE_KINDS, REFERENCE_PARAMS, UNADDED_KINDS, UNGROUPABLE, AnimationKind, ObjectKind, StepKind
 from manim_studio.ui.document import ProjectDocument
 from manim_studio.ui.editor_state import INSPECT_ANIMATION, INSPECT_STEP, EditorState
 from manim_studio.ui.settings import AppSettings
@@ -766,7 +767,8 @@ class EditorController(QObject):
         label = tr(f"anim.{kind.value}")
         if use_current:
             step = self.scene().steps[cursor]
-            if step.mode != STEP_SEQUENCE and simultaneous_conflicts([*step.animations, *animations]) - simultaneous_conflicts(step.animations):
+            scene = self.scene()
+            if step.mode != STEP_SEQUENCE and step_conflicts(scene, [*step.animations, *animations]) - step_conflicts(scene, step.animations):
                 # e.g. transforming and moving one object, or creating it while it wiggles
                 use_current = False
                 self.statusMessage.emit(tr("status.own_step_for_conflict", step=cursor + 2))

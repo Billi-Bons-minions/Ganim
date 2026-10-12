@@ -263,3 +263,42 @@ def test_duplicating_and_copying_a_group_copies_its_members(window) -> None:
     pasted = window.editor.scene()
     assert sorted(obj.kind.value for obj in pasted.objects) == ["circle", "group", "square"]
     assert not has_errors(validate_scene(pasted))
+
+
+def test_objects_rebuilt_from_a_parameter_wait_for_it() -> None:
+    """A number or graph that depends on a parameter cannot be animated while it changes (Manim crashes)."""
+    import pytest
+
+    from manim_studio.codegen import generate_script
+    from manim_studio.codegen.errors import CodegenError
+    from manim_studio.model.conflicts import step_conflicts
+    from manim_studio.model.entities import STEP_SEQUENCE, Scene
+    from manim_studio.model.types import AnimationKind, ObjectKind
+    from manim_studio.model.validation import validate_scene
+    from tests.helpers import make_animation, make_object, make_project, play
+
+    parameter = make_object(ObjectKind.PARAMETER, "a", "a", symbol="a", value=9.5, minimum=0.0, maximum=20.0)
+    number = make_object(ObjectKind.DECIMAL_NUMBER, "Zahl", "z", parameter_id="a")
+    other = make_object(ObjectKind.CIRCLE, "Kreis", "k")
+    step = play(make_animation(AnimationKind.FADE_IN, "z"), make_animation(AnimationKind.FADE_IN, "k"), make_animation(AnimationKind.SET_VALUE, "a", value=10.5))
+    scene = Scene(id="s", name="S", objects=[parameter, number, other], steps=[step])
+    assert step_conflicts(scene, step.animations) == {"z"}
+    assert "parameter_conflict" in {issue.code for issue in validate_scene(scene)}
+    with pytest.raises(CodegenError):
+        generate_script(make_project(scene))
+    step.mode = STEP_SEQUENCE  # one after another is fine
+    assert "parameter_conflict" not in {issue.code for issue in validate_scene(scene)}
+    assert "number.set_value(a.get_value()), call_updater=True)" in generate_script(make_project(scene))
+
+
+def test_adding_a_value_change_next_to_a_dependent_object_gets_its_own_step(window) -> None:
+    from manim_studio.model.types import AnimationKind, ObjectKind
+
+    controller = window.controller
+    parameter = controller.add_object(ObjectKind.PARAMETER)
+    number = controller.add_object(ObjectKind.DECIMAL_NUMBER, parameter_id=parameter)
+    window.editor.select_objects([number])
+    controller.add_animation(AnimationKind.FADE_IN, False)
+    window.editor.select_objects([parameter])
+    controller.add_animation(AnimationKind.SET_VALUE, True)
+    assert [[anim.kind for anim in step.animations] for step in window.editor.scene().steps] == [[AnimationKind.FADE_IN], [AnimationKind.SET_VALUE]]

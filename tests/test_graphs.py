@@ -201,7 +201,7 @@ def test_parameter_code_uses_value_trackers_and_always_redraw() -> None:
     assert code.index("a = ValueTracker") < code.index("achsen = Axes")
     assert "graph = always_redraw(" in code and "lambda x: a.get_value() * x ** 2," in code
     assert "def p_build():" in code and "p = always_redraw(p_build)" in code
-    assert "zahl.add_updater(lambda number: number.set_value(a.get_value()))" in code
+    assert "zahl.add_updater(lambda number: number.set_value(a.get_value()), call_updater=True)" in code
     assert "self.play(a.animate(run_time=1.0, rate_func=smooth).set_value(3.0))" in code
     assert "self.add(" in code and " a," not in code.split("self.add(")[1].split(")")[0]
 

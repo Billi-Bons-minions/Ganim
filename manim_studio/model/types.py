@@ -111,6 +111,8 @@ class AnimationKind(str, Enum):
     APPLY_COMPLEX = "apply_complex"
     APPLY_POINTWISE = "apply_pointwise"
     AMBIENT_ROTATION = "ambient_rotation"
+    MOVE_3D = "move_3d"
+    ROTATE_3D = "rotate_3d"
 
 
 class StepKind(str, Enum):

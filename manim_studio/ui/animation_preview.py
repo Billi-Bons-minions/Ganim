@@ -456,6 +456,27 @@ class AnimationPreview(QWidget):
         painter.setBrush(YELLOW)
         painter.drawEllipse(point, unit * 0.25, unit * 0.25)
 
+    def _draw_move_3d(self, painter: QPainter, t: float, unit: float) -> None:
+        self._draw_cube(painter, unit, 0.0, (-1.2 + 2.4 * t, 0.4 - 0.8 * t))
+
+    def _draw_rotate_3d(self, painter: QPainter, t: float, unit: float) -> None:
+        self._draw_cube(painter, unit, math.pi / 2 * t, (0.0, 0.0))
+
+    def _draw_cube(self, painter: QPainter, unit: float, angle: float, shift: tuple[float, float]) -> None:
+        tilt = 0.45
+        corners = [(x, y, z) for x in (-1, 1) for y in (-1, 1) for z in (-1, 1)]
+
+        def project(x: float, y: float, z: float) -> QPointF:
+            u = x * math.cos(angle) - y * math.sin(angle)
+            v = x * math.sin(angle) + y * math.cos(angle)
+            return QPointF((u * 0.6 + shift[0]) * unit, ((-z * math.cos(tilt) + v * math.sin(tilt)) * 0.6 - shift[1]) * unit)
+
+        painter.setPen(self._pen(BLUE, 2.0))
+        for a in range(8):
+            for b in range(a + 1, 8):
+                if sum(1 for i in range(3) if corners[a][i] != corners[b][i]) == 1:
+                    painter.drawLine(project(*corners[a]), project(*corners[b]))
+
     def _draw_ambient_rotation(self, painter: QPainter, t: float, unit: float) -> None:
         # a cube seen from above at an angle, turning steadily about the vertical axis
         angle = 2 * math.pi * t

@@ -262,7 +262,7 @@ class StageView(QGraphicsView):
             self._entered_group = None
         known = set()
         # in 3D scenes Manim draws shaded objects sorted by depth and everything else above them
-        depth_ranks = depth_order(scene, resources.view3d or View(), resources.values) if is_3d(scene) else {}
+        depth_ranks = depth_order(scene, resources.view3d or View(), resources.values, states) if is_3d(scene) else {}
         for index, obj in enumerate(scene.objects):
             state = states.get(obj.id)
             if state is None or obj.kind in INVISIBLE_KINDS:

@@ -52,7 +52,13 @@ def default_transform_target(scene: Scene, source_id: str, states: dict[str, Obj
     return chosen[0].id if chosen else None
 
 
-def _defaults(kind: AnimationKind, state: ObjectState | None) -> dict[str, object]:
+def _defaults(kind: AnimationKind, state: ObjectState | None, scene: Scene | None = None, object_id: str = "") -> dict[str, object]:
+    if kind == AnimationKind.MOVE_3D and scene is not None and scene.object_by_id(object_id) is not None:
+        from manim_studio.model.three_d import solid_axes_center
+
+        center = solid_axes_center(scene, scene.object_by_id(object_id), state)
+        if center is not None:
+            return {"x": round(center[0] + 1.0, 4), "y": round(center[1], 4), "z": round(center[2], 4)}
     if kind == AnimationKind.MOVE and state is not None:
         return {"x": round(state.x + 1.0, 4), "y": round(state.y, 4)}
     if kind == AnimationKind.ORBIT and state is not None:
@@ -79,4 +85,4 @@ def build_animations(scene: Scene, kind: AnimationKind, object_ids: list[str], c
         candidates = [obj.id for obj in reference_candidates(scene, kind, source)]
         other = object_ids[1] if len(object_ids) > 1 and object_ids[1] in candidates else (candidates[:1] or [None])[0]
         return [create_animation(kind, source, **{REFERENCE_PARAMS[kind]: other})]
-    return [create_animation(kind, object_id, **_defaults(kind, states.get(object_id))) for object_id in object_ids]
+    return [create_animation(kind, object_id, **_defaults(kind, states.get(object_id), scene, object_id)) for object_id in object_ids]

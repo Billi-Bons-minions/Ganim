@@ -816,6 +816,15 @@ ANIMATION_PARAMS: dict[AnimationKind, tuple[ParamSpec, ...]] = {
         ParamSpec("m21", ParamType.FLOAT, 0.0, minimum=-20.0, maximum=20.0, step=0.25),
         ParamSpec("m22", ParamType.FLOAT, 1.0, minimum=-20.0, maximum=20.0, step=0.25),
     ),
+    AnimationKind.MOVE_3D: (
+        ParamSpec("x", ParamType.FLOAT, 0.0, minimum=-100.0, maximum=100.0, step=0.5),
+        ParamSpec("y", ParamType.FLOAT, 0.0, minimum=-100.0, maximum=100.0, step=0.5),
+        ParamSpec("z", ParamType.FLOAT, 0.0, minimum=-100.0, maximum=100.0, step=0.5),
+    ),
+    AnimationKind.ROTATE_3D: (
+        ParamSpec("angle", ParamType.FLOAT, 90.0, minimum=-3600.0, maximum=3600.0, step=15.0, decimals=1),
+        ParamSpec("axis", ParamType.CHOICE, "z", choices=("x", "y", "z")),
+    ),
     AnimationKind.AMBIENT_ROTATION: (
         ParamSpec("rate", ParamType.FLOAT, 10.0, minimum=-360.0, maximum=360.0, step=5.0, decimals=1),
         ParamSpec("about", ParamType.CHOICE, "theta", choices=("theta", "phi")),
@@ -1003,8 +1012,8 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
         return False
     if obj_kind == ObjectKind.CAMERA:
         return anim_kind in CAMERA_ANIMATIONS
-    if anim_kind == AnimationKind.ORBIT:
-        return False
+    if anim_kind in (AnimationKind.ORBIT, AnimationKind.AMBIENT_ROTATION):
+        return False  # camera only
     if anim_kind in (AnimationKind.ADD_LETTERS, AnimationKind.TYPE_WITH_CURSOR):
         return obj_kind == ObjectKind.TEXT
     if anim_kind == AnimationKind.NETWORK_PARTS:
@@ -1013,6 +1022,8 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
         return obj_kind in MATRIX_KINDS
     if anim_kind in WARP_ANIMATIONS:
         return obj_kind in WARP_KINDS
+    if anim_kind in (AnimationKind.MOVE_3D, AnimationKind.ROTATE_3D):
+        return obj_kind == ObjectKind.SOLID
     if anim_kind == AnimationKind.ONE_BY_ONE:
         return obj_kind in (ObjectKind.BULLET_LIST, ObjectKind.GROUP)
     if anim_kind == AnimationKind.GROW_ARROW:

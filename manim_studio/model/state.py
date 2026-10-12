@@ -64,6 +64,9 @@ class ObjectState:
     parts: tuple = ()
     #: Nonlinear maps the object went through, in order (see ``model/warps.py``).
     warps: tuple = ()
+    #: A moved or turned 3D solid: its points are ``anchor3d + orientation · local point`` (scene coordinates).
+    anchor3d: tuple = ()
+    orientation: tuple = ()
 
 
 def first_reference(scene: Scene, object_id: str) -> tuple[Animation, bool] | None:
@@ -275,6 +278,9 @@ def apply_animation(states: dict[str, ObjectState], anim: Animation, scene: Scen
             states[anim.target_id] = replace(current, value=float(anim.params.get("value", current.value)))
     elif kind == AnimationKind.AMBIENT_ROTATION:
         return  # the camera turns while time passes (see ``ambient_rates``)
+    elif kind in (AnimationKind.MOVE_3D, AnimationKind.ROTATE_3D):
+        if not returns and scene is not None:
+            states[anim.target_id] = solid_motion(scene, current, anim, 1.0)
     elif kind == AnimationKind.ORBIT:
         if not returns:
             states[anim.target_id] = replace(current, phi=float(anim.params.get("phi", current.phi)), theta=float(anim.params.get("theta", current.theta)))
@@ -314,6 +320,23 @@ def apply_matrix(state: ObjectState, matrix: Matrix, progress: float) -> ObjectS
     cos, sin = math.cos(radians), math.sin(radians)
     local = _multiply(_multiply((cos, sin, -sin, cos), current), _multiply((cos, -sin, sin, cos), state.matrix))
     return replace(state, x=x, y=y, matrix=tuple(round(value, 12) for value in local), visible=True)  # type: ignore[arg-type]
+
+
+def solid_motion(scene: Scene, state: ObjectState, anim: Animation, progress: float) -> ObjectState:
+    """A 3D solid moved (``move_to``) or turned (``Rotate``) ``progress`` of the way."""
+    from manim_studio.model.three_d import moved_solid, turned_solid
+
+    obj = scene.object_by_id(anim.target_id)
+    if obj is None:
+        return state
+    if anim.kind == AnimationKind.MOVE_3D:
+        target = tuple(float(anim.params.get(key, 0.0)) for key in ("x", "y", "z"))
+        placement = moved_solid(scene, obj, state, target, progress)  # type: ignore[arg-type]
+    else:
+        placement = turned_solid(scene, obj, state, str(anim.params.get("axis", "z")), float(anim.params.get("angle", 90.0)) * progress)
+    if placement is None:
+        return state
+    return replace(state, anchor3d=placement[0], orientation=placement[1], visible=True)
 
 
 def network_animation_parts(scene: Scene | None, anim: Animation) -> list[tuple[str, str, str]]:

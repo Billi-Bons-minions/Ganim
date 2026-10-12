@@ -215,8 +215,22 @@ def simple_animation_code(anim: Animation, scene: Scene, names: dict[str, str], 
         # a linear map of the whole plane, around the origin (like 3Blue1Brown's grids)
         m11, m12, m21, m22 = (fmt_float(float(anim.params.get(key, default))) for key, default in (("m11", 1.0), ("m12", 0.0), ("m21", 0.0), ("m22", 1.0)))
         return f"ApplyMatrix({', '.join([f'[[{m11}, {m12}], [{m21}, {m22}]]', variable] + timing.args())})"
+    if anim.kind == AnimationKind.MOVE_3D:
+        # the center of the solid's bounding box goes to a point of its 3D axes
+        from manim_studio.model.three_d import axes_of
+
+        target = scene.object_by_id(anim.target_id)
+        axes = axes_of(scene, target) if target is not None else None
+        if axes is None or axes.id not in names:
+            raise CodegenError("axes_3d_missing", target.name if target is not None else "")
+        point = ", ".join(fmt_float(float(anim.params.get(key, 0.0))) for key in ("x", "y", "z"))
+        return f"ApplyMethod({', '.join([f'{variable}.move_to', f'{names[axes.id]}.c2p({point})'] + timing.args())})"
+    if anim.kind == AnimationKind.ROTATE_3D:
+        axis = {"x": "RIGHT", "y": "UP"}.get(str(anim.params.get("axis", "z")), "OUT")
+        angle = f"angle={fmt_float(float(anim.params.get('angle', 90.0)))} * DEGREES"
+        return f"Rotate({', '.join([variable, angle, f'axis={axis}'] + timing.args())})"
     if anim.kind == AnimationKind.APPLY_COMPLEX:
-        # every point z moves to f(z), along an arc of angle arg f(1) (Manim's ApplyComplexFunction)
+        # every point z moves to f(z) on a straight line (Manim's ApplyComplexFunction never uses its arc path)
         from manim_studio.model.expression import IMAGINARY_UNIT, ExpressionError, parse_complex
 
         try:

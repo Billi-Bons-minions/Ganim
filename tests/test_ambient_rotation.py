@@ -54,6 +54,11 @@ def test_code_and_rules() -> None:
     # orbiting while the camera turns on its own is refused
     scene.steps.insert(1, play(make_animation(AnimationKind.ORBIT, "cam", "orbit", phi=60.0, theta=0.0)))
     assert "orbit_during_ambient" in {issue.code for issue in validate_scene(scene)}
+    # only the camera turns like this
+    from manim_studio.model.schema import animation_allowed
+
+    assert animation_allowed(AnimationKind.AMBIENT_ROTATION, ObjectKind.CAMERA, {})
+    assert not any(animation_allowed(AnimationKind.AMBIENT_ROTATION, kind, {}) for kind in ObjectKind if kind != ObjectKind.CAMERA)
     # and it needs a 3D scene
     flat = Scene(id="f", name="F", objects=[make_object(ObjectKind.CAMERA, "Kamera", "cam")], steps=[play(make_animation(AnimationKind.AMBIENT_ROTATION, "cam", "t"))])
     assert "orbit_needs_3d" in {issue.code for issue in validate_scene(flat)}

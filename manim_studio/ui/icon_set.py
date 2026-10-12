@@ -661,6 +661,26 @@ def _a_ambient_rotation(p: QPainter) -> None:
     _arrow_head(p, 3.4, 13.2, math.radians(280), 3)
 
 
+def _wire_cube(p: QPainter, x: float, y: float, size: float) -> None:
+    depth = size * 0.45
+    _rect(p, x, y + depth, size, size, 0)
+    _poly(p, [(x, y + depth), (x + depth, y), (x + size + depth, y), (x + size, y + depth)])
+    _line(p, x + size + depth, y, x + size + depth, y + size)
+    _line(p, x + size + depth, y + size, x + size, y + size + depth)
+
+
+def _a_move_3d(p: QPainter) -> None:
+    _wire_cube(p, 2, 9, 8)
+    _line(p, 13, 9, 21, 4)
+    _arrow_head(p, 21, 4, math.radians(-32), 3)
+
+
+def _a_rotate_3d(p: QPainter) -> None:
+    _wire_cube(p, 6, 7, 9)
+    _arc(p, 12, 12, 10, 200, 140)
+    _arrow_head(p, 21.4, 9.0, math.radians(70), 3)
+
+
 def _a_value(p: QPainter) -> None:
     _line(p, 3, 17, 21, 17)
     _circle(p, 15, 17, 2.6, fill=True)
@@ -1005,6 +1025,8 @@ ICONS: dict[str, Drawer] = {
     "a_swap": _a_swap,
     "a_orbit": _a_orbit,
     "a_ambient_rotation": _a_ambient_rotation,
+    "a_move_3d": _a_move_3d,
+    "a_rotate_3d": _a_rotate_3d,
     "a_indicate": _sparkle,
     "a_circumscribe": _a_circumscribe,
     "a_fade_out": _a_fade_out,

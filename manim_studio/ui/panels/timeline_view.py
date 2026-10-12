@@ -51,7 +51,7 @@ def group_color(kind: AnimationKind) -> QColor:
         return QColor("#9A72AC")
     if kind in EMPHASIS_ANIMATIONS or kind == AnimationKind.NETWORK_PARTS:
         return QColor(palette.warning)
-    if kind in MODIFIER_ANIMATIONS or kind in MOTION_ANIMATIONS or kind in (AnimationKind.APPLY_MATRIX, AnimationKind.APPLY_COMPLEX, AnimationKind.APPLY_POINTWISE):
+    if kind in MODIFIER_ANIMATIONS or kind in MOTION_ANIMATIONS or kind in (AnimationKind.APPLY_MATRIX, AnimationKind.APPLY_COMPLEX, AnimationKind.APPLY_POINTWISE, AnimationKind.MOVE_3D, AnimationKind.ROTATE_3D):
         return QColor(palette.accent)
     if kind == AnimationKind.SET_VALUE:
         return QColor("#5CD0B3")

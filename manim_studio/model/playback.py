@@ -20,6 +20,7 @@ from manim_studio.model.state import (
     network_animation_parts,
     part_color,
     refresh_group_states,
+    solid_motion,
     states_after,
     turn_camera,
 )
@@ -229,6 +230,9 @@ def apply_partial(states: dict[str, ObjectState], anim: Animation, progress: flo
         states[anim.target_id] = replace(state, value=state.value + (target - state.value) * progress)
     elif kind == AnimationKind.AMBIENT_ROTATION:
         return  # added for the elapsed time in ``_step_state``
+    elif kind in (AnimationKind.MOVE_3D, AnimationKind.ROTATE_3D):
+        if scene is not None:
+            states[anim.target_id] = solid_motion(scene, state, anim, progress)
     elif kind == AnimationKind.ORBIT:
         phi, theta = float(anim.params.get("phi", state.phi)), float(anim.params.get("theta", state.theta))
         states[anim.target_id] = replace(state, phi=state.phi + (phi - state.phi) * progress, theta=state.theta + (theta - state.theta) * progress)

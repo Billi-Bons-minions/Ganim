@@ -4,15 +4,14 @@ from __future__ import annotations
 
 import math
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QBrush, QPainterPath
+from PySide6.QtCore import QPointF
+from PySide6.QtGui import QBrush, QColor, QLinearGradient, QPainterPath
 
 from manim_studio.model import graphs
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.geometry import param_float
 from manim_studio.model.state import ObjectState
 from manim_studio.model.three_d import (
-    POLYHEDRA,
     POLYHEDRON_VERTEX_RADIUS,
     View,
     _matrix,
@@ -20,11 +19,11 @@ from manim_studio.model.three_d import (
     axes_of,
     axis_tips,
     curve_points,
-    is_parametric_surface,
+    face_shading,
     project,
-    solid_quads,
+    solid_faces,
     solid_vertices,
-    surface_grid,
+    surface_faces,
     vector_points,
 )
 from manim_studio.model.types import ObjectKind
@@ -73,55 +72,63 @@ def three_d_primitives(scene: Scene, obj: SceneObject, state: ObjectState, resou
         return [Primitive(path=_path([line], offset), pen=_pen(state.stroke_color, obj.stroke_width, obj.stroke_opacity, state.scale))], False
     if obj.kind == ObjectKind.SOLID:
         # the item is scaled by the stage, so the faces are computed unscaled around the anchor
-        quads = [(sum(_depth(view, corner) for corner in quad) / 4, quad) for quad in solid_quads(scene, obj)]
+        faces = solid_faces(scene, obj, state=state)
     else:
-        grid = surface_grid(scene, obj, values)
-        if not grid:
-            return [], False
-        rows = grid[: len(grid) // 2]
-        quads = []
-        for i in range(len(rows) - 1):
-            for j in range(min(len(rows[i]), len(rows[i + 1])) - 1):
-                corners = [rows[i][j], rows[i][j + 1], rows[i + 1][j + 1], rows[i + 1][j]]
-                depth = sum(_depth(view, corner) for corner in corners) / 4
-                quads.append((depth, corners))
-    quads.sort(key=lambda item: item[0])
-    if (obj.kind == ObjectKind.SOLID and obj.params.get("shape") in POLYHEDRA) or is_parametric_surface(obj):
-        # closed or self-overlapping surfaces (a torus has a hole): faces one by one, like Manim
-        return _face_primitives(scene, obj, state, view, quads, offset), False
-    path = QPainterPath()
-    for _depth_value, corners in quads:
-        flat = project(corners, view)
-        # same winding for all faces, otherwise front and back faces cancel out when filled
-        area = sum(flat[i][0] * flat[(i + 1) % len(flat)][1] - flat[(i + 1) % len(flat)][0] * flat[i][1] for i in range(len(flat)))
-        if area < 0:
-            flat = flat[::-1]
-        path.moveTo(pt(flat[0][0] - offset[0], flat[0][1] - offset[1]))
-        for x, y in flat[1:]:
-            path.lineTo(pt(x - offset[0], y - offset[1]))
-        path.closeSubpath()
-    path.setFillRule(Qt.FillRule.WindingFill)
-    brush = QBrush(_color(state.fill_color, obj.fill_opacity * 0.85)) if obj.fill_opacity > 0 else None
-    pen = _pen(state.stroke_color, obj.stroke_width, obj.stroke_opacity, state.scale) if obj.stroke_width > 0 else None
-    return [Primitive(path=path, brush=brush, pen=pen)], False
+        faces = surface_faces(scene, obj, values)
+    return _face_primitives(scene, obj, state, view, faces, offset), False
+
+
+def _shaded(color: str, light: float, opacity: float) -> QColor:
+    """A color with Manim's light added (``get_shaded_rgb``, clipped like Cairo does)."""
+    base = QColor(color)
+    if not base.isValid():
+        base = QColor("#FFFFFF")
+    shaded = QColor.fromRgbF(*(max(0.0, min(1.0, channel + light)) for channel in (base.redF(), base.greenF(), base.blueF())))
+    shaded.setAlphaF(max(0.0, min(1.0, opacity)))
+    return shaded
+
+
+def _gradient(color: str, light_start: float, light_end: float, opacity: float, start: QPointF, end: QPointF) -> QBrush:
+    if math.hypot(end.x() - start.x(), end.y() - start.y()) < 1e-6:
+        return QBrush(_shaded(color, (light_start + light_end) / 2, opacity))
+    gradient = QLinearGradient(start, end)
+    gradient.setColorAt(0.0, _shaded(color, light_start, opacity))
+    gradient.setColorAt(1.0, _shaded(color, light_end, opacity))
+    return QBrush(gradient)
 
 
 def _face_primitives(scene: Scene, obj: SceneObject, state: ObjectState, view: View, faces: list, offset: tuple[float, float]) -> list[Primitive]:
-    """Faces and corners one by one from back to front, so front faces cover the back like in Manim."""
-    brush = QBrush(_color(state.fill_color, obj.fill_opacity)) if obj.fill_opacity > 0 else None
-    pen = _pen(state.stroke_color, obj.stroke_width, obj.stroke_opacity, state.scale) if obj.stroke_width > 0 else None
+    """Faces and corners one by one from back to front, so front faces cover the back like in Manim.
+
+    Every face is shaded like Manim's ``ThreeDCamera`` does it: a gradient from its first corner to
+    a point near its third, lighter where it faces the light at (-7, -9, 10), darker where it does not.
+    """
     items = []
-    for depth, corners in faces:
+    for corners, points in faces:
         flat = project(corners, view)
         path = QPainterPath()
         path.moveTo(pt(flat[0][0] - offset[0], flat[0][1] - offset[1]))
         for x, y in flat[1:]:
             path.lineTo(pt(x - offset[0], y - offset[1]))
         path.closeSubpath()
+        if points:
+            start, end, light_start, light_end = face_shading(points)
+            (sx, sy), (ex, ey) = project([start, end], view)
+            a, b = pt(sx - offset[0], sy - offset[1]), pt(ex - offset[0], ey - offset[1])
+        else:
+            a = b = QPointF()
+            light_start = light_end = 0.0
+        brush = _gradient(state.fill_color, light_start, light_end, obj.fill_opacity, a, b) if obj.fill_opacity > 0 else None
+        pen = None
+        if obj.stroke_width > 0:
+            pen = _pen(state.stroke_color, obj.stroke_width, obj.stroke_opacity, state.scale)
+            pen.setBrush(_gradient(state.stroke_color, light_start, light_end, obj.stroke_opacity, a, b))
+        # unshaded parts come last, like the 3D camera sorts them
+        depth = sum(_depth(view, corner) for corner in corners) / len(corners) if points else math.inf
         items.append((depth, Primitive(path=path, brush=brush, pen=pen)))
-    if obj.params.get("show_vertices", False):
+    if obj.kind == ObjectKind.SOLID and obj.params.get("show_vertices", False):
         dot = QBrush(_color(state.stroke_color))
-        vertices = solid_vertices(scene, obj)
+        vertices = solid_vertices(scene, obj, state)
         for vertex, (x, y) in zip(vertices, project(vertices, view)):
             path = QPainterPath()
             path.addEllipse(pt(x - offset[0], y - offset[1]), POLYHEDRON_VERTEX_RADIUS * PX, POLYHEDRON_VERTEX_RADIUS * PX)

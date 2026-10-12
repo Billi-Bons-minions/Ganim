@@ -809,3 +809,18 @@ def test_platonic_solids_with_every_allowed_animation(tmp_path) -> None:
     script = generate_script(make_project(scene))
     result = run_manim(tmp_path, script, "Platon", "--dry_run")
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+
+
+def test_parametric_surfaces_render(tmp_path) -> None:
+    axes = make_object(ObjectKind.AXES_3D, "Raum", "r")
+    r = make_object(ObjectKind.PARAMETER, "r", "pr", symbol="r", value=1.0, minimum=0.5, maximum=2.0)
+    sphere = make_object(ObjectKind.SURFACE, "Kugel", "k", axes_id="r", form="parametric", x_uv="r cos(u) sin(v)", y_uv="r sin(u) sin(v)", z_uv="r cos(v)", resolution=8)
+    torus = make_object(ObjectKind.SURFACE, "Torus", "t", axes_id="r", form="parametric", x_uv="(2 + 0.5 cos(v)) cos(u)", y_uv="(2 + 0.5 cos(v)) sin(u)", z_uv="0.5 sin(v)", v_max=6.2832, resolution=8)
+    scene = Scene(
+        id="s",
+        name="Uv",
+        objects=[axes, r, sphere, torus],
+        steps=[play(make_animation(AnimationKind.CREATE, "r"), make_animation(AnimationKind.CREATE, "t"), make_animation(AnimationKind.FADE_IN, "k")), play(make_animation(AnimationKind.SET_VALUE, "pr", "v", value=1.5, run_time=0.3))],
+    )
+    result = run_manim(tmp_path, generate_script(make_project(scene)), "Uv", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]

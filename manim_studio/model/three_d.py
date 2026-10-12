@@ -159,12 +159,48 @@ def surface_expression(obj: SceneObject, parameters: tuple[str, ...] = ()) -> Ex
         return None
 
 
-def _value(expression: Expression, x: float, y: float, values: dict[str, float]) -> float:
+def _value(expression: Expression, x: float, y: float, values: dict[str, float], second: str = "y") -> float:
     try:
-        result = expression.evaluate(x, {**values, "y": y})
+        result = expression.evaluate(x, {**values, second: y})
     except (ArithmeticError, ValueError, OverflowError):
         return math.nan
     return result if math.isfinite(result) else math.nan
+
+
+#: The three formulas of a parametric surface x(u, v), y(u, v), z(u, v).
+SURFACE_UV_KEYS = ("x_uv", "y_uv", "z_uv")
+
+
+def is_parametric_surface(obj: SceneObject) -> bool:
+    return obj.kind == ObjectKind.SURFACE and obj.params.get("form") == "parametric"
+
+
+def surface_uv_expressions(obj: SceneObject, parameters: tuple[str, ...] = ()) -> list[Expression] | None:
+    """``x(u, v), y(u, v), z(u, v)`` of a parametric surface (``v`` is passed as an extra name)."""
+    try:
+        return [parse_expression(str(obj.params.get(key, "")), "u", ("v", *parameters)) for key in SURFACE_UV_KEYS]
+    except ExpressionError:
+        return None
+
+
+def _uv_grid(scene: Scene, obj: SceneObject, axes: SceneObject, values: dict[str, float]) -> list[list[Point3]]:
+    from manim_studio.model.graphs import parameter_symbols
+
+    expressions = surface_uv_expressions(obj, parameter_symbols(scene))
+    if expressions is None:
+        return []
+    u0, u1 = param_float(obj.params, "u_min", 0.0), param_float(obj.params, "u_max", math.tau)
+    v0, v1 = param_float(obj.params, "v_min", 0.0), param_float(obj.params, "v_max", math.pi)
+    steps = max(2, min(64, int(param_float(obj.params, "resolution", 16))))
+    us = [u0 + (u1 - u0) * i / steps for i in range(steps + 1)]
+    vs = [v0 + (v1 - v0) * j / steps for j in range(steps + 1)]
+
+    def point(u: float, v: float) -> Point3:
+        coordinates = [_value(expression, u, v, values, "v") for expression in expressions]
+        return to_space(axes, *coordinates) if all(math.isfinite(c) for c in coordinates) else (math.nan, math.nan, math.nan)
+
+    lines = [[point(u, v) for v in vs] for u in us] + [[point(u, v) for u in us] for v in vs]
+    return [[p for p in line if math.isfinite(p[2])] for line in lines]
 
 
 def surface_grid(scene: Scene, obj: SceneObject, values: dict[str, float] | None = None) -> list[list[Point3]]:
@@ -172,6 +208,8 @@ def surface_grid(scene: Scene, obj: SceneObject, values: dict[str, float] | None
     from manim_studio.model.graphs import parameter_symbols, scene_values
 
     axes = axes_of(scene, obj)
+    if axes is not None and is_parametric_surface(obj):
+        return _uv_grid(scene, obj, axes, scene_values(scene, values))
     expression = surface_expression(obj, parameter_symbols(scene))
     if axes is None or expression is None:
         return []

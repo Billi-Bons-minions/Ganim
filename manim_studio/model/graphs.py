@@ -1067,7 +1067,12 @@ def parameter_users(scene: Scene, obj: SceneObject, _seen: frozenset[str] = froz
         used |= {by_symbol[symbol] for symbol in field_users(scene, obj) if symbol in by_symbol}
     if obj.kind in (ObjectKind.SURFACE, ObjectKind.CURVE_3D):
         # 3D objects with parameters are redrawn while the parameters change
-        texts = [(obj.params.get("expression", ""), "x", ("y",))] if obj.kind == ObjectKind.SURFACE else [(obj.params.get(key, ""), "t", ()) for key in ("x_expression", "y_expression", "z_expression")]
+        if obj.kind == ObjectKind.SURFACE and obj.params.get("form") == "parametric":
+            texts = [(obj.params.get(key, ""), "u", ("v",)) for key in ("x_uv", "y_uv", "z_uv")]
+        elif obj.kind == ObjectKind.SURFACE:
+            texts = [(obj.params.get("expression", ""), "x", ("y",))]
+        else:
+            texts = [(obj.params.get(key, ""), "t", ()) for key in ("x_expression", "y_expression", "z_expression")]
         for text, variable, extra in texts:
             try:
                 expression = parse_expression(str(text), variable, (*extra, *parameter_symbols(scene)))

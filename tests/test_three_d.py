@@ -164,3 +164,24 @@ def test_shaded_objects_are_drawn_back_to_front() -> None:
     # seen from the other side the order turns around
     behind = depth_order(scene, View(theta=135.0))
     assert behind["n"] < behind["r"] < behind["f"]
+
+
+def test_parametric_surfaces() -> None:
+    from manim_studio.model.three_d import surface_grid
+
+    axes = make_object(ObjectKind.AXES_3D, "Raum", "r")
+    r = make_object(ObjectKind.PARAMETER, "r", "pr", symbol="r", value=2.0, minimum=1.0, maximum=3.0)
+    sphere = make_object(ObjectKind.SURFACE, "Kugel", "k", axes_id="r", form="parametric", x_uv="r cos(u) sin(v)", y_uv="r sin(u) sin(v)", z_uv="r cos(v)", resolution=8)
+    scene = Scene(id="s", name="S", objects=[axes, r, sphere], steps=[play(make_animation(AnimationKind.SET_VALUE, "pr", "v", value=3.0))])
+    grid = surface_grid(scene, sphere)
+    assert len(grid) == 18 and all(len(line) == 9 for line in grid)
+    center = to_space(axes, 0.0, 0.0, 0.0)
+    radii = {round(math.dist(point, center), 6) for line in grid for point in line}
+    assert len(radii) > 1  # the axes scale x, y and z differently, so the sphere is drawn as an ellipsoid like in Manim
+    assert surface_grid(scene, sphere, {"r": 3.0}) != grid  # follows the parameter
+    assert not has_errors(validate_scene(scene))
+    code = generate_script(make_project(scene))
+    assert "always_redraw(" in code and "lambda u, v: raum.c2p(r.get_value() * np.cos(u) * np.sin(v)" in code
+    assert "u_range=[0, 6.2832]" in code and "v_range=[0, 3.1416]" in code
+    sphere.params["z_uv"] = "w + 1"  # w is no parameter
+    assert has_errors(validate_scene(scene))

@@ -20,6 +20,7 @@ from manim_studio.model.three_d import (
     axes_of,
     axis_tips,
     curve_points,
+    is_parametric_surface,
     project,
     solid_quads,
     solid_vertices,
@@ -85,8 +86,9 @@ def three_d_primitives(scene: Scene, obj: SceneObject, state: ObjectState, resou
                 depth = sum(_depth(view, corner) for corner in corners) / 4
                 quads.append((depth, corners))
     quads.sort(key=lambda item: item[0])
-    if obj.kind == ObjectKind.SOLID and obj.params.get("shape") in POLYHEDRA:
-        return _polyhedron_primitives(scene, obj, state, view, quads, offset), False
+    if (obj.kind == ObjectKind.SOLID and obj.params.get("shape") in POLYHEDRA) or is_parametric_surface(obj):
+        # closed or self-overlapping surfaces (a torus has a hole): faces one by one, like Manim
+        return _face_primitives(scene, obj, state, view, quads, offset), False
     path = QPainterPath()
     for _depth_value, corners in quads:
         flat = project(corners, view)
@@ -104,7 +106,7 @@ def three_d_primitives(scene: Scene, obj: SceneObject, state: ObjectState, resou
     return [Primitive(path=path, brush=brush, pen=pen)], False
 
 
-def _polyhedron_primitives(scene: Scene, obj: SceneObject, state: ObjectState, view: View, faces: list, offset: tuple[float, float]) -> list[Primitive]:
+def _face_primitives(scene: Scene, obj: SceneObject, state: ObjectState, view: View, faces: list, offset: tuple[float, float]) -> list[Primitive]:
     """Faces and corners one by one from back to front, so front faces cover the back like in Manim."""
     brush = QBrush(_color(state.fill_color, obj.fill_opacity)) if obj.fill_opacity > 0 else None
     pen = _pen(state.stroke_color, obj.stroke_width, obj.stroke_opacity, state.scale) if obj.stroke_width > 0 else None

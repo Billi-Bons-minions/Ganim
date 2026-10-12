@@ -8,7 +8,16 @@ from manim_studio.codegen.literals import fmt_float, py_color, py_range, py_str
 from manim_studio.model import graphs
 from manim_studio.model.entities import Animation, Scene, SceneObject
 from manim_studio.model.geometry import param_float
-from manim_studio.model.three_d import DEFAULT_PHI, DEFAULT_THETA, POLYHEDRA, POLYHEDRON_VERTEX_RADIUS, axes_of, surface_expression
+from manim_studio.model.three_d import (
+    DEFAULT_PHI,
+    DEFAULT_THETA,
+    POLYHEDRA,
+    POLYHEDRON_VERTEX_RADIUS,
+    axes_of,
+    is_parametric_surface,
+    surface_expression,
+    surface_uv_expressions,
+)
 from manim_studio.model.types import ObjectKind
 
 
@@ -41,8 +50,30 @@ def _axes_variable(scene: Scene, obj: SceneObject, names: dict[str, str]) -> str
     return names[axes.id]
 
 
+def _uv_surface_code(scene: Scene, obj: SceneObject, axes: str, rename: dict[str, str]) -> list[str]:
+    """``Surface(lambda u, v: axes.c2p(x(u, v), y(u, v), z(u, v)), …)``."""
+    expressions = surface_uv_expressions(obj, graphs.parameter_symbols(scene))
+    if expressions is None:
+        raise CodegenError("expression_invalid", obj.name)
+    codes = ", ".join(expression.to_numpy(rename, pad_variable=False) for expression in expressions)
+    steps = int(param_float(obj.params, "resolution", 24))
+    kwargs = [
+        ("u_range", py_range(param_float(obj.params, "u_min", 0.0), param_float(obj.params, "u_max", 6.2832))),
+        ("v_range", py_range(param_float(obj.params, "v_min", 0.0), param_float(obj.params, "v_max", 3.1416))),
+        ("resolution", f"({steps}, {steps})"),
+        ("checkerboard_colors", "False"),
+        ("fill_color", py_color(obj.fill_color)),
+        ("fill_opacity", fmt_float(obj.fill_opacity)),
+        ("stroke_color", py_color(obj.stroke_color)),
+        ("stroke_width", fmt_float(obj.stroke_width)),
+    ]
+    return call("Surface", [f"lambda u, v: {axes}.c2p({codes})"], kwargs, 2)
+
+
 def surface_code(scene: Scene, obj: SceneObject, names: dict[str, str], rename: dict[str, str]) -> list[str]:
     axes = _axes_variable(scene, obj, names)
+    if is_parametric_surface(obj):
+        return _uv_surface_code(scene, obj, axes, rename)
     expression = surface_expression(obj, graphs.parameter_symbols(scene))
     if expression is None:
         raise CodegenError("expression_invalid", obj.name)

@@ -340,3 +340,8 @@ Jede Funktion ist mit einem Vergleich Bühne ↔ Manim-Bild und mit echten Manim
 - Entscheidung: numerische statt symbolische Integration, wie Manims `plot_antiderivative_graph`. Im Skript rechnet der Helfer `studio_integral` (Simpson-Regel, 200 Schritte), auf der Bühne eine feine Tabelle. Beides weicht um weniger als 10⁻⁴ ab; ein Manim-Test vergleicht die gezeichnete Kurve mit der Bühne.
 - Grenze: Auf einer Integralfunktion gibt es keine Graph-Werkzeuge (Tangente, Nullstellen …), weil diese einen Funktionsterm brauchen. Die Knöpfe sind dort ausgegraut. Ist f irgendwo nicht definiert, endet F dort.
 
+### 3. Parameterflächen
+- Eine 3D-Fläche hat jetzt die Form „z = f(x, y)“ oder „Parameterfläche x(u, v), y(u, v), z(u, v)“. Voreinstellung ist eine Kugel mit Radius 2; Bereiche für u und v sind einstellbar, Parameter in den Formeln werden live mitgerechnet (`always_redraw`).
+- Die Bühne zeichnet Parameterflächen Feld für Feld von hinten nach vorn (ein Torus hat ein Loch und überlappt sich selbst). Form und Lage stimmen mit Manim überein (Bildvergleich mit einem Torus).
+- Grenze: Manim schattiert 3D-Flächen nach einer Lichtquelle; die Bühne zeichnet sie einfarbig. Das gilt für alle 3D-Objekte.
+

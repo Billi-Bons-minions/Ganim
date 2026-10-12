@@ -60,7 +60,7 @@ Beim Start prüft Manim Studio im Hintergrund, ob Manim, FFmpeg und LaTeX vorhan
 5. **Leertaste** spielt alles auf der Bühne ab, **F5** rendert eine echte Manim-Vorschau.
 6. **Datei → Exportieren …**: Format *Video (MP4)*, Qualität und Ordner wählen, dann *Exportieren*.
 
-Im Raum gibt es 3D-Achsen, Flächen, Kurven, Körper (auch die platonischen Körper Tetraeder, Oktaeder, Ikosaeder und Dodekaeder) sowie Pfeile, Strecken und Punkte (Bereich *3D* der Objektbibliothek oder Menü *Einfügen*).
+Im Raum gibt es 3D-Achsen, Flächen (z = f(x, y) oder als Parameterfläche x(u, v), y(u, v), z(u, v), z. B. Kugel oder Torus), Kurven, Körper (auch die platonischen Körper Tetraeder, Oktaeder, Ikosaeder und Dodekaeder) sowie Pfeile, Strecken und Punkte (Bereich *3D* der Objektbibliothek oder Menü *Einfügen*).
 
 Es geht auch ohne leere Bühne: Im Willkommensdialog gibt es fünf Beispielprojekte, und unter *Szene → Neue Szene aus Vorlage* findest du 15 Vorlagen (z. B. Kurvendiskussion, von der Sekante zur Tangente, Tangente wandert am Graphen, Satz des Pythagoras, Graphentheorie, lineare Abbildung).
 

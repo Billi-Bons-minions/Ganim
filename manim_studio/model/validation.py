@@ -167,7 +167,11 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
 
         if axes_of(scene, obj) is None:
             add(ERROR, "axes_3d_missing")
-        if obj.kind == ObjectKind.SURFACE:
+        if obj.kind == ObjectKind.SURFACE and params.get("form") == "parametric":
+            for key in ("x_uv", "y_uv", "z_uv"):
+                if _expression_issue_names(scene, str(params.get(key, "")), "u", ("v",), add):
+                    break
+        elif obj.kind == ObjectKind.SURFACE:
             _expression_issue_names(scene, str(params.get("expression", "")), "x", ("y",), add)
         else:
             for key in ("x_expression", "y_expression", "z_expression"):

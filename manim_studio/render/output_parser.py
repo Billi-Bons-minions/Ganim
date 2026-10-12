@@ -10,6 +10,11 @@ _PROGRESS = re.compile(r"Animation (\d+):.*?(\d{1,3})%\|")
 _PARTIAL_DONE = re.compile(r"Animation (\d+) : Partial movie file written")
 _EXCEPTION = re.compile(r"^([A-Za-z_][\w.]*(?:Error|Exception|Exit)): (.*)$")
 _LATEX_LINE = re.compile(r"^! (.+)$")
+#: Manim's own log line (``ERROR LaTeX compilation error: ...  tex_file_writing.py:320``).
+_LATEX_COMPILATION = re.compile(r"LaTeX compilation error:\s*(.+?)(?:\s{2,}\S+\.py:\d+)?$")
+#: The offending line of the formula, shown by Manim after "Context of error:".
+_LATEX_CONTEXT = re.compile(r"^->\s*(.+?)(?:\s{2,}\S+\.py:\d+)?$")
+_DVISVGM_MARKERS = re.compile(r"\\special\{dvisvgm:raw <g id='unique\d+'>\}|\\special\{dvisvgm:raw </g>\}")
 
 
 @dataclass(frozen=True)
@@ -78,6 +83,17 @@ def _last_exception(lines: list[str]) -> tuple[str, str] | None:
     return None
 
 
+def _latex_detail(lines: list[str], latex_lines: list[str]) -> str:
+    """LaTeX's complaint and, if Manim shows it, the formula that caused it."""
+    messages = [match.group(1).strip() for line in lines if (match := _LATEX_COMPILATION.search(line))]
+    message = messages[0] if messages else (latex_lines[0] if latex_lines else "")
+    formulas = [match.group(1) for line in lines if (match := _LATEX_CONTEXT.match(line))]
+    formula = _DVISVGM_MARKERS.sub("", formulas[0]).strip() if formulas else ""
+    if message and formula:
+        return f"{message} → {formula}"
+    return message or formula
+
+
 def summarize_error(log: str) -> ErrorSummary:
     """Derive a user-friendly reason from a failed Manim run."""
     lines = [_clean(line) for line in log.splitlines()]
@@ -89,7 +105,7 @@ def summarize_error(log: str) -> ErrorSummary:
         return ErrorSummary("scene_not_found")
     latex_lines = [match.group(1) for line in lines if (match := _LATEX_LINE.match(line))]
     if latex_lines or "LaTeX compilation error" in text or "latex error converting" in text.lower():
-        return ErrorSummary("latex_error", latex_lines[0] if latex_lines else "")
+        return ErrorSummary("latex_error", _latex_detail(lines, latex_lines))
     exception = _last_exception(lines)
     if exception is not None:
         name, message = exception

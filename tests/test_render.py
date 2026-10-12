@@ -88,6 +88,19 @@ def test_latex_error_detail() -> None:
     assert summarize_error("! Missing } inserted.").detail == "Missing } inserted."
 
 
+def test_latex_error_names_the_formula() -> None:
+    log = (
+        "[10/12/26 06:04:24] ERROR    LaTeX compilation error: Undefined control sequence.        tex_file_writing.py:320\n"
+        "                    ERROR    Context of error:                                           tex_file_writing.py:354\n"
+        "                             -> \\special{dvisvgm:raw <g id='unique000'>}\\gibtsnicht x\\special{dvisvgm:raw </g>}\n"
+        "                             \\end{align*}\n"
+        "ValueError: latex error converting to dvi. See log output above or the log file: m/Tex/d6.log\n"
+    )
+    summary = summarize_error(log)
+    assert summary.code == "latex_error"
+    assert summary.detail == "Undefined control sequence. → \\gibtsnicht x"
+
+
 @pytest.mark.manim
 @pytest.mark.skipif(importlib.util.find_spec("manim") is None, reason="Manim is not installed")
 def test_runner_renders_and_reports_progress(tmp_path, qapp) -> None:

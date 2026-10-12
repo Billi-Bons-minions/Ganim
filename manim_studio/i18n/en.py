@@ -1324,4 +1324,8 @@ STRINGS: dict[str, str] = {
     "param.to_x": "Tip/point x",
     "param.to_y": "Tip/point y",
     "param.to_z": "Tip/point z",
+    "graph_action.value_table": "Table of values",
+    "graph_action.value_table_tip": "Adds a table with x and f(x) at round values (values as they are now).",
+    "graph.value_table_name": "Table of values {name}",
+    "status.value_table_impossible": "No table of values can be computed for this graph.",
 }

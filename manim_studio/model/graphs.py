@@ -609,6 +609,32 @@ def marker_label_direction(scene: Scene, obj: SceneObject, special: SpecialPoint
     return (1.0, -1.0) if math.isfinite(slope) and slope > 0 else (1.0, 1.0)
 
 
+def value_table(scene: Scene, graph: SceneObject, values: Values | None = None, max_columns: int = 11) -> list[list[str]]:
+    """A table of values (row ``x`` and row ``f(x)``) for a function graph, at round x values.
+
+    Whole numbers if the graph is wide enough (otherwise halves), at most ``max_columns`` values.
+    """
+    function = graph_function(scene, graph, values)
+    if function is None:
+        return []
+    low, high = x_range(graph)
+    step = 1.0
+    if math.floor(high) - math.ceil(low) + 1 < 5:
+        step = 0.5
+    while (math.floor(high / step) - math.ceil(low / step)) + 1 > max_columns:
+        step *= 2
+    xs = [k * step for k in range(math.ceil(low / step), math.floor(high / step) + 1)]
+    name = graph.name.strip() if is_valid_name(graph.name.strip()) else "f"
+    cells = []
+    for x in xs:
+        try:
+            y = function(x)
+        except (ArithmeticError, ValueError):
+            y = math.nan
+        cells.append(format_coordinate(y) if math.isfinite(y) else "–")
+    return [["x", *(format_coordinate(x) for x in xs)], [f"{name}(x)", *cells]]
+
+
 def label_anchor(scene: Scene, obj: SceneObject, values: Values | None = None) -> tuple[Point, Point] | None:
     """Return the graph point and the direction of a graph label (axes coordinates)."""
     graph = tool_graph(scene, obj)

@@ -120,6 +120,7 @@ GRAPH_ACTIONS: tuple[tuple[str, str, dict], ...] = (
     ("area", ObjectKind.GRAPH_AREA.value, {}),
     ("riemann", ObjectKind.RIEMANN.value, {}),
     ("label", ObjectKind.GRAPH_LABEL.value, {}),
+    ("value_table", "value_table", {}),
 )
 #: Icons of the align/distribute buttons in the multi-selection inspector.
 ARRANGE_ICONS = tuple(
@@ -642,6 +643,8 @@ class PropertiesPanel(QScrollArea):
             if action in ("derivative", "second_derivative"):
                 order = 1 if action == "derivative" else 2
                 button.clicked.connect(lambda _checked=False, order=order: self.controller.add_derivative(object_id, order))
+            elif action == "value_table":
+                button.clicked.connect(lambda _checked=False: self.controller.add_value_table(object_id))
             else:
                 kind = ObjectKind(action)
                 button.clicked.connect(lambda _checked=False, kind=kind, params=params: self.controller.add_graph_tool(kind, object_id, **params))

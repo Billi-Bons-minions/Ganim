@@ -253,6 +253,16 @@ class EditorController(QObject):
         }
         return self.add_object(ObjectKind.FUNCTION_GRAPH, 0.0, 0.0, name=name, attributes={"stroke_color": color}, **params)
 
+    def add_value_table(self, graph_id: str) -> str | None:
+        """Add a table of values (x and f(x)) of a function graph below the picture."""
+        graph = self.scene().object_by_id(graph_id)
+        rows = graphs.value_table(self.scene(), graph) if graph is not None else []
+        if not rows:
+            self.statusMessage.emit(tr("status.value_table_impossible"))
+            return None
+        name = tr("graph.value_table_name", name=graph.name)
+        return self.add_object(ObjectKind.TABLE, 0.0, -3.4, name=name, rows=rows, font_size=24.0, h_buff=0.5, v_buff=0.3)
+
     def delete_objects(self, ids: list[str] | None = None) -> None:
         """Delete objects and everything that refers to them."""
         ids = list(ids if ids is not None else self.editor.selected_objects)

@@ -1324,4 +1324,8 @@ STRINGS: dict[str, str] = {
     "param.to_x": "Spitze/Punkt x",
     "param.to_y": "Spitze/Punkt y",
     "param.to_z": "Spitze/Punkt z",
+    "graph_action.value_table": "Wertetabelle",
+    "graph_action.value_table_tip": "Legt eine Tabelle mit x und f(x) an runden Stellen an (Werte zum jetzigen Stand).",
+    "graph.value_table_name": "Wertetabelle {name}",
+    "status.value_table_impossible": "Für diesen Graphen lässt sich keine Wertetabelle berechnen.",
 }

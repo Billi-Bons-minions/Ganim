@@ -240,3 +240,25 @@ def test_implicit_curves() -> None:
     assert "always_redraw(" in code and "achsen.plot_implicit_curve(" in code and "x ** 2 + y ** 2.0 - r.get_value() ** 2.0" in code
     circle.params["implicit_expression"] = "x^2 + "
     assert "expression_invalid" in {issue.code for issue in validate_scene(scene)}
+
+
+def test_table_of_values() -> None:
+    from manim_studio.model.graphs import value_table
+
+    axes = make_object(ObjectKind.AXES, "Achsen", "a")
+    graph = make_object(ObjectKind.FUNCTION_GRAPH, "g", "g", expression="x^2", axes_id="a", x_min=-3.0, x_max=3.0)
+    scene = Scene(id="s", name="S", objects=[axes, graph])
+    assert value_table(scene, graph) == [["x", "-3", "-2", "-1", "0", "1", "2", "3"], ["g(x)", "9", "4", "1", "0", "1", "4", "9"]]
+    graph.params.update(expression="1/x", x_min=-1.0, x_max=1.0)  # few whole numbers: halves; undefined values get a dash
+    assert value_table(scene, graph)[1] == ["g(x)", "-1", "-2", "–", "2", "1"]
+    graph.params.update(expression="x", x_min=-20.0, x_max=20.0)  # wide ranges: at most 11 columns
+    assert value_table(scene, graph)[0] == ["x", "-20", "-16", "-12", "-8", "-4", "0", "4", "8", "12", "16", "20"]
+
+
+def test_table_of_values_in_the_app(window) -> None:
+    controller = window.controller
+    axes = controller.add_object(ObjectKind.AXES)
+    graph = controller.add_object(ObjectKind.FUNCTION_GRAPH, expression="2x")
+    table = controller.add_value_table(graph)
+    obj = window.editor.scene().object_by_id(table)
+    assert obj.kind == ObjectKind.TABLE and obj.params["rows"][0][0] == "x" and axes

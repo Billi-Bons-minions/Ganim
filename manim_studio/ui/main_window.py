@@ -135,6 +135,7 @@ class MainWindow(QMainWindow):
         self.playback = PlaybackController(self.editor, self)
         self.still = StillPreview(self.document, self.editor, self.settings, cache_dir() / "still", self)
         self.still.latex_available = self.context.latex_available
+        self.still.formula_errors = self.context.tex_cache.formula_error
         self._code_timer = QTimer(self, singleShot=True, interval=CODE_REFRESH_MS)
         self._code_timer.timeout.connect(self.refresh_code)
         self._build_actions()

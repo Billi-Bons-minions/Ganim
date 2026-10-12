@@ -1356,4 +1356,5 @@ STRINGS: dict[str, str] = {
     "choice.tips_at.end": "Am Ende",
     "choice.tips_at.both": "An beiden Enden",
     "choice.tips_at.none": "Keine (Bogen)",
+    "issue.latex_failed": "LaTeX kann diese Formel nicht setzen: {detail}. Korrigiere sie im Eigenschaften-Panel (in einem LaTeX-Text braucht Mathematik $…$).",
 }

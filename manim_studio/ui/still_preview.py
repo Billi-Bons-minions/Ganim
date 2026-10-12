@@ -33,6 +33,7 @@ class StillPreview(QObject):
         self.folder = folder
         self.enabled = False
         self.latex_available = lambda: True
+        self.formula_errors = None
         self._runner = ManimRunner(self)
         self._runner.finished.connect(self._on_finished)
         self._timer = QTimer(self, singleShot=True, interval=DEBOUNCE_MS)
@@ -58,7 +59,7 @@ class StillPreview(QObject):
 
     def _script(self) -> tuple[str, str] | None:
         scene = self.editor.scene()
-        if has_errors(validate_scene(scene, self.latex_available(), self.document.base_dir)):
+        if has_errors(validate_scene(scene, self.latex_available(), self.document.base_dir, self.formula_errors)):
             return None
         cursor = self.editor.cursor
         stop = cursor if cursor != START else -1

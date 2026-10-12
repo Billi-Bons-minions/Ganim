@@ -26,6 +26,10 @@ TEX_TEMPLATE = r"""\documentclass[preview]{standalone}
 """
 
 
+class LatexFailure(str):
+    """An error LaTeX itself reported for a formula (as opposed to a missing tool or a timeout)."""
+
+
 def latex_key(latex: str, environment: str = "align*") -> str:
     """Return a stable cache key for a formula."""
     return hashlib.sha1(f"{environment}\n{latex}".encode("utf-8")).hexdigest()[:20]
@@ -44,7 +48,7 @@ def compile_latex_to_svg(latex: str, target: Path, timeout: float = 30.0, enviro
             if result.returncode != 0 or not (work / "formula.dvi").exists():
                 log = (work / "formula.log").read_text(encoding="utf-8", errors="replace") if (work / "formula.log").exists() else ""
                 errors = [line[2:] for line in log.splitlines() if line.startswith("! ")]
-                return errors[0] if errors else "LaTeX error"
+                return LatexFailure(errors[0]) if errors else "LaTeX error"
             result = run_quiet([dvisvgm, "formula.dvi", "-n", "-v", "0", "-o", "formula.svg"], timeout, folder)
         except (OSError, subprocess.SubprocessError) as error:
             return str(error)
@@ -56,7 +60,8 @@ def compile_latex_to_svg(latex: str, target: Path, timeout: float = 30.0, enviro
 
 
 class _Signals(QObject):
-    done = Signal(str, str)
+    # latex, key, error, whether LaTeX itself rejected the formula
+    done = Signal(str, str, str, bool)
 
 
 class _TexJob(QRunnable):
@@ -70,7 +75,7 @@ class _TexJob(QRunnable):
     def run(self) -> None:
         error = compile_latex_to_svg(self.latex, self.target, environment=self.environment)
         try:
-            self.signals.done.emit(self.latex, error or "")
+            self.signals.done.emit(self.latex, latex_key(self.latex, self.environment), error or "", isinstance(error, LatexFailure))
         except RuntimeError:
             pass
 
@@ -85,7 +90,8 @@ class TexPreviewCache(QObject):
         self.cache_dir = cache_dir
         self.enabled = enabled
         self._pending: set[str] = set()
-        self._errors: dict[str, str] = {}
+        #: by ``latex_key``: (message, whether LaTeX itself rejected the formula)
+        self._errors: dict[str, tuple[str, bool]] = {}
         self._signals = _Signals()
         self._signals.done.connect(self._on_done)
         self._pool = QThreadPool(self)
@@ -95,20 +101,27 @@ class TexPreviewCache(QObject):
         """Return the SVG of a formula if available; otherwise start compiling it."""
         if not self.enabled or not latex.strip():
             return None
-        target = self.cache_dir / f"{latex_key(latex, environment)}.svg"
+        key = latex_key(latex, environment)
+        target = self.cache_dir / f"{key}.svg"
         if target.exists():
             return target
-        if latex not in self._pending and latex not in self._errors:
-            self._pending.add(latex)
+        if key not in self._pending and key not in self._errors:
+            self._pending.add(key)
             self._pool.start(_TexJob(latex, target, self._signals, environment))
         return None
 
-    def error(self, latex: str) -> str | None:
+    def error(self, latex: str, environment: str = "align*") -> str | None:
         """Return the compile error of a formula, if any."""
-        return self._errors.get(latex)
+        found = self._errors.get(latex_key(latex, environment))
+        return found[0] if found else None
 
-    def _on_done(self, latex: str, error: str) -> None:
-        self._pending.discard(latex)
+    def formula_error(self, latex: str, environment: str = "align*") -> str | None:
+        """Return the error only if LaTeX itself rejected the formula (Manim would fail as well)."""
+        found = self._errors.get(latex_key(latex, environment))
+        return found[0] if found and found[1] else None
+
+    def _on_done(self, latex: str, key: str, error: str, rejected: bool) -> None:
+        self._pending.discard(key)
         if error:
-            self._errors[latex] = error
+            self._errors[key] = (error, rejected)
         self.ready.emit(latex)

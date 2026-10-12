@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import textwrap
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -385,8 +386,30 @@ def _step_issues(scene: Scene, index: int, step: Step) -> list[Issue]:
     return issues
 
 
-def validate_scene(scene: Scene, latex_available: bool = True, base_dir: str | Path | None = None) -> list[Issue]:
-    """Return all problems of a scene, errors first."""
+#: Looks up an error LaTeX reported for ``(source, environment)`` (the stage compiles every formula).
+FormulaErrors = Callable[[str, str], str | None]
+
+
+def formula_sources(obj: SceneObject) -> list[tuple[str, str]]:
+    """``(source, environment)`` of the formulas Manim typesets for an object, as the stage compiles them."""
+    params = obj.params
+    if obj.kind == ObjectKind.MATH_TEX:
+        return [(str(params.get("latex", "")), "align*")]
+    if obj.kind == ObjectKind.TEX:
+        return [(str(params.get("tex", "")), "center")]
+    if obj.kind == ObjectKind.GRAPH_LABEL and params.get("use_latex"):
+        return [(str(params.get("text", "")), "align*")]
+    return []
+
+
+def validate_scene(
+    scene: Scene, latex_available: bool = True, base_dir: str | Path | None = None, formula_errors: FormulaErrors | None = None
+) -> list[Issue]:
+    """Return all problems of a scene, errors first.
+
+    ``formula_errors`` reports formulas LaTeX already rejected on the stage, so that
+    the render does not start only to fail.
+    """
     issues: list[Issue] = []
     if not is_hex_color(scene.background_color):
         issues.append(Issue(ERROR, "color_invalid", scene.id, detail=scene.background_color))
@@ -395,6 +418,11 @@ def validate_scene(scene: Scene, latex_available: bool = True, base_dir: str | P
         issues.append(Issue(ERROR, "camera_duplicate", scene.id, extra.id))
     for obj in scene.objects:
         issues.extend(_object_issues(scene, obj, latex_available, base_dir))
+        if formula_errors is not None and latex_available:
+            for source, environment in formula_sources(obj):
+                error = formula_errors(source, environment) if source.strip() else None
+                if error:
+                    issues.append(Issue(ERROR, "latex_failed", scene.id, object_id=obj.id, detail=error))
     for index, step in enumerate(scene.steps):
         issues.extend(_step_issues(scene, index, step))
     issues.extend(_hidden_object_issues(scene))

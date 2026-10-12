@@ -47,7 +47,7 @@ Everything below was built for this first public version.
 
 ### Robustness
 - Check for Manim, FFmpeg and LaTeX at start, with installation hints; Manim can be installed from the app.
-- Validation before rendering with understandable messages; render errors are explained (LaTeX errors name the failing formula).
+- Validation before rendering with understandable messages; render errors are explained (LaTeX errors name the failing formula). Formulas LaTeX already rejected on the stage stop the render before it starts.
 - Rules that keep scripts valid: animations Manim cannot play at the same time go into their own step automatically (e.g. a number tied to a parameter while the parameter changes), dependent objects bring their hosts along and disappear with them.
 - Random editing sessions (`tools/fuzz_sessions.py`) found and fixed several crashes.
 - Dashed helper lines of length 0 (a point on an axis, a secant with h = 0) no longer break rendering with Manim 0.19.

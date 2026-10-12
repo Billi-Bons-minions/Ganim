@@ -90,6 +90,7 @@ class AppContext(QObject):
         self.tex_cache = TexPreviewCache(cache_dir() / "tex", enabled=settings.latex_preview and latex_found, parent=self)
         self.environment: EnvironmentReport | None = None
         self.render = RenderController(self.document, self.editor, settings, self.latex_available, self.window, self)
+        self.render.formula_errors = self.tex_cache.formula_error
         self.autosaver = AutoSaver(self.document, self.data_folder / "autosave", self)
         self.plugins = PluginManager(self.data_folder / "plugins", lambda: self.settings.enabled_plugins, self)
         self.library.extra_styles = lambda: [Style(name, values, True) for _plugin, name, values in self.plugins.contributions.styles]

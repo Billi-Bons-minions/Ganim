@@ -79,6 +79,8 @@ class RenderController(QObject):
         self.editor = editor
         self.settings = settings
         self.latex_available = latex_available
+        #: errors LaTeX already reported for formulas on the stage (set by the context)
+        self.formula_errors = None
         self.window = window
         self.runner = ManimRunner(self)
         self.runner.progressChanged.connect(self.progressChanged)
@@ -106,7 +108,7 @@ class RenderController(QObject):
         return folder
 
     def _validate(self, scene: Scene) -> bool:
-        issues = validate_scene(scene, self.latex_available(), self.document.base_dir)
+        issues = validate_scene(scene, self.latex_available(), self.document.base_dir, self.formula_errors)
         for issue in issues:
             self.logLine.emit(f"[{issue.severity}] {issue_text(scene, issue)}")
         if has_errors(issues):

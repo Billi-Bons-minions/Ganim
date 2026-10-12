@@ -1356,4 +1356,5 @@ STRINGS: dict[str, str] = {
     "choice.tips_at.end": "At the end",
     "choice.tips_at.both": "At both ends",
     "choice.tips_at.none": "None (arc)",
+    "issue.latex_failed": "LaTeX cannot typeset this formula: {detail}. Correct it in the properties panel (in a LaTeX text, math needs $…$).",
 }

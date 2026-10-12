@@ -54,3 +54,49 @@ und den Punkten, die du prüfen solltest. Neueste Einträge unten.
 - **Ergebnis:** Blockiert. Siehe Hinweis ganz oben.
 - **Warum blockiert:** Ich habe keine Zugangsdaten gesucht oder angelegt (kein Token, keine Anmeldung im Browser). Das ist deine Entscheidung.
 - **Ab jetzt:** Nach jedem Feature versuche ich `git push ganim main` erneut.
+
+## Phase 2: Bestandsaufnahme (12.10., nachts)
+
+### Was geprüft wurde
+- **Testsuite:** 300 Tests grün.
+- **E2E in der echten App (offscreen):**
+  - 5 Vorlagen geladen und jeweils eine Vorschau gerendert.
+  - Export als MP4 (720p und 4K), GIF und PNG funktioniert.
+- **Fuzzing:**
+  - 100 bis 250 zufällige Bearbeitungssitzungen über den echten Controller: Objekte, Animationen, Ziehen, Schritte, Gruppen, Szenen, Rückgängig/Wiederholen.
+  - Danach jeweils Speichern/Laden, Codeerzeugung und `manim --dry_run` der erzeugten Skripte.
+
+### Gefunden und behoben
+1. **Transparenter Export mit MP4:** brach mit Manim 0.22 ab. Behoben, außerdem WebM und MOV neu als Formate.
+2. **Inspektor:** stürzte bei veralteter Mehrfachauswahl ab (z. B. nach Rückgängig).
+3. **Aufnahme:** konnte unpassende Animationen erzeugen, z. B. „Bewegen“ für einen Parameter.
+4. **Gleichzeitige Animationen:**
+   - Problem: Mehrere Animationen eines Objekts im selben Schritt, die Manim nicht gleichzeitig kann (Verwandeln + Bewegen, Erstellen + Wackeln, zwei Verwandlungen derselben Quelle). Teils meldete die Validierung nichts, und erst Manim stürzte ab.
+   - **Entscheidung:** eine gemeinsame Regel für Validierung, Codegen und Bedienung. Beim Hinzufügen kommt die Animation in so einem Fall automatisch in einen eigenen Schritt, mit Hinweis.
+5. **Abhängige Objekte (Tangente, Fläche, Datenpunkte, 3D-Fläche) ohne Achsen oder Graph:**
+   - Vorher entstanden verwaiste Objekte, die dann nicht renderten.
+   - **Entscheidung (wie GeoGebra):**
+     - Fehlende Achsen bzw. Graphen werden beim Einfügen mit angelegt.
+     - Beim Löschen eines Hosts werden die abhängigen Objekte mitgelöscht, mit Hinweis. Rückgängig stellt alles wieder her.
+6. **Manim-Laufzeitfehler:**
+   - Pfeil nach „Verwandeln“ in eine Gruppe oder einen Text
+   - Bewegung entlang einer gestrichelten Linie
+   - Gruppe mit einem Parameter darin
+
+### Plan für die Features (Reihenfolge)
+1. Neue Animationen:
+   - Wachsen vom Rand
+   - Rückwärts schreiben
+   - Kopie verwandeln
+   - Lichtlauf
+   - Ausbreiten
+   - Tippen mit Cursor
+   - Ein- und Ausblenden mit Zoom
+2. Hervorhebungs-Objekte, die an einem Objekt hängen: Rahmen, Hintergrund, Unterstreichen, Durchstreichen.
+3. Winkelmarkierung zwischen zwei Linien.
+4. Bewegungsspur (TracedPath).
+5. Vektorfeld und Stromlinien.
+6. 3D-Körper: Kugel, Würfel, Kegel, Zylinder, Torus …
+7. Implizite Kurven f(x, y) = 0.
+8. Mehr Vorlagen und Beispielszenen.
+9. Wenn Zeit bleibt: Netzwerk-Graph, Aufzählungslisten, Kamera-Zoom auf ein Objekt.

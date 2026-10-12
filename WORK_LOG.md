@@ -419,3 +419,11 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
 - **Gefunden:** `ApplyComplexFunction` definiert einen Bogenweg (Winkel arg f(1)), Manim 0.19 bis 0.22 benutzen ihn aber nie: Die Punkte laufen gerade. Die Bühne macht es ebenso (Test gegen Manims `interpolate`). Manim bildet nur die Ankerpunkte der Bézierkurven exakt ab (die Griffe folgen der Tangente); die Bühne tastet die Umrisse fein ab, beides stimmt im Bild überein.
 - **Nebenbei gefunden (eigene Commits):** Gitterlinien der Zahlenebene am Rand (siehe oben).
 - **Geprüft:** Bildvergleiche (z², exp, punktweise), Zwischenpositionen gegen Manim, Rendern mit 1/z durch den Ursprung, log, exp, Text, Achsen mit Zahlen und Graph (0.19 und 0.22).
+
+## 5. Kamera dreht dauerhaft (3D)
+- **Was:** Neue Kamera-Animation *Kamera dreht dauerhaft* (`begin_ambient_camera_rotation`) mit Geschwindigkeit in °/s und Winkel θ oder φ. Die Drehung beginnt mit ihrem Schritt und läuft durch alle folgenden Schritte und Pausen. Eine weitere Dauerdrehung um denselben Winkel ändert die Geschwindigkeit, 0 °/s hält an. Die Vorlage *3D-Körper mit Kamerafahrt* endet jetzt damit.
+- **Entscheidungen:**
+  - Als Animation an der Kamera (statt als Szeneneinstellung), damit sie in der Zeitleiste an ihrem Schritt sichtbar ist. Ihre Dauer ist die Mindestdauer des Schritts.
+  - Das Skript hält eine laufende Drehung um denselben Winkel vorher an (zwei würden sich in Manim addieren) und am Ende der Szene (sonst drehte sich im Gesamtvideo die nächste Szene weiter).
+  - *Kamera schwenken* während einer Dauerdrehung ist gesperrt (Manim würde beides vermischen).
+- **Gefunden:** Manims erstes Bild jeder Animation hat dt = 0; pro Schritt dreht sich die Kamera deshalb 1/fps Sekunden kürzer (bei 60 fps 0,3° bei 20 °/s). Die Bühne kennt die Bildrate nicht und rechnet ohne diesen Verlust; der Test hält die Abweichung fest.

@@ -816,6 +816,10 @@ ANIMATION_PARAMS: dict[AnimationKind, tuple[ParamSpec, ...]] = {
         ParamSpec("m21", ParamType.FLOAT, 0.0, minimum=-20.0, maximum=20.0, step=0.25),
         ParamSpec("m22", ParamType.FLOAT, 1.0, minimum=-20.0, maximum=20.0, step=0.25),
     ),
+    AnimationKind.AMBIENT_ROTATION: (
+        ParamSpec("rate", ParamType.FLOAT, 10.0, minimum=-360.0, maximum=360.0, step=5.0, decimals=1),
+        ParamSpec("about", ParamType.CHOICE, "theta", choices=("theta", "phi")),
+    ),
     AnimationKind.APPLY_COMPLEX: (ParamSpec("function", ParamType.EXPRESSION, "z^2", variable="z", extra_names=("i",)),),
     AnimationKind.APPLY_POINTWISE: (
         ParamSpec("x_function", ParamType.EXPRESSION, "x + 0.5 sin(y)", extra_names=("y",)),

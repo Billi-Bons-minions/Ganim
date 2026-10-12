@@ -110,6 +110,7 @@ class AnimationKind(str, Enum):
     APPLY_MATRIX = "apply_matrix"
     APPLY_COMPLEX = "apply_complex"
     APPLY_POINTWISE = "apply_pointwise"
+    AMBIENT_ROTATION = "ambient_rotation"
 
 
 class StepKind(str, Enum):
@@ -212,7 +213,7 @@ def pivot_of(anim) -> tuple[float, float] | None:
 def _participants(animations) -> dict[str, list[AnimationKind]]:
     by_object: dict[str, list[AnimationKind]] = {}
     for anim in animations:
-        if anim.kind in DETACHED_EFFECTS or anim.kind == AnimationKind.ORBIT:
+        if anim.kind in DETACHED_EFFECTS or anim.kind in (AnimationKind.ORBIT, AnimationKind.AMBIENT_ROTATION):
             continue
         # a rotation around another point cannot be merged with other movements
         by_object.setdefault(anim.target_id, []).append(AnimationKind.MOVE_ALONG_PATH if pivot_of(anim) else anim.kind)
@@ -314,7 +315,7 @@ UNGROUPABLE = frozenset({ObjectKind.PARAMETER, ObjectKind.CAMERA})
 #: Kinds that are not added to the Manim scene (the camera is shown on the stage only).
 UNADDED_KINDS = INVISIBLE_KINDS | {ObjectKind.CAMERA}
 #: Animations a camera understands.
-CAMERA_ANIMATIONS = frozenset({AnimationKind.MOVE, AnimationKind.SCALE, AnimationKind.ROTATE, AnimationKind.ORBIT})
+CAMERA_ANIMATIONS = frozenset({AnimationKind.MOVE, AnimationKind.SCALE, AnimationKind.ROTATE, AnimationKind.ORBIT, AnimationKind.AMBIENT_ROTATION})
 
 #: Curve types of a function graph.
 CURVE_FUNCTION = "function"

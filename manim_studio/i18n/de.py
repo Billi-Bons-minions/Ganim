@@ -1443,4 +1443,12 @@ STRINGS: dict[str, str] = {
     "choice.numbers.real": "Reell (1, 2, …)",
     "choice.numbers.complex": "Komplexe Ebene (1, 2, …, i, 2i, …)",
     "param.numbers": "Zahlen",
+    "anim.ambient_rotation": "Kamera dreht dauerhaft (3D)",
+    "anim_short.ambient_rotation": "Dauerdrehung",
+    "anim_help.ambient_rotation": "Die 3D-Kamera dreht sich ab diesem Schritt gleichmäßig weiter, auch in allen folgenden Schritten und Pausen (Manims begin_ambient_camera_rotation). Eine weitere Dauerdrehung um denselben Winkel ändert die Geschwindigkeit; 0 °/s hält die Kamera an.",
+    "aparam.rate": "Geschwindigkeit (°/s)",
+    "aparam.about": "Winkel",
+    "choice.about.theta": "Drehung θ (um die z-Achse)",
+    "choice.about.phi": "Neigung φ",
+    "issue.orbit_during_ambient": "Die Kamera dreht sich gerade dauerhaft. Halte die Dauerdrehung vorher an (Geschwindigkeit 0) oder schwenke sie nicht zusätzlich.",
 }

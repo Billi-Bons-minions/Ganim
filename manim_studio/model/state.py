@@ -273,6 +273,8 @@ def apply_animation(states: dict[str, ObjectState], anim: Animation, scene: Scen
     elif kind == AnimationKind.SET_VALUE:
         if not returns:
             states[anim.target_id] = replace(current, value=float(anim.params.get("value", current.value)))
+    elif kind == AnimationKind.AMBIENT_ROTATION:
+        return  # the camera turns while time passes (see ``ambient_rates``)
     elif kind == AnimationKind.ORBIT:
         if not returns:
             states[anim.target_id] = replace(current, phi=float(anim.params.get("phi", current.phi)), theta=float(anim.params.get("theta", current.theta)))
@@ -431,11 +433,44 @@ def refresh_attached_states(scene: Scene, states: dict[str, ObjectState]) -> dic
     return states
 
 
+def ambient_rates(scene: Scene, step_index: int) -> dict[str, tuple[str, float]]:
+    """The 3D camera's lasting rotations during step ``step_index``: angle -> (camera id, degrees per second).
+
+    A lasting rotation (``begin_ambient_camera_rotation``) starts with its step and goes on
+    through all later steps (waiting included) until another one about the same angle replaces
+    or stops it (rate 0).
+    """
+    rates: dict[str, tuple[str, float]] = {}
+    for step in scene.steps[: step_index + 1]:
+        if step.kind != StepKind.PLAY:
+            continue
+        for anim in step.animations:
+            if anim.kind == AnimationKind.AMBIENT_ROTATION:
+                about = str(anim.params.get("about", "theta"))
+                rate = float(anim.params.get("rate", 10.0))
+                if rate:
+                    rates[about] = (anim.target_id, rate)
+                else:
+                    rates.pop(about, None)
+    return rates
+
+
+def turn_camera(states: dict[str, ObjectState], rates: dict[str, tuple[str, float]], seconds: float) -> None:
+    """Add ``seconds`` of the lasting rotations to the camera's angles."""
+    for about, (camera_id, rate) in rates.items():
+        state = states.get(camera_id)
+        if state is not None and about in ("theta", "phi"):
+            states[camera_id] = replace(state, **{about: getattr(state, about) + rate * seconds})
+
+
 def states_after(scene: Scene, step_index: int) -> dict[str, ObjectState]:
     """Return the state of every object after ``step_index`` (``START`` = before step 1)."""
     states = refresh_attached_states(scene, {obj.id: initial_state(scene, obj) for obj in scene.objects})
     last = min(step_index, len(scene.steps) - 1)
-    for step in scene.steps[: last + 1]:
+    turning = any(anim.kind == AnimationKind.AMBIENT_ROTATION for step in scene.steps for anim in step.animations)
+    for index, step in enumerate(scene.steps[: last + 1]):
+        if turning:
+            turn_camera(states, ambient_rates(scene, index), step.duration())
         if step.kind != StepKind.PLAY:
             continue
         for anim in step.animations:

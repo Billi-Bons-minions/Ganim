@@ -12,6 +12,7 @@ from manim_studio.model.rate_functions import rate, there_and_back
 from manim_studio.model.state import (
     START,
     ObjectState,
+    ambient_rates,
     apply_animation,
     apply_matrix,
     apply_to_group,
@@ -20,6 +21,7 @@ from manim_studio.model.state import (
     part_color,
     refresh_group_states,
     states_after,
+    turn_camera,
 )
 from manim_studio.model.types import ENTRANCE_ANIMATIONS, EXIT_ANIMATIONS, TRANSFORM_ANIMATIONS, AnimationKind, StepKind, pivot_of
 
@@ -225,6 +227,8 @@ def apply_partial(states: dict[str, ObjectState], anim: Animation, progress: flo
     elif kind == AnimationKind.SET_VALUE:
         target = float(anim.params.get("value", state.value))
         states[anim.target_id] = replace(state, value=state.value + (target - state.value) * progress)
+    elif kind == AnimationKind.AMBIENT_ROTATION:
+        return  # added for the elapsed time in ``_step_state``
     elif kind == AnimationKind.ORBIT:
         phi, theta = float(anim.params.get("phi", state.phi)), float(anim.params.get("theta", state.theta))
         states[anim.target_id] = replace(state, phi=state.phi + (phi - state.phi) * progress, theta=state.theta + (theta - state.theta) * progress)
@@ -234,6 +238,7 @@ def apply_partial(states: dict[str, ObjectState], anim: Animation, progress: flo
 
 def _step_state(scene: Scene, index: int, step: Step, local_time: float) -> dict[str, ObjectState]:
     states = states_after(scene, index - 1)
+    turn_camera(states, ambient_rates(scene, index), local_time)
     if step.kind != StepKind.PLAY:
         return states
     for anim, (start, end) in zip(step.animations, step.windows()):

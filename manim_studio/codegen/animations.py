@@ -541,15 +541,19 @@ def step_code(
         # the exit plays on a copy, so the object is still intact when a later step uses it again
         names = {**names, **{object_id: f"{names[object_id]}.copy()" for object_id in reused}}
     starts = [anim for anim in step.animations if step.kind == StepKind.PLAY and anim.kind in ENTRANCE_ANIMATIONS and _is_trace(scene, anim.target_id)]
-    if not starts:
+    turns = [anim for anim in step.animations if step.kind == StepKind.PLAY and anim.kind == AnimationKind.AMBIENT_ROTATION]
+    if not starts and not turns:
         lines = _step_lines(step, number, scene, names, helpers, base_dir)
     else:
-        # a TracedPath cannot fade in: it is added and records from this step on
-        rest = dataclasses.replace(step, animations=[anim for anim in step.animations if anim not in starts])
+        # a TracedPath cannot fade in: it is added and records from this step on;
+        # a lasting camera rotation starts before the step and goes on in the later ones
+        rest = dataclasses.replace(step, animations=[anim for anim in step.animations if anim not in starts and anim not in turns])
         lines = _step_lines(rest, number, scene, names, helpers, base_dir)
-        lines[1:1] = [line for anim in starts for line in (f"self.add({_variable(names, anim.target_id)})", trace_start(_variable(names, anim.target_id)))]
+        lines[1:1] = _ambient_lines(scene, number - 1, turns) + [
+            line for anim in starts for line in (f"self.add({_variable(names, anim.target_id)})", trace_start(_variable(names, anim.target_id)))
+        ]
         if not rest.animations:
-            lines.append(f"self.wait({fmt_float(max(anim.delay + anim.run_time for anim in starts))})")
+            lines.append(f"self.wait({fmt_float(max(anim.delay + anim.run_time for anim in starts + turns))})")
     if step.kind == StepKind.PLAY:
         lines += _arrow_fixes(step, scene, names, helpers)
     if helpers is not None and any(f"{name}(" in line for line in lines for name in (STUDIO_MAP_POINT, STUDIO_MAP_COMPLEX)):
@@ -574,6 +578,30 @@ def _reused_after_destroying_exit(step: Step, number: int, scene: Scene, names: 
             later.update(str(anim.params[key]) for key in ("target", "path", "partner") if anim.params.get(key))
     found = [anim.target_id for anim in step.animations if anim.kind in _DESTROYING and anim.target_id in later and anim.target_id in names]
     return list(dict.fromkeys(found))
+
+
+def _ambient_lines(scene: Scene, index: int, turns: list[Animation]) -> list[str]:
+    """Stop a running rotation about the same angle (two would add up), then start the new one."""
+    from manim_studio.model.state import ambient_rates
+
+    running = ambient_rates(scene, index - 1)
+    lines = []
+    for anim in turns:
+        about = str(anim.params.get("about", "theta"))
+        rate = float(anim.params.get("rate", 10.0))
+        if about in running:
+            lines.append(f"self.stop_ambient_camera_rotation(about={py_str(about)})")
+        if rate:
+            lines.append(f"self.begin_ambient_camera_rotation(rate={fmt_float(rate)} * DEGREES, about={py_str(about)})")
+    return lines
+
+
+def ambient_stop_lines(scene: Scene, last_index: int) -> list[str]:
+    """Stop lasting rotations at the end of a scene (the next scene of a joined video starts still)."""
+    from manim_studio.model.state import ambient_rates
+
+    running = ambient_rates(scene, last_index)
+    return [f"self.stop_ambient_camera_rotation(about={py_str(about)})" for about in running]
 
 
 def trace_start(variable: str) -> str:

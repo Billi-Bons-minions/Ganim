@@ -456,6 +456,23 @@ class AnimationPreview(QWidget):
         painter.setBrush(YELLOW)
         painter.drawEllipse(point, unit * 0.25, unit * 0.25)
 
+    def _draw_ambient_rotation(self, painter: QPainter, t: float, unit: float) -> None:
+        # a cube seen from above at an angle, turning steadily about the vertical axis
+        angle = 2 * math.pi * t
+        tilt = 0.45
+        corners = [(x, y, z) for x in (-1, 1) for y in (-1, 1) for z in (-1, 1)]
+
+        def project(x: float, y: float, z: float) -> QPointF:
+            u = x * math.cos(angle) - y * math.sin(angle)
+            v = x * math.sin(angle) + y * math.cos(angle)
+            return QPointF(u * unit * 0.8, (-z * math.cos(tilt) + v * math.sin(tilt)) * unit * 0.8)
+
+        painter.setPen(self._pen(BLUE, 2.0))
+        for a in range(8):
+            for b in range(a + 1, 8):
+                if sum(1 for i in range(3) if corners[a][i] != corners[b][i]) == 1:
+                    painter.drawLine(project(*corners[a]), project(*corners[b]))
+
     def _draw_swap(self, painter: QPainter, t: float, unit: float) -> None:
         angle = math.pi * smooth(t)
         radius = unit * 1.1

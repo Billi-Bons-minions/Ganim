@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from manim_studio import __version__
-from manim_studio.codegen.animations import STUDIO_MAP, STUDIO_MAP_SOURCE, STUDIO_SHAPE, STUDIO_SHAPE_SOURCE, STUDIO_TRANSFORM, STUDIO_TRANSFORM_SOURCE, step_code, trace_start
+from manim_studio.codegen.animations import STUDIO_MAP, STUDIO_MAP_SOURCE, STUDIO_SHAPE, STUDIO_SHAPE_SOURCE, STUDIO_TRANSFORM, STUDIO_TRANSFORM_SOURCE, ambient_stop_lines, step_code, trace_start
 from manim_studio.codegen.errors import CodegenError
 from manim_studio.codegen.formatting import indent_lines
 from manim_studio.codegen.graph_code import (
@@ -153,6 +153,9 @@ def _timeline_lines(
         if lines:
             lines.append("")
         lines += ["# Keep the scene visible for one second", "self.wait(1.0)"]
+    stops = ambient_stop_lines(scene, len(steps) - 1)
+    if stops:
+        lines += ["", "# The camera stops turning at the end of the scene"] + stops
     return lines
 
 

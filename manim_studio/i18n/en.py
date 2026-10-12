@@ -1443,4 +1443,12 @@ STRINGS: dict[str, str] = {
     "choice.numbers.real": "Real (1, 2, …)",
     "choice.numbers.complex": "Complex plane (1, 2, …, i, 2i, …)",
     "param.numbers": "Numbers",
+    "anim.ambient_rotation": "Camera keeps turning (3D)",
+    "anim_short.ambient_rotation": "Turning",
+    "anim_help.ambient_rotation": "From this step on the 3D camera turns steadily, also in all following steps and pauses (Manim's begin_ambient_camera_rotation). Another lasting rotation about the same angle changes the speed; 0 °/s stops the camera.",
+    "aparam.rate": "Speed (°/s)",
+    "aparam.about": "Angle",
+    "choice.about.theta": "Turn θ (about the z-axis)",
+    "choice.about.phi": "Tilt φ",
+    "issue.orbit_during_ambient": "The camera is turning on its own. Stop the lasting rotation first (speed 0) or do not orbit it as well.",
 }

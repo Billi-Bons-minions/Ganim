@@ -370,8 +370,13 @@ def _animation_issues(scene: Scene, step_index: int, anim: Animation) -> list[Is
     if target.kind == ObjectKind.CAMERA:
         from manim_studio.model.three_d import is_3d
 
-        if anim.kind == AnimationKind.ORBIT and not is_3d(scene):
+        if anim.kind in (AnimationKind.ORBIT, AnimationKind.AMBIENT_ROTATION) and not is_3d(scene):
             add(ERROR, "orbit_needs_3d", object_id=target.id)
+        if anim.kind == AnimationKind.ORBIT:
+            from manim_studio.model.state import ambient_rates
+
+            if ambient_rates(scene, step_index):
+                add(ERROR, "orbit_during_ambient", object_id=target.id)
         elif anim.kind == AnimationKind.ROTATE and not is_3d(scene):
             add(ERROR, "camera_rotation_2d", object_id=target.id)
     if anim.kind in (AnimationKind.MOVE_ALONG_PATH, AnimationKind.SWAP):

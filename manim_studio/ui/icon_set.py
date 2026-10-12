@@ -653,6 +653,14 @@ def _a_orbit(p: QPainter) -> None:
     _arrow_head(p, 20.5, 14.5, math.radians(110), 3)
 
 
+def _a_ambient_rotation(p: QPainter) -> None:
+    # a camera above a circle with two arrows: it keeps turning
+    _rect(p, 8, 2, 8, 6, 1)
+    p.drawEllipse(QRectF(3, 10, 18, 9))
+    _arrow_head(p, 20.6, 15.8, math.radians(100), 3)
+    _arrow_head(p, 3.4, 13.2, math.radians(280), 3)
+
+
 def _a_value(p: QPainter) -> None:
     _line(p, 3, 17, 21, 17)
     _circle(p, 15, 17, 2.6, fill=True)
@@ -996,6 +1004,7 @@ ICONS: dict[str, Drawer] = {
     "a_move_along_path": _a_path,
     "a_swap": _a_swap,
     "a_orbit": _a_orbit,
+    "a_ambient_rotation": _a_ambient_rotation,
     "a_indicate": _sparkle,
     "a_circumscribe": _a_circumscribe,
     "a_fade_out": _a_fade_out,

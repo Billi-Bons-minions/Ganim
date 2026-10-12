@@ -188,6 +188,9 @@ def solids_in_space() -> Scene:
     _play(scene, create_animation(AnimationKind.CREATE, axes.id), create_animation(AnimationKind.WRITE, title.id))
     _play(scene, *(create_animation(AnimationKind.GROW_FROM_CENTER, solid.id) for solid in solids))
     _play(scene, create_animation(AnimationKind.ORBIT, camera.id, run_time=4.0, phi=55.0, theta=30.0))
+    # then the camera keeps turning slowly while the picture stays (begin_ambient_camera_rotation)
+    _play(scene, create_animation(AnimationKind.AMBIENT_ROTATION, camera.id, run_time=0.5, rate=15.0))
+    scene.steps.append(create_wait_step(4.0))
     return scene
 
 

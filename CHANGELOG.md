@@ -25,6 +25,8 @@ All notable changes to Manim Studio are listed here. The format follows
 - Nonlinear maps of the plane: *Complex map f(z)* (`ApplyComplexFunction`, e.g. `z^2`, `exp(z)`, `1/z` with `i` as imaginary unit) and *Pointwise map* (`ApplyPointwiseFunction` with x′ and y′). The stage bends the outlines point by point; where a map is undefined the point stays, like in the script, so Manim gets no invalid points.
 - Number planes can show their numbers, also as a complex plane (`ComplexPlane` with 1, 2 … and i, 2i …, written without LaTeX). Template "Complex map w = z²" (now 17 templates).
 
+- The 3D camera can keep turning (*Camera keeps turning*, Manim's `begin_ambient_camera_rotation`) through all following steps and pauses, about θ or φ; a new speed replaces it, 0 °/s stops it. The template "3D solids with camera move" ends with it.
+
 ### Fixed
 - Manim's `Union` leaves a hole where two shapes drawn in opposite directions overlap (e.g. a sector and a triangle). Generated scripts unite the two areas themselves (`studio_union`), so the video shows the real union like the stage.
 - The stage draws texts in Manim's default font (Pango's serif font) instead of the interface font, so texts and labels are as wide as in the video.

@@ -151,7 +151,7 @@ Good to know:
 
 ## Examples and templates
 
-- **Templates** (*Scene → New scene from template*): title and subtitle, analyze a function, explore a parameter, compare two columns, analyze data, Pythagorean theorem, orbit with trace, flow (vector field), 3D solids with camera move, conic sections, presentation slide, graph theory (a path), linear map (shear).
+- **Templates** (*Scene → New scene from template*): title and subtitle, analyze a function, explore a parameter, compare two columns, analyze data, Pythagorean theorem, orbit with trace, flow (vector field), 3D solids with camera move, conic sections, presentation slide, graph theory (a path), linear map (shear), from secant to tangent.
 - **Example projects** (welcome dialog): circle becomes square, function graph, motion, formula, title card.
 - The folder [examples](examples) contains example projects to open with *File → Open* and an example plugin.
 

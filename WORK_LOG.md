@@ -214,6 +214,31 @@ Ich habe vier Fragen gestellt; ohne Antwort gelten diese Entscheidungen (änderb
 - `tools/fuzz_sessions.py` spielt zufällige Bearbeitungssitzungen über den echten Controller ab und prüft danach Speichern/Laden, die Bühne, die Codeerzeugung und `manim --dry_run`.
 - Ein Wächter schließt modale Dialoge und protokolliert sie (vorher hing eine Sitzung an einem Dialog).
 
+### Weitere Funktionen (Nachmittag)
+Jede Funktion ist mit einem Vergleich Bühne ↔ Manim-Bild und mit echten Manim-Tests unter Manim 0.19 und 0.22 geprüft.
+- **Wertetabelle** zum Funktionsgraphen (Knopf im Eigenschaften-Panel).
+- **Polar-Gitter** als Option des Koordinatengitters (Kreise und Strahlen, `PolarPlane`).
+- **Implizite Kurven 3× schneller:** `y` wurde fälschlich als Parameter gezählt, deshalb wurde die Kurve in jedem Bild neu berechnet (Fund aus Fuzz-Runde 6).
+- **Sekante** als Graph-Werkzeug: Gerade durch f(x₀) und f(x₀ + h) mit Steigungsdreieck; x₀ und h können an Parameter gekoppelt sein.
+  - Entscheidung: Bei h = 0 zeichnen Bühne und Skript die Tangente (statt eines Fehlers). So kann man h gegen 0 animieren, und das letzte Bild zeigt die Tangente.
+  - Das Eigenschaften-Panel zeigt den Differenzenquotienten live.
+- **Vorlage „Von der Sekante zur Tangente“** (jetzt 14 Vorlagen), auch im Beispielprojekt `function-analysis.msproj`, und als GIF im README (ersetzt „Parameter erkunden“).
+- **Platonische Körper** (Tetraeder, Oktaeder, Ikosaeder, Dodekaeder) als weitere Formen des 3D-Körpers, mit Kantenlänge und wahlweise sichtbaren Ecken.
+  - Entscheidung: Manim zeigt die Ecken standardmäßig als kleine Kugeln; die App blendet sie aus, außer man schaltet „Ecken zeigen“ ein.
+  - Die Bühne zeichnet Flächen und Ecken einzeln von hinten nach vorn, damit vordere Flächen die hinteren verdecken wie bei Manim.
+- **3D-Reihenfolge wie in Manim:** Achsen, Flächen, Körper und 3D-Pfeile zeichnet die Bühne jetzt nach ihrer Tiefe (vorher in Ebenen-Reihenfolge), 3D-Kurven und Texte darüber, wie Manims `ThreeDCamera`.
+- **Gebogener Pfeil** (`CurvedArrow`, `CurvedDoubleArrow`, `ArcBetweenPoints`) als eigene Objektart.
+  - Entscheidung: eine neue Objektart statt einer Biegung für die vorhandenen Linien, weil gerade Linien an vielen Stellen vorausgesetzt werden (Endpunkt-Griffe, Winkelmarken, Pfade).
+  - Die Bühne rechnet Manims Schritte nach (Bézierpunkte, Spitze entlang der Tangente, Bogen bis zur Spitze verkürzt, beim Doppelpfeil die zusätzliche Abbildung). Ein Test vergleicht alle Punkte mit Manim (Abweichung < 10⁻⁶).
+  - „Pfeil wachsen lassen“ (GrowArrow) ist dafür gesperrt: Manim kann es nur für gerade Pfeile (Test hat es gefunden).
+  - Der Skript-Import liest gebogene Pfeile.
+
+### Gefunden und behoben (Nachmittag)
+- **Absturz mit Manim 0.19:** Gestrichelte Hilfslinien der Länge 0 (ein Punkt am Graphen auf einer Achse, z. B. bei x = 0, oder eine Sekante mit h = 0) brachen das Rendern ab. Das Skript nutzt jetzt `studio_dashed_line`/`studio_lines_to_point`. Der Fehler bestand schon vorher beim „Punkt am Graphen“.
+- **Namenskonflikt im Skript:** Ein Parameter namens `x0` oder ein Objekt namens „Studio Plot“ verdeckte Variablen bzw. Hilfsfunktionen des erzeugten Skripts. Solche Namen bekommen jetzt einen Zusatz (`x0_obj`).
+- **Formelfehler erst beim Rendern (Fuzz-Runde 7):** Ein LaTeX-Text (`Tex`) mit Mathematik ohne `$…$` ließ das Rendern scheitern, obwohl die Bühne den Fehler schon kannte. Jetzt stoppen Vorschau und Export vorher mit der LaTeX-Meldung. Nur Fehler, die LaTeX selbst meldet, blockieren (nicht z. B. eine Zeitüberschreitung); der Formel-Cache unterscheidet jetzt Text- und Mathe-Modus.
+- **README versprach zu viel beim Skript-Import:** Es stand dort, der Import verstehe den Code, den Manim Studio schreibt. Er liest aber nur einfache Szenen (Formen, Linien und Pfeile, Text, Achsen, einfache Graphen, Zahlen, Gruppen, übliche Animationen); vieles andere wird übersprungen und aufgelistet. README und CHANGELOG sagen das jetzt so.
+
 ## Release-Vorbereitung (Tagschicht)
 
 ### Entscheidungen
@@ -248,16 +273,24 @@ Ich habe vier Fragen gestellt; ohne Antwort gelten diese Entscheidungen (änderb
   - Lineare Abbildung (`ApplyMatrix`)
   - Kopplung (Updater): Objekte folgen einem Objekt oder einer Formel; auch die 2D-Kamera kann folgen
   - 3D-Pfeile, -Strecken und -Punkte
-  - Drei neue Vorlagen (jetzt 13)
+  - Wertetabelle, Polar-Gitter
+  - Sekante mit Steigungsdreieck (h → 0 wird zur Tangente)
+  - Platonische Körper (Tetraeder, Oktaeder, Ikosaeder, Dodekaeder)
+  - Gebogener Pfeil (`CurvedArrow`, `CurvedDoubleArrow`, `ArcBetweenPoints`)
+  - 3D-Objekte auf der Bühne nach Tiefe sortiert wie in Manim
+  - Vier neue Vorlagen (jetzt 14), darunter „Von der Sekante zur Tangente“
 - **Fuzzing:** Neuer Fuzzer `tools/fuzz_sessions.py`.
   - Runde 5 (49 Sitzungen) fand einen Absturz: Zahlen bzw. Graphen, die von einem Parameter abhängen, während der Parameter sich im selben Schritt ändert. Behoben, plus neue Regel `model/conflicts.py`.
-  - Runde 6: siehe unten.
-- **Release-ready:** Version 0.9.0, LICENSE, README mit echten Renderings, deutsche Anleitung, CHANGELOG, CONTRIBUTING, CI (grün), `examples/` mit 7 Projekten, `.gitignore`.
-- **Stand am Ende:** 390 Tests grün unter Python 3.13 (Manim 0.22, mit LaTeX) und Python 3.10 (Manim 0.19, ohne LaTeX).
+  - Runde 6 (117 Sitzungen, dann Zeitlimit): kein Absturz, 2 zu langsame Szenen. Eine davon (implizite Kurve) ist jetzt 3× schneller; die andere ist eine Manim-Grenze (siehe unten).
+  - Runde 7 (Stand vom Nachmittag, 80 Sitzungen, davon 55 mit echtem Manim-Lauf): 79 in Ordnung, 1 Fund: Ein LaTeX-Text mit Mathematik ohne `$…$` scheiterte erst beim Rendern. Behoben, Vorschau und Export stoppen jetzt vorher mit der LaTeX-Meldung.
+- **Release-ready:** Version 0.9.0, LICENSE, README mit echten Renderings, deutsche Anleitung, CHANGELOG, CONTRIBUTING, CI, `examples/` mit 9 Projekten, `.gitignore`. Frische Installation per `pip install git+https://github.com/Billi-Bons-minions/Ganim` am Nachmittag erneut geprüft: App startet, Vorlage rendert.
+- **Stand am Ende:** 428 Tests grün unter Python 3.13 (Manim 0.22, mit LaTeX); unter Python 3.10 (Manim 0.19, wirklich ohne LaTeX) 425 grün und 3 übersprungen, weil sie LaTeX brauchen. CI (Lint und beide Testläufe) ist für den letzten Code-Stand grün.
 
 ## Nicht fertig / bekannte Grenzen
 - **App-Bündel** für Windows/macOS ungetestet (siehe oben). Ohne Bündel braucht man Python zur Installation.
-- **Skript-Import:** kennt Netzwerke und 3D-Vektoren nicht (Zeilen werden mit Hinweis übersprungen).
+- **Skript-Import:** liest nur einfache Szenen. Graph-Werkzeuge, 3D, Netzwerke, Vektorfelder und Listen werden übersprungen und aufgelistet. Zum Weiterarbeiten das Projekt als `.msproj` speichern.
+- **3D-Reihenfolge auf der Bühne:** Manim sortiert jedes Flächenstück einzeln nach seiner Tiefe; die Bühne sortiert ganze Objekte nach der Tiefe ihres Mittelpunkts. Bei Körpern, die sich durchdringen, oder bei Achsen, die durch einen Körper laufen, kann die Überdeckung deshalb leicht abweichen.
+- **Sehr ungleiche Verwandlungen** (z. B. eine Fläche aus 576 Feldern in 3D-Achsen verwandeln) rendern sehr langsam, weil Manim jedes Feld einzeln angleicht. Kein Fehler der App; Fund aus Fuzz-Runde 6.
 - **Kopplung:** Wird ein gekoppeltes Objekt selbst animiert, pausiert Manim dessen Updater für diese Zeit.
 - **Nichtlineare Abbildungen** (`ApplyComplexFunction`) habe ich bewusst nicht angefangen (Bühne müsste Formen punktweise verbiegen).
 - **Polar-Gitter** gibt es jetzt als Option des Koordinatengitters. Das kartesische Koordinatensystem bleibt dabei erhalten, damit Graphen exakt bleiben. Grenze: Bei unsymmetrischen Bereichen (z. B. x von −2 bis 10) passt eine *Bewegen*-Animation des Gitters nicht genau zur Bühne, weil Manim die Mitte inklusive der Kreise berechnet.
@@ -273,3 +306,4 @@ Ich habe vier Fragen gestellt; ohne Antwort gelten diese Entscheidungen (änderb
 4. **Lizenzinhaber:** In der LICENSE steht „Billi-Bons-minions“. Möchtest du einen echten Namen?
 5. **E-Mail in Commits:** Die Commits der Nacht tragen deine Gmail-Adresse und sind öffentlich (siehe oben). Für künftige Commits kannst du die GitHub-noreply-Adresse setzen.
 6. **Repo-Einstellungen auf GitHub** (macht nur du): Beschreibung, Website, Topics (z. B. manim, animation, math, education), Issues aktivieren.
+7. **CI-Hinweis:** GitHub stellt `ubuntu-latest` ab dem 19.10.2026 auf Ubuntu 26 um (Hinweis im CI-Lauf). Falls die CI danach scheitert (z. B. andere Paketnamen für LaTeX/Cairo), in `.github/workflows/ci.yml` `ubuntu-24.04` fest eintragen. Ich habe das bewusst nicht vorab geändert.

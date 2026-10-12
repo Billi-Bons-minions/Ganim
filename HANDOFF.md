@@ -16,7 +16,7 @@ für Formeln eine LaTeX-Installation (`latex`, `dvisvgm`).
 
 ## Testen
 ```bash
-QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest -q          # alles, ca. 4 min (387 Tests)
+QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest -q          # alles, ca. 5 min (über 400 Tests)
 QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest -q -m "not manim"   # ohne echte Renderläufe, ca. 1 min
 .venv/bin/ruff check manim_studio tests tools examples packaging
 QT_QPA_PLATFORM=offscreen .venv/bin/python tools/fuzz_sessions.py --sessions 30 --seed 1   # Zufallssitzungen
@@ -42,7 +42,7 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
 - Objekte, Bühne, Inspektor, Zeitleiste, Vorschau, Export MP4/GIF/PNG/.py
 - Rückgängig/Wiederholen, mehrere Szenen, Umgebungsprüfung
 - Graphen mit Analyse, Parameter-Animation, Daten und Diagramme, Flächen
-- eingeschränktes 3D (Achsen, Flächen, Kurven, Kamera)
+- eingeschränktes 3D (Achsen, Flächen, Kurven, Körper inkl. platonischer Körper, 3D-Pfeile/-Punkte, Kamera)
 - Vorlagen, Stile, Bausteine, Projektpakete, Autosave, Skript-Import
 - Erweiterungen, Manim-Installation per pip
 
@@ -120,9 +120,11 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
 - Kopplung (Updater): folgt einem Objekt / Position aus Formel mit Parametern; auch die 2D-Kamera kann folgen. Code: `model/attach.py`.
 - Neue szenenbezogene Konfliktregel `model/conflicts.py`: Objekte, die Manim aus einem Parameter neu zeichnet, nicht im selben Schritt animieren, in dem sich der Parameter ändert (Absturz aus dem Fuzzing).
 - Vorlagen: Präsentationsfolie, Graphentheorie, Lineare Abbildung (jetzt 13).
-- Release-Vorbereitung: Version 0.9.0, MIT-LICENSE, README (englisch) mit echten Renderings, `docs/ANLEITUNG.md` (deutsch), CHANGELOG, CONTRIBUTING, CI, `examples/` (7 Projekte, erzeugt von `tools/make_examples.py`).
+- Release-Vorbereitung: Version 0.9.0, MIT-LICENSE, README (englisch) mit echten Renderings, `docs/ANLEITUNG.md` (deutsch), CHANGELOG, CONTRIBUTING, CI, `examples/` (9 Projekte, erzeugt von `tools/make_examples.py`).
 - Kompatibilität: Python 3.10–3.13, Manim 0.19–0.22. PySide6 6.12 stürzt unter Python < 3.12 ab → dort `<6.12`. PNG-Export nutzt `-s`.
 - Experimentelle App-Bündel: `packaging/` + Workflow `bundle.yml` (nur manuell). Unter Linux geprüft, Windows/macOS ungetestet.
+- Nachmittag: Wertetabelle, Polar-Gitter, Sekante (h → 0 wird zur Tangente) mit Vorlage (jetzt 14), platonische Körper, gebogener Pfeil (`model/curved.py`, rechnet Manims Geometrie exakt nach), 3D-Tiefensortierung auf der Bühne.
+- Fixes: gestrichelte Linien der Länge 0 brachen Manim 0.19 ab (`studio_dashed_line`); Objektnamen wie `x0` oder `studio_plot` verdeckten Teile des Skripts (`naming.BUILD_LOCALS`, `HELPER_FUNCTIONS`).
 
 ### Halbfertig
 - (nichts)
@@ -130,5 +132,5 @@ Siehe Abschnitte unten. Entscheidungen und offene Fragen stehen in `WORK_LOG.md`
 ### Als Nächstes
 - Freigabe durch den Nutzer: Tag/Release v0.9.0, ggf. PyPI (siehe WORK_LOG.md, offene Entscheidungen).
 - Bundle-Workflow einmal von Hand starten und Windows/macOS prüfen.
-- Ideen: komplexe Ebene (Beschriftung braucht LaTeX), Skript-Import für Netzwerke, nichtlineare Abbildungen (`ApplyComplexFunction`).
-- Testlauf: Die volle Suite braucht ca. 4 Minuten (387 Tests, davon rund 35 echte Manim-Läufe).
+- Ideen: Skript-Import erweitern (liest bisher nur einfache Szenen), komplexe Ebene (Beschriftung braucht LaTeX), nichtlineare Abbildungen (`ApplyComplexFunction`).
+- Testlauf: Die volle Suite braucht ca. 5 Minuten (über 400 Tests, davon rund 45 echte Manim-Läufe).

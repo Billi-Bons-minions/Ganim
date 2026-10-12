@@ -72,7 +72,8 @@ def _graph_uses_parameters(scene: Scene, graph: SceneObject | None) -> bool:
         return any(piece.expression.used_parameters() for piece in pieces)
     if curve == CURVE_IMPLICIT:
         expression = graphs.implicit_expression(scene, graph)
-        return expression is not None and bool(expression.used_parameters())
+        # y is the second variable of f(x, y) = 0, not a parameter
+        return expression is not None and bool(expression.used_parameters() - {"y"})
     keys = ("x_expression", "y_expression") if curve == CURVE_PARAMETRIC else ("r_expression",)
     expressions = [graphs.parse(scene, str(graph.params.get(key, "")), "t") for key in keys]
     return any(expression is not None and expression.used_parameters() for expression in expressions)
@@ -186,6 +187,9 @@ def graph_constructor(scene: Scene, graph: SceneObject, names: dict[str, str], h
         if expression is None:
             raise CodegenError("expression_invalid", graph.name)
         function = f"lambda x, y: {expression.to_numpy(rename)}"
+        if _graph_uses_parameters(scene, graph):
+            # recomputed in every frame while the parameter moves: a coarser search is much faster
+            style = [("max_quads", "500")] + list(style)
         if axes_variable is not None:
             return call(f"{axes_variable}.plot_implicit_curve", [function], style, 2)
         x0, x1, y0, y1 = graphs.implicit_range(scene, graph)

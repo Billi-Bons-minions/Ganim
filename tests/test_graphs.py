@@ -279,3 +279,17 @@ def test_polar_grid_behind_a_number_plane() -> None:
     assert "polar_grid_units" in {issue.code for issue in validate_scene(scene)}
     plane.params["grid"] = "cartesian"
     assert polar_grid(plane) is None and "PolarPlane" not in generate_script(make_project(scene))
+
+
+def test_implicit_curves_are_only_redrawn_when_they_use_a_parameter() -> None:
+    """y is the second variable of f(x, y) = 0; counting it as a parameter made every implicit curve slow."""
+    from manim_studio.codegen.graph_code import is_dynamic
+
+    parameter = make_object(ObjectKind.PARAMETER, "r", "p", symbol="r", value=1.0)
+    axes = make_object(ObjectKind.AXES, "Achsen", "a")
+    circle = make_object(ObjectKind.FUNCTION_GRAPH, "Kreis", "k", curve="implicit", implicit_expression="x^2 + y^2 - r^2", axes_id="a")
+    hyperbola = make_object(ObjectKind.FUNCTION_GRAPH, "Hyperbel", "h", curve="implicit", implicit_expression="x^2/4 - y^2 - 1", axes_id="a")
+    scene = Scene(id="s", name="S", objects=[parameter, axes, circle, hyperbola])
+    assert is_dynamic(scene, circle) and not is_dynamic(scene, hyperbola)
+    code = generate_script(make_project(scene))
+    assert code.count("always_redraw(") == 1 and code.count("max_quads=500") == 1

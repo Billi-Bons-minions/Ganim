@@ -398,4 +398,7 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
   - Wird die Beschriftung im selben Schritt eingeblendet, in dem sich ihr Parameter ändert, kommt sie automatisch in einen eigenen Schritt (bestehende Regel für Objekte, die Manim aus einem Parameter neu zeichnet).
 - **Geprüft:** Text und Mittelpunkt jeder Beschriftung mit Manim 0.19 und 0.22 verglichen (Abweichung < 0,01), alle erlaubten Animationen gerendert, Bildvergleich.
 - **Gefunden:** Manims `always_redraw` (`become`) aktualisiert die Form, aber nicht das Attribut `Text.text`; Tests lesen den Text deshalb aus der Bauanleitung. Für Nutzer ohne Bedeutung.
-- **Offen:** Riemann-Summen und Markierungen (Nullstellen …) haben noch keine Wertbeschriftung. Die Achsenbeschriftung „y“ steht auf der Bühne etwas höher als im Video (gefunden beim Bildvergleich, kommt als Nächstes).
+- **Offen:** Riemann-Summen und Markierungen (Nullstellen …) haben noch keine Wertbeschriftung. Die Achsenbeschriftung „y“ stand auf der Bühne etwas höher als im Video (siehe nächster Abschnitt, behoben).
+
+## Bühne = Video: Achsenbeschriftungen x/y
+- Manim setzt sie mit `next_to` an die obere rechte Ecke der Achse (Pfeilspitze eingeschlossen), die y-Beschriftung nach rechts und halb nach oben (nicht schräg), und schiebt sie danach ins Bild zurück (`shift_onto_screen`, 0,25 Abstand vom Rand). Die Bühne setzte sie schräg und ohne Zurückschieben; bei Achsen bis an den Bildrand stand „y“ dadurch rund 0,2 Einheiten zu hoch. Jetzt gleich; ein Test vergleicht vier Lagen mit Manim (Abweichung < 0,03).

@@ -26,6 +26,7 @@ All notable changes to Manim Studio are listed here. The format follows
 - Manim's `Union` leaves a hole where two shapes drawn in opposite directions overlap (e.g. a sector and a triangle). Generated scripts unite the two areas themselves (`studio_union`), so the video shows the real union like the stage.
 - The stage draws texts in Manim's default font (Pango's serif font) instead of the interface font, so texts and labels are as wide as in the video.
 - Axes and number lines with an arrow tip no longer show the last tick and number on the stage (Manim leaves them out; the tip sits there); ranges that do not contain 0 start their ticks at the first value like Manim.
+- Axis labels (x, y) sit on the stage where Manim puts them: next to the tip (the y label half up, not diagonally) and pushed back onto the screen like `shift_onto_screen`.
 - Fading out a motion trace before it recorded anything (e.g. in the first step) crashed Manim.
 - Motion paths along a regular polygon with an even number of corners started at the wrong corner (and a square-shaped one was turned by 45°).
 - The label of a point that follows a parameter showed fewer decimals on the stage than in the video.

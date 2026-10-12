@@ -389,7 +389,7 @@ def _axis_labels(layout: AxesLayout, x_step: float, y_step: float, tips: bool) -
     return path
 
 
-def _axes_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
+def _axes_primitives(obj: SceneObject, state: ObjectState, frame_size: tuple[float, float] = (8.0 * 16 / 9, 8.0)) -> list[Primitive]:
     layout = axes_layout(obj)
     x_step, y_step = param_float(obj.params, "x_step", 1.0), param_float(obj.params, "y_step", 1.0)
     pen = _pen(state.stroke_color, obj.stroke_width, 1.0, state.scale)
@@ -401,7 +401,7 @@ def _axes_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
         primitives.append(Primitive(path=_axis_labels(layout, x_step, y_step, tips), brush=QBrush(QColor("#FFFFFF"))))
     from manim_studio.ui.stage.drawing_graph import axis_label_primitives
 
-    return primitives + axis_label_primitives(obj, state, layout)
+    return primitives + axis_label_primitives(obj, state, layout, frame_size)
 
 
 def _number_plane_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
@@ -525,7 +525,7 @@ def _shape_drawing(obj: SceneObject, state: ObjectState, scene: Scene, resources
     if kind == ObjectKind.MATH_TEX:
         return _math_tex_primitives(obj, state, resources, scene), True
     if kind == ObjectKind.AXES:
-        return _axes_primitives(obj, state), False
+        return _axes_primitives(obj, state, resources.frame_size), False
     if kind == ObjectKind.NUMBER_PLANE:
         return _number_plane_primitives(obj, state), False
     if kind == ObjectKind.FUNCTION_GRAPH:

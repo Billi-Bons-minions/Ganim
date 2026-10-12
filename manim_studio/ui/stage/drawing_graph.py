@@ -15,7 +15,7 @@ from PySide6.QtGui import QBrush, QPainterPath, QPen
 
 from manim_studio.model import graphs
 from manim_studio.model.entities import Scene, SceneObject
-from manim_studio.model.geometry import Point, Segment, axes_to_scene, bound_axes, origin_shift, param_float
+from manim_studio.model.geometry import AXES_TICK_SIZE, Point, Segment, axes_to_scene, bound_axes, origin_shift, param_float
 from manim_studio.model.state import ObjectState
 from manim_studio.model.types import ObjectKind
 from manim_studio.ui.stage.drawing import (
@@ -271,24 +271,41 @@ def label_primitives(scene: Scene, obj: SceneObject, state: ObjectState, resourc
     return _label_primitives(scene, obj, state, resources.values, axes, graphs.bound_anchor(scene, obj), resources), False
 
 
-def axis_label_primitives(obj: SceneObject, state: ObjectState, layout) -> list[Primitive]:
-    """``x``/``y`` labels at the ends of the axes (like ``get_axis_labels``)."""
+def axis_label_primitives(obj: SceneObject, state: ObjectState, layout, frame_size: tuple[float, float] = (8.0 * 16 / 9, 8.0)) -> list[Primitive]:
+    """``x``/``y`` labels at the ends of the axes, placed like Manim's ``get_x_axis_label``/``get_y_axis_label``.
+
+    Manim puts the label ``next_to`` the upper right corner of the axis (its tip included),
+    to the upper right for x and to the right and half up for y, and then pushes it back
+    onto the screen (``shift_onto_screen``) where the axes are at the start.
+    """
     primitives = []
-    tip = 0.35 / 2 if obj.params.get("tips", True) else 0.0
+    # half the height of the tip (or of the ticks) widens the axis around its line
+    half = 0.35 / 2 if obj.params.get("tips", True) else AXES_TICK_SIZE
     ox = origin_shift(layout.x_min, layout.x_max)
     oy = origin_shift(layout.y_min, layout.y_max)
     label_obj = SceneObject(id="", kind=ObjectKind.TEXT, name="")
     color = "#FFFFFF"
-    for key, corner in (("x_label", layout.to_local(layout.x_max, oy)), ("y_label", layout.to_local(ox, layout.y_max))):
+    (xx, xy), (yx, yy) = layout.to_local(layout.x_max, oy), layout.to_local(ox, layout.y_max)
+    for key, corner, direction in (("x_label", (xx, xy + half), (1.0, 1.0)), ("y_label", (yx + half, yy), (1.0, 0.5))):
         text = str(obj.params.get(key, "")).strip()
         if not text:
             continue
-        cx, cy = corner
-        anchor = pt(cx + tip, cy + tip)
-        font = text_font(label_obj, AXIS_LABEL_SIZE)
-        path = text_path(text, font)
+        path = text_path(text, text_font(label_obj, AXIS_LABEL_SIZE))
         bounds = path.boundingRect()
-        path.translate(anchor.x() + SMALL_BUFF * PX - bounds.left(), anchor.y() - SMALL_BUFF * PX - bounds.bottom())
+        width, height = bounds.width() / PX, bounds.height() / PX
+        # lower left corner of the label (Manim units, local), then onto the screen
+        left, bottom = corner[0] + SMALL_BUFF * direction[0], corner[1] + SMALL_BUFF * direction[1]
+        frame_x, frame_y = frame_size[0] / 2, frame_size[1] / 2
+        if obj.x + left + width > frame_x:
+            left = frame_x - 0.25 - width - obj.x
+        if obj.y + bottom + height > frame_y:
+            bottom = frame_y - 0.25 - height - obj.y
+        if obj.x + left < -frame_x:
+            left = -frame_x + 0.25 - obj.x
+        if obj.y + bottom < -frame_y:
+            bottom = -frame_y + 0.25 - obj.y
+        target = pt(left, bottom)
+        path.translate(target.x() - bounds.left(), target.y() - bounds.bottom())
         primitives.append(Primitive(path=path, brush=QBrush(_color(color))))
     return primitives
 

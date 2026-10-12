@@ -43,3 +43,30 @@ def test_stage_text_is_as_wide_as_manims(qapp) -> None:
     manim_text = Text(sample, font_size=48.0)
     assert bounds.width() / PX == pytest.approx(manim_text.width, rel=0.02)
     assert bounds.height() / PX == pytest.approx(manim_text.height, rel=0.05)
+
+
+@pytest.mark.manim
+@pytest.mark.skipif(not HAS_MANIM, reason="Manim is not installed")
+@pytest.mark.parametrize("x, y, y_max", [(0.0, -0.3, 2.0), (0.0, 0.0, 3.0), (-3.0, -1.0, 2.0), (3.5, 0.5, 3.0)])
+def test_axis_labels_like_manim(tmp_path, qapp, x: float, y: float, y_max: float) -> None:
+    """``get_x_axis_label``/``get_y_axis_label``: next to the axis tip, pushed back onto the screen."""
+    import re
+
+    from manim_studio.codegen import generate_script
+    from manim_studio.model.entities import Scene, Step
+    from manim_studio.model.state import states_after
+    from manim_studio.model.types import ObjectKind, StepKind
+    from manim_studio.ui.stage.drawing import PX, StageResources, build_drawing
+    from tests.helpers import make_object, make_project
+    from tests.test_manim_integration import run_manim
+
+    axes = make_object(ObjectKind.AXES, "Achsen", "ax", x, y, x_min=-3.0, x_max=3.0, y_min=-2.0, y_max=y_max, x_length=10.0, y_length=6.0, x_label="x", y_label="y")
+    code = "for label in achsen.submobjects[-2:]:\n    print('LABEL', round(float(label.get_center()[0]), 4), round(float(label.get_center()[1]), 4))"
+    scene = Scene(id="s", name="Achsen", objects=[axes], steps=[Step(id="code", kind=StepKind.CODE, code=code)])
+    result = run_manim(tmp_path, generate_script(make_project(scene)), "Achsen", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+    manim_centers = [(float(a), float(b)) for a, b in re.findall(r"LABEL (\\S+) (\\S+)", result.stdout)]
+    drawing = build_drawing(scene, axes, states_after(scene, -1)["ax"], StageResources())
+    stage_centers = [(x + p.path.boundingRect().center().x() / PX, y - p.path.boundingRect().center().y() / PX) for p in drawing.primitives[-2:]]
+    for ours, theirs in zip(stage_centers, manim_centers):
+        assert ours == pytest.approx(theirs, abs=0.03)

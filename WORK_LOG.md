@@ -1,5 +1,15 @@
 # Arbeitsprotokoll (Nachtschicht)
 
+> **WICHTIG – Push blockiert:** Dieser Rechner hat keine GitHub-Zugangsdaten.
+> Es gibt keinen SSH-Schlüssel für GitHub, kein `gh` und keinen Credential-Helper.
+> `git push` endet mit „could not read Username“.
+> Alles ist lokal auf `main` committet und mit `ganim/main` zusammengeführt.
+> Zum Hochladen genügt nach dem Anmelden ein Befehl (Fast-Forward, kein Force nötig):
+>
+>     cd ~/Documents/manim-gui && git push ganim main
+>
+> Ohne diesen Push sieht die Cloud-Session den neuen Stand nicht.
+
 Hier stehen Entscheidungen, die ich ohne Rückfrage getroffen habe, mit Begründung
 und den Punkten, die du prüfen solltest. Neueste Einträge unten.
 
@@ -39,3 +49,8 @@ und den Punkten, die du prüfen solltest. Neueste Einträge unten.
   - Wenn du das nicht willst, kannst du für künftige Commits die GitHub-noreply-Adresse setzen.
   - Alte Commits lassen sich nur durch Umschreiben der Historie ändern. Das habe ich bewusst nicht gemacht.
 - **Phase 7c:** Den Rest aus dem v2-Plan habe ich nicht gemacht: PyInstaller-Builds, CI und README-Überarbeitung. Laut deiner Anweisung übernimmt das Polieren zum Release die Cloud-Session.
+
+### Push
+- **Ergebnis:** Blockiert. Siehe Hinweis ganz oben.
+- **Warum blockiert:** Ich habe keine Zugangsdaten gesucht oder angelegt (kein Token, keine Anmeldung im Browser). Das ist deine Entscheidung.
+- **Ab jetzt:** Nach jedem Feature versuche ich `git push ganim main` erneut.

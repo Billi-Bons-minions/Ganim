@@ -1474,4 +1474,5 @@ STRINGS: dict[str, str] = {
     "codegen.lens_joined_3d": "Im Gesamtvideo lassen sich eine Lupe und 3D-Szenen nicht verbinden. Exportiere die Szenen einzeln.",
     "template.lens.name": "Lupe: lokal linear",
     "template.lens.caption": "Aus der Nähe:\nGraph ≈ Tangente",
+    "aparam.path_arc": "Bogenbahn (°)",
 }

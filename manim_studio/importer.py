@@ -70,7 +70,11 @@ TWO_OBJECT_ANIMATIONS = {
     "MoveAlongPath": (AnimationKind.MOVE_ALONG_PATH, "path"),
     "Swap": (AnimationKind.SWAP, "partner"),
     "TransformFromCopy": (AnimationKind.TRANSFORM_FROM_COPY, "target"),
+    "ClockwiseTransform": (AnimationKind.TRANSFORM, "target"),
+    "CounterclockwiseTransform": (AnimationKind.TRANSFORM, "target"),
 }
+#: Transforms that move on a half circle (their ``path_arc`` in degrees).
+HALF_CIRCLE_TRANSFORMS = {"ClockwiseTransform": -180.0, "CounterclockwiseTransform": 180.0}
 NUMPY_TO_TERM = {"arcsin": "asin", "arccos": "acos", "arctan": "atan", "log": "ln"}
 
 
@@ -529,6 +533,9 @@ class _SceneReader:
             if name == "ReplacementTransform" and isinstance(source, ast.Call) and isinstance(source.func, ast.Attribute) and source.func.attr == "copy":
                 kind = AnimationKind.TRANSFORM_FROM_COPY  # a copy turns into the target, the original stays
             anim = create_animation(kind, self._target(node.args[0]), **{key: self._target(node.args[1])})
+            if "path_arc" in anim.params:
+                arc = math.degrees(_number(kwargs["path_arc"])) if "path_arc" in kwargs else HALF_CIRCLE_TRANSFORMS.get(name, 0.0)
+                anim.params["path_arc"] = round(arc, 6)
             return [self._timing(anim, kwargs, run_time)]
         if name == "ShowPassingFlash" and node.args:
             anim = create_animation(AnimationKind.PASSING_FLASH, self._target(node.args[0]))
@@ -590,6 +597,11 @@ class _SceneReader:
             else:
                 raise ImportProblem(method)
             result.append(self._timing(anim, options, run_time))
+        # an arc belongs to the movement; next to a rotation it is the rotation's own (that is how .animate turns)
+        if "path_arc" in options and not any(call.func.attr == "rotate" for call in chain):
+            for anim in result:
+                if anim.kind == AnimationKind.MOVE:
+                    anim.params["path_arc"] = round(math.degrees(_number(options["path_arc"])), 6)
         return result
 
     def finish(self) -> None:

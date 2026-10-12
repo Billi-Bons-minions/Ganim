@@ -6,6 +6,7 @@ preview moves an object the same way as the rendered video.
 
 from __future__ import annotations
 
+import cmath
 import math
 
 from manim_studio.model.entities import Scene, SceneObject
@@ -13,6 +14,8 @@ from manim_studio.model.geometry import Point, param_float, rotate_point
 from manim_studio.model.types import LINE_KINDS, ObjectKind
 
 ARC_SAMPLES = 96
+#: Manim's limit below which ``path_along_arc`` moves straight (radians).
+STRAIGHT_PATH_THRESHOLD = 0.01
 
 
 def _arc(radius_x: float, radius_y: float, start: float, angle: float, samples: int = ARC_SAMPLES) -> list[Point]:
@@ -129,13 +132,27 @@ def path_end(scene: Scene, states: dict, path_id: str) -> Point | None:
     return point_at(path_polyline(scene, states, path_id), 1.0)
 
 
+def arc_factor(alpha: float, arc_degrees: float) -> complex:
+    """Manim's ``path_along_arc`` as a weight: a point ``p`` on its way to ``q`` is at ``p + w·(q − p)``.
+
+    The weight is a complex number (points as ``x + iy``): ``alpha`` itself for a straight path,
+    otherwise it also turns the way, so every point travels on an arc of ``arc_degrees``
+    (positive = counterclockwise). Because it is the same for all points, a shape that only
+    moves stays rigid, and the weight can be applied to whole outlines.
+    """
+    angle = math.radians(arc_degrees)
+    if abs(angle) < STRAIGHT_PATH_THRESHOLD:
+        return complex(alpha, 0.0)
+    return (1 - cmath.exp(1j * alpha * angle)) * 1j * cmath.exp(-0.5j * angle) / (2 * math.sin(angle / 2))
+
+
 def arc_point(start: Point, end: Point, alpha: float, arc_degrees: float = 90.0) -> Point:
     """Manim's ``path_along_arc``: the point at ``alpha`` on an arc from start to end."""
-    if arc_degrees == 0 or start == end:
-        return start[0] + (end[0] - start[0]) * alpha, start[1] + (end[1] - start[1]) * alpha
-    angle = math.radians(arc_degrees)
-    vx, vy = end[0] - start[0], end[1] - start[1]
-    cx = start[0] + vx / 2 - (vy / 2) / math.tan(angle / 2)
-    cy = start[1] + vy / 2 + (vx / 2) / math.tan(angle / 2)
-    rx, ry = rotate_point(start[0] - cx, start[1] - cy, math.degrees(angle * alpha))
-    return cx + rx, cy + ry
+    way = arc_factor(alpha, arc_degrees) * complex(end[0] - start[0], end[1] - start[1])
+    return start[0] + way.real, start[1] + way.imag
+
+
+def arc_polyline(start: Point, end: Point, arc_degrees: float, samples: int = 48) -> list[Point]:
+    """The way from start to end on an arc (a straight line for 0°)."""
+    count = 1 if abs(math.radians(arc_degrees)) < STRAIGHT_PATH_THRESHOLD else samples
+    return [arc_point(start, end, index / count, arc_degrees) for index in range(count + 1)]

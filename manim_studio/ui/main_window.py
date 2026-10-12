@@ -51,6 +51,7 @@ from manim_studio.model.arrange import (
 from manim_studio.model.assets import relative_asset_path, resolve_asset_path
 from manim_studio.model.frame import frame_box, frame_size
 from manim_studio.model.package import PACKAGE_SUFFIX, extract_package, save_package
+from manim_studio.model.paths import arc_polyline
 from manim_studio.model.playback import state_at_time, step_spans, step_start_time
 from manim_studio.model.serialization import FILE_SUFFIX, ProjectFormatError
 from manim_studio.model.stage_edits import is_recording
@@ -651,7 +652,7 @@ class MainWindow(QMainWindow):
                 start = before[anim.target_id]
                 end = (float(anim.params.get("x", start.x)), float(anim.params.get("y", start.y)))
                 if abs(end[0] - start.x) > 1e-6 or abs(end[1] - start.y) > 1e-6:
-                    paths.append(((start.x, start.y), end))
+                    paths.append(arc_polyline((start.x, start.y), end, float(anim.params.get("path_arc", 0.0))))
         return paths
 
     def _update_banner(self) -> None:

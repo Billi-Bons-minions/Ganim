@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import math
 import textwrap
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,6 +15,7 @@ from manim_studio.codegen.three_d_code import orbit_call
 from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import STEP_LAGGED, STEP_SEQUENCE, Animation, Scene, Step
 from manim_studio.model.geometry import param_float
+from manim_studio.model.paths import STRAIGHT_PATH_THRESHOLD
 from manim_studio.model.schema import ARROW_KINDS, animation_allowed
 from manim_studio.model.three_d import is_3d
 from manim_studio.model.types import (
@@ -138,7 +140,7 @@ def _extra_arguments(anim: Animation, scene: Scene, names: dict[str, str]) -> li
         other = scene.object_by_id(str(target))
         if other is not None and not animation_allowed(anim.kind, other.kind, other.params):
             raise CodegenError("animation_incompatible", names[str(target)])
-        return [names[str(target)]]
+        return [names[str(target)]] + _arc_arguments(anim)
     if anim.kind in (AnimationKind.FADE_IN, AnimationKind.FADE_OUT):
         direction = SHIFT_DIRECTIONS.get(str(params.get("shift", "none")))
         arguments = [f"shift={direction}"] if direction else []
@@ -201,8 +203,7 @@ def simple_animation_code(anim: Animation, scene: Scene, names: dict[str, str], 
     if anim.kind == AnimationKind.TRANSFORM_FROM_COPY:
         # same picture as TransformFromCopy, but the target object itself is not reshaped
         # (TransformFromCopy breaks arrows that are the target)
-        target = _extra_arguments(anim, scene, names)[0]
-        return f"ReplacementTransform({', '.join([f'{variable}.copy()', target] + timing.args())})"
+        return f"ReplacementTransform({', '.join([f'{variable}.copy()'] + _extra_arguments(anim, scene, names) + timing.args())})"
     if anim.kind == AnimationKind.ONE_BY_ONE:
         # the entries (list lines, group members) appear one after another
         direction = SHIFT_DIRECTIONS.get(str(anim.params.get("shift", "up")))
@@ -293,6 +294,12 @@ def network_parts_code(anim: Animation, scene: Scene, variable: str, timing: Tim
     return codes[0] if len(codes) == 1 else "AnimationGroup(\n" + "".join(f"{INDENT}{code},\n" for code in codes) + ")"
 
 
+def _arc_arguments(anim: Animation) -> list[str]:
+    """``path_arc`` for a Move or Transform on an arc (nothing for a straight one)."""
+    arc = float(anim.params.get("path_arc", 0.0))
+    return [f"path_arc={py_degrees(arc)}"] if abs(math.radians(arc)) >= STRAIGHT_PATH_THRESHOLD else []
+
+
 def _modifier_call(anim: Animation) -> str:
     params = anim.params
     if anim.kind == AnimationKind.MOVE:
@@ -315,7 +322,10 @@ def _studio_part(anim: Animation, begin: float) -> str:
     rate = rate_func_code(anim.rate_func)
     timing = f"{fmt_float(begin)}, {fmt_float(anim.run_time)}, {rate}"
     if anim.kind == AnimationKind.MOVE:
-        return f'("move", {timing}, {py_point(float(params.get("x", 0.0)), float(params.get("y", 0.0)))})'
+        point = py_point(float(params.get("x", 0.0)), float(params.get("y", 0.0)))
+        if _arc_arguments(anim):
+            return f'("arc_move", {timing}, ({point}, {py_degrees(float(params.get("path_arc", 0.0)))}))'
+        return f'("move", {timing}, {point})'
     if anim.kind == AnimationKind.SCALE:
         return f'("scale", {timing}, {fmt_float(float(params.get("factor", 1.0)))})'
     if anim.kind == AnimationKind.ROTATE:
@@ -352,7 +362,10 @@ def modifier_group_code(group: list[Animation], scene: Scene, names: dict[str, s
         return simple_animation_code(first, scene, names, timing)
     if any(pivot_of(anim) for anim in group):
         raise CodegenError("animation_conflict", names.get(first.target_id, ""))
-    options = timing.args()
+    if len(group) > 1 and any(_arc_arguments(anim) for anim in group):
+        # with path_arc, .animate would turn the scaling or rotation along the arc too; the stage moves only the center on it
+        return studio_transform_code(group, names, [anim.delay for anim in group], helpers)
+    options = timing.args() + (_arc_arguments(first) if first.kind == AnimationKind.MOVE else [])
     angle = sum(float(anim.params.get("angle", 0.0)) for anim in group if anim.kind == AnimationKind.ROTATE)
     if any(anim.kind == AnimationKind.ROTATE for anim in group) and round(angle, 6) != 0:
         options.append(f"path_arc={py_degrees(angle)}")
@@ -783,6 +796,8 @@ STUDIO_TRANSFORM_SOURCE = '''class StudioTransform(Animation):
                 mobject.rotate(value * progress)
             elif kind == "move":
                 center = center + (np.array(value) - self.start_center) * progress
+            elif kind == "arc_move":
+                center = center + path_along_arc(value[1])(self.start_center, np.array(value[0]), progress) - self.start_center
             elif kind == "stroke":
                 mobject.set_stroke(color=interpolate_color(self.start.get_stroke_color(), ManimColor(value), progress))
             elif kind == "fill":

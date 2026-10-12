@@ -9,6 +9,7 @@ from manim_studio.model import groups
 from manim_studio.model.entities import Animation, Scene, SceneObject
 from manim_studio.model.extents import base_size, rotated_extent
 from manim_studio.model.graphs import bound_anchor, is_bound
+from manim_studio.model.paths import arc_point
 from manim_studio.model.types import (
     DETACHED_EFFECTS,
     ENTRANCE_ANIMATIONS,
@@ -48,6 +49,8 @@ class ObjectState:
     fill: float = 1.0
     morph_to: str | None = None
     morph_t: float = 0.0
+    #: On an arc (``path_arc``): complex weights ``(source, target)`` of the two outlines in the object's own coordinates.
+    morph_weights: tuple[complex, complex] | None = None
     outline: float = 0.0
     outline_color: str = "#F7D96F"
     value: float = 0.0
@@ -381,8 +384,8 @@ def apply_to_group(states: dict[str, ObjectState], scene: Scene, anim: Animation
         for leaf in leaf_ids:
             state = states[leaf]
             if anim.kind == AnimationKind.MOVE:
-                dx = (float(params.get("x", cx)) - cx) * progress
-                dy = (float(params.get("y", cy)) - cy) * progress
+                x, y = arc_point((cx, cy), (float(params.get("x", cx)), float(params.get("y", cy))), progress, float(params.get("path_arc", 0.0)))
+                dx, dy = x - cx, y - cy
                 states[leaf] = replace(state, x=state.x + dx, y=state.y + dy, visible=True)
             elif anim.kind == AnimationKind.SCALE:
                 factor = 1 + (float(params.get("factor", 1.0)) - 1) * progress

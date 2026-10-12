@@ -142,15 +142,18 @@ def _polygon(points: list[tuple[float, float]]) -> QPainterPath:
 
 
 def _ellipse_path(width: float, height: float) -> QPainterPath:
+    """Like Manim's Circle: from the right, counterclockwise (Create starts there, Transform pairs the points so)."""
     path = QPainterPath()
-    path.addEllipse(QPointF(0, 0), width / 2 * PX, height / 2 * PX)
+    box = QRectF(-width / 2 * PX, -height / 2 * PX, width * PX, height * PX)
+    path.moveTo(box.right(), 0.0)
+    path.arcTo(box, 0.0, 360.0)
+    path.closeSubpath()
     return path
 
 
 def _rect_path(width: float, height: float) -> QPainterPath:
-    path = QPainterPath()
-    path.addRect(QRectF(-width / 2 * PX, -height / 2 * PX, width * PX, height * PX))
-    return path
+    """Like Manim's Rectangle: corners upper right, upper left, lower left, lower right."""
+    return _polygon([(width / 2, height / 2), (-width / 2, height / 2), (-width / 2, -height / 2), (width / 2, -height / 2)])
 
 
 def _triangle_path(radius: float) -> QPainterPath:

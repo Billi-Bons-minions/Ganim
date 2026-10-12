@@ -48,7 +48,7 @@ def test_step_edits_animation_targets() -> None:
     scene = scene_with_move()
     assert check_edit(scene, 0, ["c"], MOVE).allowed
     move_edit(0, ["c"], 1.0, 2.0)(scene)
-    assert scene.steps[0].animations[0].params == {"x": 4.0, "y": 2.0}
+    assert scene.steps[0].animations[0].params == {"x": 4.0, "y": 2.0, "path_arc": 0.0}
     assert (scene.object_by_id("c").x, scene.object_by_id("c").y) == (1.0, 1.0)
 
 
@@ -72,7 +72,7 @@ def test_dragging_in_a_step_records_new_animations() -> None:
     rotate_edit(2, "c", 45.0)(scene)
     color_edit(2, ["c"], "fill_color", "#FF0000")(scene)
     kinds = {anim.kind: anim for anim in scene.steps[2].animations}
-    assert kinds[AnimationKind.MOVE].params == {"x": 2.0, "y": 0.5}
+    assert kinds[AnimationKind.MOVE].params == {"x": 2.0, "y": 0.5, "path_arc": 0.0}
     assert kinds[AnimationKind.SCALE].params == {"factor": 2.0}
     assert kinds[AnimationKind.ROTATE].params["angle"] == 45.0 and kinds[AnimationKind.ROTATE].params.get("pivot", "center") == "center"
     assert kinds[AnimationKind.CHANGE_COLOR].params == {"color": "#FF0000", "apply_to": "fill"}
@@ -93,7 +93,7 @@ def test_absolute_step_values_and_color_merge() -> None:
     set_scale_factor(2, "c", 0.5)(scene)
     color_edit(2, ["c"], "stroke_color", "#00FF00")(scene)
     color_edit(2, ["c"], "fill_color", "#0000FF")(scene)
-    assert scene.steps[0].animations[0].params == {"x": -2.0, "y": 1.0}
+    assert scene.steps[0].animations[0].params == {"x": -2.0, "y": 1.0, "path_arc": 0.0}
     color = [a for a in scene.steps[2].animations if a.kind == AnimationKind.CHANGE_COLOR]
     assert len(color) == 1 and color[0].params == {"color": "#0000FF", "apply_to": "both"}
     color_edit(START, ["c"], "fill_color", "#123456")(scene)
@@ -103,7 +103,7 @@ def test_absolute_step_values_and_color_merge() -> None:
 def test_build_move_uses_current_position() -> None:
     scene = scene_with_move()
     anims = build_animations(scene, AnimationKind.MOVE, ["c"], 0)
-    assert anims[0].params == {"x": 4.0, "y": 0.0}
+    assert anims[0].params == {"x": 4.0, "y": 0.0, "path_arc": 0.0}
 
 
 def test_build_transform_from_two_selected_objects() -> None:

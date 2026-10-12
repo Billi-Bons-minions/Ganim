@@ -145,7 +145,7 @@ class ObjectItem(QGraphicsObject):
     def _paint_morph(self, painter: QPainter) -> None:
         effects = self.effects
         assert effects.morph is not None
-        path = morph_path(self.drawing, effects.morph, effects.morph_t)
+        path = morph_path(self.drawing, effects.morph, effects.morph_t, effects.morph_weights)
         styled = next((p for p in self.drawing.primitives if p.path is not None), None)
         pen = QPen(styled.pen) if styled is not None and styled.pen is not None else Qt.PenStyle.NoPen
         brush = styled.brush if styled is not None and styled.brush is not None else Qt.BrushStyle.NoBrush

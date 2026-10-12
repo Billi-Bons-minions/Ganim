@@ -806,6 +806,8 @@ COLOR_TARGET_CHOICES = ("both", "stroke", "fill")
 EDGE_CHOICES = ("down", "up", "left", "right")
 #: What "highlight vertices/edges" does: recolor for good, light up briefly, or flash.
 NETWORK_PART_EFFECTS = ("color", "indicate", "flash")
+#: Manim's ``path_arc`` in degrees: every point travels on an arc of this angle (0 = straight, positive = counterclockwise).
+PATH_ARC = ParamSpec("path_arc", ParamType.FLOAT, 0.0, minimum=-270.0, maximum=270.0, step=15.0, decimals=1)
 
 ANIMATION_PARAMS: dict[AnimationKind, tuple[ParamSpec, ...]] = {
     AnimationKind.FADE_IN: (
@@ -817,7 +819,7 @@ ANIMATION_PARAMS: dict[AnimationKind, tuple[ParamSpec, ...]] = {
         ParamSpec("scale", ParamType.FLOAT, 1.0, minimum=0.05, maximum=10.0, step=0.1),
     ),
     AnimationKind.GROW_FROM_EDGE: (ParamSpec("edge", ParamType.CHOICE, "down", choices=EDGE_CHOICES),),
-    AnimationKind.TRANSFORM_FROM_COPY: (ParamSpec("target", ParamType.OBJECT_REF, None),),
+    AnimationKind.TRANSFORM_FROM_COPY: (ParamSpec("target", ParamType.OBJECT_REF, None), PATH_ARC),
     AnimationKind.PASSING_FLASH: (
         ParamSpec("color", ParamType.COLOR, _YELLOW),
         ParamSpec("time_width", ParamType.FLOAT, 0.3, minimum=0.05, maximum=1.0, step=0.05),
@@ -856,11 +858,12 @@ ANIMATION_PARAMS: dict[AnimationKind, tuple[ParamSpec, ...]] = {
         ParamSpec("lag_ratio", ParamType.FLOAT, 0.6, minimum=0.05, maximum=1.0, step=0.05),
         ParamSpec("shift", ParamType.CHOICE, "up", choices=SHIFT_CHOICES),
     ),
-    AnimationKind.TRANSFORM: (ParamSpec("target", ParamType.OBJECT_REF, None),),
-    AnimationKind.REPLACEMENT_TRANSFORM: (ParamSpec("target", ParamType.OBJECT_REF, None),),
+    AnimationKind.TRANSFORM: (ParamSpec("target", ParamType.OBJECT_REF, None), PATH_ARC),
+    AnimationKind.REPLACEMENT_TRANSFORM: (ParamSpec("target", ParamType.OBJECT_REF, None), PATH_ARC),
     AnimationKind.MOVE: (
         ParamSpec("x", ParamType.FLOAT, 0.0, minimum=-100.0, maximum=100.0, step=0.25),
         ParamSpec("y", ParamType.FLOAT, 0.0, minimum=-100.0, maximum=100.0, step=0.25),
+        PATH_ARC,
     ),
     AnimationKind.SCALE: (ParamSpec("factor", ParamType.FLOAT, 1.5, minimum=0.01, maximum=100.0, step=0.1),),
     AnimationKind.ROTATE: (

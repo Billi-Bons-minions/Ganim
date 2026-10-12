@@ -24,6 +24,7 @@ class Effects:
     morph_t: float = 0.0
     outline: float = 0.0
     outline_color: str = "#F7D96F"
+    morph_weights: tuple[complex, complex] | None = None
 
     def is_plain(self) -> bool:
         """Return ``True`` if nothing special has to be drawn."""
@@ -96,13 +97,21 @@ def _resample(polygon: QPolygonF, count: int) -> list[QPointF]:
     return points
 
 
-def morph_path(source: Drawing, target: Drawing, t: float) -> QPainterPath:
-    """Interpolate between the main outlines of two drawings."""
+def morph_path(source: Drawing, target: Drawing, t: float, weights: tuple[complex, complex] | None = None) -> QPainterPath:
+    """Interpolate between the main outlines of two drawings.
+
+    ``weights`` (a Transform on an arc) mix the outlines as complex numbers, so the
+    points travel on arcs; they are meant for y pointing up, the stage's y points down.
+    """
     first = _resample(_main_outline(source), MORPH_SAMPLES)
     second = _resample(_main_outline(target), MORPH_SAMPLES)
     path = QPainterPath()
     for index, (a, b) in enumerate(zip(first, second)):
-        point = QPointF(a.x() + (b.x() - a.x()) * t, a.y() + (b.y() - a.y()) * t)
+        if weights is None:
+            point = QPointF(a.x() + (b.x() - a.x()) * t, a.y() + (b.y() - a.y()) * t)
+        else:
+            mixed = weights[0].conjugate() * complex(a.x(), a.y()) + weights[1].conjugate() * complex(b.x(), b.y())
+            point = QPointF(mixed.real, mixed.imag)
         if index == 0:
             path.moveTo(point)
         else:

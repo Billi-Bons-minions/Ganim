@@ -32,6 +32,8 @@ All notable changes to Manim Studio are listed here. The format follows
 
 - Zoom lens (Manim's `ZoomedScene`): a frame and a display that shows it magnified, on the stage like in the video. It pops out (*Fade in*), moves, zooms (*Scale*) and fades out; one per 2D scene, also in the joined video. Template "Zoom lens: locally linear" (now 18 templates).
 
+- Move and Transform on an arc (Manim's `path_arc`, *Arc path (°)*: positive turns counterclockwise). The stage moves every point on its arc like Manim and shows the arc as the motion path of the step; the script import reads `path_arc` and `ClockwiseTransform`/`CounterclockwiseTransform`.
+
 ### Fixed
 - Manim's `Union` leaves a hole where two shapes drawn in opposite directions overlap (e.g. a sector and a triangle). Generated scripts unite the two areas themselves (`studio_union`), so the video shows the real union like the stage.
 - The stage draws texts in Manim's default font (Pango's serif font) instead of the interface font, so texts and labels are as wide as in the video.
@@ -43,6 +45,7 @@ All notable changes to Manim Studio are listed here. The format follows
 - Fading out a motion trace before it recorded anything (e.g. in the first step) crashed Manim.
 - Motion paths along a regular polygon with an even number of corners started at the wrong corner (and a square-shaped one was turned by 45°).
 - The label of a point that follows a parameter showed fewer decimals on the stage than in the video.
+- Circles, ellipses, dots, squares and rectangles run on the stage in Manim's order (circles from the right counterclockwise, rectangles from the upper right corner). *Create* now starts where it starts in the video, and a Transform pairs the points like Manim: half way from a circle to a square the stage showed a shape that was too small and turned.
 
 ## 0.9.0 – first public pre-release (not yet published)
 

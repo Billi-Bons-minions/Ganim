@@ -37,8 +37,8 @@ All of these clips were made from the built-in templates and the projects in [ex
 
 **Animations** (each with duration, delay and easing)
 - Appear: Create, Write, Fade in (with direction and zoom), Grow, Spin in, Border then fill, Add letters, Type with cursor, Grow arrow, Grow from edge, One by one
-- Change: Move, Scale, Rotate (also around a fixed point), Change color, Move along a path, Swap, **Linear map** (`ApplyMatrix`), **nonlinear maps** of the plane (`ApplyComplexFunction` with a term like `z^2`, `exp(z)` or `1/z`, and `ApplyPointwiseFunction` with x′ and y′), shown point by point on the stage, Change value of a parameter, 3D camera orbit
-- Transform: Transform, Replacement transform, Fade transform, Transform matching shapes, Transform from copy
+- Change: Move (straight or on an arc, `path_arc`), Scale, Rotate (also around a fixed point), Change color, Move along a path, Swap, **Linear map** (`ApplyMatrix`), **nonlinear maps** of the plane (`ApplyComplexFunction` with a term like `z^2`, `exp(z)` or `1/z`, and `ApplyPointwiseFunction` with x′ and y′), shown point by point on the stage, Change value of a parameter, 3D camera orbit
+- Transform: Transform, Replacement transform, Fade transform, Transform matching shapes, Transform from copy; Transform also on an arc (`path_arc`)
 - Emphasize: Indicate, Circumscribe, Flash, Wiggle, Apply wave, Focus on, Passing flash, Broadcast, **Highlight vertices/edges** of a network
 - Disappear: Fade out, Uncreate, Unwrite, Shrink to center
 - Steps play their animations together, staggered or one after another. A 2D camera can move and zoom, and **objects can be coupled** (Manim updaters): a label can follow a moving dot, the camera can follow an object, and a position can come from a formula like `x = 2 cos(w)`, `y = 2 sin(w)` driven by a parameter.

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import cmath
 import math
 from dataclasses import replace
 
 from manim_studio.model import groups
 from manim_studio.model.entities import Animation, Scene, Step
-from manim_studio.model.paths import arc_point, path_polyline, point_at
+from manim_studio.model.paths import arc_factor, arc_point, path_polyline, point_at
 from manim_studio.model.rate_functions import rate, there_and_back
 from manim_studio.model.state import (
     START,
@@ -124,27 +125,50 @@ def _partial_transform(states: dict[str, ObjectState], anim: Animation, progress
         return
     # TransformFromCopy leaves the source alone; the target appears out of a copy of it
     key = target.object_id if anim.kind == AnimationKind.TRANSFORM_FROM_COPY else anim.target_id
+    arc = float(anim.params.get("path_arc", 0.0))
+    rotation = source.rotation + (target.rotation - source.rotation) * progress
+    scale = source.scale + (target.scale - source.scale) * progress
+    x, y = arc_point((source.x, source.y), (target.x, target.y), progress, arc)
     states[key] = replace(
         source,
         object_id=key,
         visible=True,
         morph_to=target.shape_id,
         morph_t=progress,
-        x=source.x + (target.x - source.x) * progress,
-        y=source.y + (target.y - source.y) * progress,
-        rotation=source.rotation + (target.rotation - source.rotation) * progress,
-        scale=source.scale + (target.scale - source.scale) * progress,
+        morph_weights=_arc_weights(source, target, rotation, scale, progress, arc),
+        x=x,
+        y=y,
+        rotation=rotation,
+        scale=scale,
         stroke_color=_mix(source.stroke_color, target.stroke_color, progress),
         fill_color=_mix(source.fill_color, target.fill_color, progress),
     )
+
+
+def _arc_weights(source: ObjectState, target: ObjectState, rotation: float, scale: float, progress: float, arc: float) -> tuple[complex, complex] | None:
+    """How a Transform on an arc mixes the two outlines, seen from the object's turned and scaled frame.
+
+    Every point goes ``p + w·(q − p)`` (``arc_factor``); with the frame of each object as a complex
+    number ``σ = scale·e^(i·rotation)`` the point in the moving frame is ``(1 − w)·σₛ/σ·l + w·σₜ/σ·m``.
+    Straight transforms keep the simple mix of the outlines (``None``).
+    """
+    weight = arc_factor(progress, arc)
+    if weight.imag == 0.0:
+        return None
+
+    def frame(turn: float, size: float) -> complex:
+        return max(size, 1e-9) * cmath.exp(1j * math.radians(turn))
+
+    current = frame(rotation, scale)
+    return (1 - weight) * frame(source.rotation, source.scale) / current, weight * frame(target.rotation, target.scale) / current
 
 
 def _partial_modifier(state: ObjectState, anim: Animation, progress: float) -> ObjectState:
     params = anim.params
     kind = anim.kind
     if kind == AnimationKind.MOVE:
-        x, y = float(params.get("x", state.x)), float(params.get("y", state.y))
-        return replace(state, visible=True, x=state.x + (x - state.x) * progress, y=state.y + (y - state.y) * progress)
+        x, y = arc_point((state.x, state.y), (float(params.get("x", state.x)), float(params.get("y", state.y))), progress, float(params.get("path_arc", 0.0)))
+        return replace(state, visible=True, x=x, y=y)
     if kind == AnimationKind.SCALE:
         return replace(state, visible=True, scale=state.scale * (1 + (float(params.get("factor", 1.0)) - 1) * progress))
     if kind == AnimationKind.ROTATE:

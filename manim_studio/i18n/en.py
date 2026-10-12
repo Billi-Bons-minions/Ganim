@@ -1474,4 +1474,5 @@ STRINGS: dict[str, str] = {
     "codegen.lens_joined_3d": "A zoom lens and 3D scenes cannot be joined into one video. Export the scenes one by one.",
     "template.lens.name": "Zoom lens: locally linear",
     "template.lens.caption": "Up close:\ngraph ≈ tangent",
+    "aparam.path_arc": "Arc path (°)",
 }

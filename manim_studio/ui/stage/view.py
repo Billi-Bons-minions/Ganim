@@ -8,7 +8,7 @@ from typing import Callable
 
 import shiboken6
 from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QImage, QKeyEvent, QMouseEvent, QPainter, QPen, QPixmap, QTransform, QWheelEvent
+from PySide6.QtGui import QBrush, QColor, QImage, QKeyEvent, QMouseEvent, QPainter, QPen, QPixmap, QPolygonF, QTransform, QWheelEvent
 from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QWidget
 
 from manim_studio.model import groups
@@ -124,7 +124,7 @@ class StageView(QGraphicsView):
         self._grid_step = 0.5
         self._snap = True
         self._auto_fit = True
-        self._motion_paths: list[tuple[QPointF, QPointF]] = []
+        self._motion_paths: list[list[QPointF]] = []
         self._guides: list[tuple[QPointF, QPointF]] = []
         self._exact_item: QGraphicsPixmapItem | None = None
         self._scene_model: Scene | None = None
@@ -173,9 +173,9 @@ class StageView(QGraphicsView):
         """Return ``True`` while the exact image is shown."""
         return self._exact_item is not None
 
-    def set_motion_paths(self, paths: list[tuple[tuple[float, float], tuple[float, float]]]) -> None:
-        """Show dashed arrows for Move animations of the selected step."""
-        self._motion_paths = [(pt(*start), pt(*end)) for start, end in paths]
+    def set_motion_paths(self, paths: list[list[tuple[float, float]]]) -> None:
+        """Show dashed arrows for Move animations of the selected step (each one a polyline, an arc for ``path_arc``)."""
+        self._motion_paths = [[pt(*point) for point in points] for points in paths if len(points) >= 2]
         self.viewport().update()
 
     def set_grid(self, show: bool, step: float, snap: bool) -> None:
@@ -297,7 +297,7 @@ class StageView(QGraphicsView):
                 self._items[obj.id] = item
                 self._scene.addItem(item)
             shape = scene.object_by_id(state.shape_id) or obj
-            effects = Effects(state.opacity, state.draw, state.fill, None, state.morph_t, state.outline, state.outline_color)
+            effects = Effects(state.opacity, state.draw, state.fill, None, state.morph_t, state.outline, state.outline_color, state.morph_weights)
             morph_shape = scene.object_by_id(state.morph_to) if state.morph_to else None
             if morph_shape is not None:
                 effects.morph = build_drawing(scene, morph_shape, state, resources)
@@ -789,14 +789,15 @@ class StageView(QGraphicsView):
         pen = QPen(record, 2.0, Qt.PenStyle.DashLine)
         pen.setCosmetic(True)
         scale = max(self.view_scale(), 0.01)
-        for start, end in self._motion_paths:
+        for points in self._motion_paths:
+            start, before, end = points[0], points[-2], points[-1]
             painter.setPen(pen)
             painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.drawLine(start, end)
+            painter.drawPolyline(QPolygonF(points))
             painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(record)
             painter.drawEllipse(start, 4 / scale, 4 / scale)
-            angle = math.atan2(end.y() - start.y(), end.x() - start.x())
+            angle = math.atan2(end.y() - before.y(), end.x() - before.x())
             size = 12 / scale
             left = QPointF(end.x() - size * math.cos(angle - 0.45), end.y() - size * math.sin(angle - 0.45))
             right = QPointF(end.x() - size * math.cos(angle + 0.45), end.y() - size * math.sin(angle + 0.45))

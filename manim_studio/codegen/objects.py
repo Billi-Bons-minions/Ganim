@@ -44,6 +44,7 @@ from manim_studio.model.assets import resolve_asset_path
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.fields import field_expressions
 from manim_studio.model.geometry import param_float, polar_grid
+from manim_studio.model.gradients import DEFAULT_DIRECTION, SHEEN_CODE, gradient_color, gradient_parts
 from manim_studio.model.latex import colored_parts, colorize
 from manim_studio.model.schema import is_vector_image_path
 from manim_studio.model.three_d import THREE_D_KINDS, is_3d
@@ -283,8 +284,22 @@ def _placement(obj: SceneObject, variable: str) -> list[str]:
     return lines
 
 
+def _gradient_lines(obj: SceneObject, variable: str) -> list[str]:
+    """Two-color fill or stroke; set before turning the object, so its direction turns with it."""
+    fill, stroke = gradient_parts(obj)
+    lines = []
+    if fill:
+        lines.append(f"{variable}.set_fill([{py_color(obj.fill_color)}, {py_color(gradient_color(obj))}])")
+    if stroke:
+        lines.append(f"{variable}.set_stroke([{py_color(obj.stroke_color)}, {py_color(gradient_color(obj))}])")
+    direction = str(obj.params.get("gradient_direction", DEFAULT_DIRECTION))
+    if lines and direction != DEFAULT_DIRECTION and direction in SHEEN_CODE:
+        lines.append(f"{variable}.set_sheen_direction({SHEEN_CODE[direction]})")
+    return lines
+
+
 def _post_style(obj: SceneObject, variable: str) -> list[str]:
-    lines: list[str] = []
+    lines: list[str] = _gradient_lines(obj, variable)
     if obj.kind == ObjectKind.MATRIX:
         lines.append(f"{variable}.set_color({py_color(obj.fill_color)})")
     if obj.kind in (ObjectKind.TEX, ObjectKind.MATRIX, ObjectKind.DECIMAL_NUMBER) and float(obj.fill_opacity) != 1.0:

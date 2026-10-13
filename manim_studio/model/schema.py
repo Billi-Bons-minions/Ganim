@@ -12,6 +12,7 @@ from typing import Any
 
 from manim_studio.model.booleans import OPERAND_KINDS
 from manim_studio.model.data import DATA_STYLES, REGRESSIONS
+from manim_studio.model.gradients import DEFAULT_DIRECTION, FILLED_KINDS, GRADIENT_KINDS, SHEEN_DIRECTIONS
 from manim_studio.model.types import (
     CAMERA_ANIMATIONS,
     CURVE_ANTIDERIVATIVE,
@@ -796,6 +797,22 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
         frozenset(),
     ),
 }
+
+
+def _gradient_params(modes: tuple[str, ...]) -> tuple[ParamSpec, ...]:
+    shown = ("gradient", modes[1:])
+    return (
+        ParamSpec("gradient", ParamType.CHOICE, "none", choices=modes),
+        ParamSpec("gradient_color", ParamType.COLOR, "#83C167", visible_when=shown),
+        ParamSpec("gradient_direction", ParamType.CHOICE, DEFAULT_DIRECTION, choices=tuple(SHEEN_DIRECTIONS), visible_when=shown),
+    )
+
+
+# color gradients (set_fill/set_stroke with two colors) for shapes and lines
+for _kind in sorted(GRADIENT_KINDS, key=lambda kind: kind.value):
+    _info = KIND_INFO[_kind]
+    _modes = ("none", "fill", "stroke", "both") if _kind in FILLED_KINDS else ("none", "stroke")
+    KIND_INFO[_kind] = KindInfo(_info.kind, _info.params + _gradient_params(_modes), _info.style, _info.default_style)
 
 #: Shift directions offered for FadeIn/FadeOut.
 SHIFT_CHOICES = ("none", "up", "down", "left", "right")

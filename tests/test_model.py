@@ -110,7 +110,7 @@ def test_remove_object_removes_its_animations_and_references() -> None:
 def test_scale_and_rotate_objects() -> None:
     scene = Scene(id="s", name="S", objects=[make_object(ObjectKind.RECTANGLE, "R", "r", width=4.0, height=2.0)])
     ops.scale_object(scene, "r", 0.5)
-    assert scene.objects[0].params == {"width": 2.0, "height": 1.0}
+    assert (scene.objects[0].params["width"], scene.objects[0].params["height"]) == (2.0, 1.0)
     ops.rotate_object(scene, "r", 270.0)
     assert scene.objects[0].rotation == -90.0
 

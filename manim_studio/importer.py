@@ -15,6 +15,7 @@ from typing import Any
 
 from manim_studio.model.entities import Animation, Project, Scene, SceneObject
 from manim_studio.model.factory import create_animation, create_object, create_play_step, create_scene, create_wait_step
+from manim_studio.model.gradients import FILLED_KINDS, GRADIENT_KINDS, SHEEN_CODE
 from manim_studio.model.types import MANIM_COLORS, AnimationKind, ObjectKind, StepKind, Visibility
 
 SCENE_BASES = {"Scene", "MovingCameraScene", "ThreeDScene", "ZoomedScene"}
@@ -431,6 +432,24 @@ class _SceneReader:
             except ImportProblem:
                 self.report.skipped.append((getattr(node, "lineno", 0), f"{target.id}.{method.func.attr}(…)"))
 
+    def _apply_colors(self, obj: SceneObject, method: str, node: ast.AST) -> None:
+        """One color, or two as a gradient (``set_fill([BLUE, GREEN])``)."""
+        parts = {"set_fill": ("fill",), "set_stroke": ("stroke",)}.get(method, ("fill", "stroke"))
+        colors = [_color(item) for item in node.elts] if isinstance(node, (ast.List, ast.Tuple)) else [_color(node)]
+        if len(colors) > 2 or (len(colors) == 2 and obj.kind not in GRADIENT_KINDS):
+            raise ImportProblem(method)
+        for part in parts:
+            setattr(obj, f"{part}_color", colors[0])
+        current = str(obj.params.get("gradient", "none"))
+        has = {"fill": current in ("fill", "both"), "stroke": current in ("stroke", "both")}
+        for part in parts:
+            has[part] = len(colors) == 2
+        if len(colors) == 2:
+            obj.params["gradient_color"] = colors[1]
+        if obj.kind in GRADIENT_KINDS:
+            has["fill"] = has["fill"] and obj.kind in FILLED_KINDS
+            obj.params["gradient"] = {(True, True): "both", (True, False): "fill", (False, True): "stroke"}.get((has["fill"], has["stroke"]), "none")
+
     def _apply_method(self, obj: SceneObject, method: str, call: ast.Call) -> None:
         if method == "move_to" and call.args:
             obj.x, obj.y = (round(value, 6) for value in _vector(call.args[0]))
@@ -439,8 +458,20 @@ class _SceneReader:
             obj.x, obj.y = round(obj.x + dx, 6), round(obj.y + dy, 6)
         elif method == "rotate" and call.args:
             obj.rotation = round(obj.rotation + math.degrees(_number(call.args[0])), 6)
-        elif method == "set_color" and call.args:
-            obj.stroke_color = obj.fill_color = _color(call.args[0])
+        elif method in ("set_color", "set_fill", "set_stroke") and (call.args or "color" in _kwargs(call)):
+            self._apply_colors(obj, method, call.args[0] if call.args else _kwargs(call)["color"])
+            opacity = _kwargs(call).get("opacity")
+            if opacity is not None and method == "set_fill":
+                obj.fill_opacity = _number(opacity)
+            elif opacity is not None and method == "set_stroke":
+                obj.stroke_opacity = _number(opacity)
+        elif method == "set_sheen_direction" and call.args:
+            vector = _vector(call.args[0])
+            names = {SHEEN_CODE[key]: key for key in SHEEN_CODE}
+            direction = next((names[name] for name, value in DIRECTIONS.items() if value == vector and name in names), None)
+            if direction is None or obj.kind not in GRADIENT_KINDS:
+                raise ImportProblem(method)
+            obj.params["gradient_direction"] = direction
         elif method == "set_z_index" and call.args:
             obj.z_index = int(_number(call.args[0]))
         elif method == "scale" and call.args:

@@ -34,6 +34,8 @@ All notable changes to Manim Studio are listed here. The format follows
 
 - Move and Transform on an arc (Manim's `path_arc`, *Arc path (°)*: positive turns counterclockwise). The stage moves every point on its arc like Manim and shows the arc as the motion path of the step; the script import reads `path_arc` and `ClockwiseTransform`/`CounterclockwiseTransform`.
 
+- Color gradients for shapes and lines (*Color gradient*: fill, outline or both, a second color and its direction; Manim's `set_fill([a, b])`, `set_stroke([a, b])` and `set_sheen_direction`). The stage lays the gradient out like Manim (across the bounding box, turning with the object); a color change makes it one color again, a transform blends it. The script import reads two-color `set_fill`/`set_stroke`/`set_color` and `set_sheen_direction`.
+
 ### Fixed
 - Manim's `Union` leaves a hole where two shapes drawn in opposite directions overlap (e.g. a sector and a triangle). Generated scripts unite the two areas themselves (`studio_union`), so the video shows the real union like the stage.
 - The stage draws texts in Manim's default font (Pango's serif font) instead of the interface font, so texts and labels are as wide as in the video.

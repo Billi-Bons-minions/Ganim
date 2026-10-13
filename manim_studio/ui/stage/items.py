@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QPointF, QRectF, Qt
-from PySide6.QtGui import QBrush, QColor, QPainter, QPainterPath, QPen
+from PySide6.QtGui import QBrush, QColor, QGradient, QLinearGradient, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (
     QGraphicsItem,
     QGraphicsObject,
@@ -104,6 +104,15 @@ class ObjectItem(QGraphicsObject):
     def _faded_brush(brush: QBrush | None, fill: float) -> QBrush | None:
         if brush is None or fill >= 1.0:
             return brush
+        gradient = brush.gradient()
+        if gradient is not None and gradient.type() == QGradient.Type.LinearGradient:
+            # a two-color fill fades as a whole
+            faded = QLinearGradient(gradient.start(), gradient.finalStop())
+            for position, stop in gradient.stops():
+                stop = QColor(stop)
+                stop.setAlphaF(stop.alphaF() * max(0.0, fill))
+                faded.setColorAt(position, stop)
+            return QBrush(faded)
         color = QColor(brush.color())
         color.setAlphaF(color.alphaF() * max(0.0, fill))
         return QBrush(color)

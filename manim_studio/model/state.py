@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 from manim_studio.model import groups
 from manim_studio.model.entities import Animation, Scene, SceneObject
 from manim_studio.model.extents import base_size, rotated_extent
+from manim_studio.model.gradients import gradient_color, gradient_parts
 from manim_studio.model.graphs import bound_anchor, is_bound
 from manim_studio.model.paths import arc_point
 from manim_studio.model.types import (
@@ -44,6 +45,9 @@ class ObjectState:
     scale: float
     stroke_color: str
     fill_color: str
+    #: Second colors of a gradient (``set_fill([a, b])``); empty for a single color.
+    stroke_color2: str = ""
+    fill_color2: str = ""
     opacity: float = 1.0
     draw: float = 1.0
     fill: float = 1.0
@@ -164,6 +168,7 @@ def initial_state(scene: Scene, obj: SceneObject) -> ObjectState:
     else:
         x, y = obj.x, obj.y
     rotation = 0.0 if bound or groups.is_group(obj) else obj.rotation
+    fill_gradient, stroke_gradient = gradient_parts(obj)
     return ObjectState(
         object_id=obj.id,
         shape_id=obj.id,
@@ -174,6 +179,8 @@ def initial_state(scene: Scene, obj: SceneObject) -> ObjectState:
         scale=1.0,
         stroke_color=obj.stroke_color,
         fill_color=obj.fill_color,
+        stroke_color2=gradient_color(obj) if stroke_gradient else "",
+        fill_color2=gradient_color(obj) if fill_gradient else "",
         value=_initial_value(obj),
         phi=float(obj.params.get("phi", 70.0)) if obj.kind == ObjectKind.CAMERA else 0.0,
         theta=float(obj.params.get("theta", -45.0)) if obj.kind == ObjectKind.CAMERA else 0.0,
@@ -201,7 +208,10 @@ def _apply_color(state: ObjectState, anim: Animation) -> ObjectState:
     apply_to = anim.params.get("apply_to", "both")
     stroke = color if apply_to in ("both", "stroke") else state.stroke_color
     fill = color if apply_to in ("both", "fill") else state.fill_color
-    return replace(state, stroke_color=stroke, fill_color=fill, visible=True)
+    # a new color replaces a gradient (Manim's set_color with one color)
+    stroke2 = "" if apply_to in ("both", "stroke") else state.stroke_color2
+    fill2 = "" if apply_to in ("both", "fill") else state.fill_color2
+    return replace(state, stroke_color=stroke, fill_color=fill, stroke_color2=stroke2, fill_color2=fill2, visible=True)
 
 
 def _apply_modifier(state: ObjectState, anim: Animation) -> ObjectState:

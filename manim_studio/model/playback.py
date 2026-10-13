@@ -73,6 +73,16 @@ def step_at_time(scene: Scene, time: float) -> int:
     return len(spans) - 1
 
 
+def _mix_second(second: str, first: str, target: str, t: float, gradient_at_end: bool = False) -> str:
+    """The second color of a gradient on its way to ``target`` (Manim stretches one color to two and mixes each).
+
+    Empty while there is no gradient at either end.
+    """
+    if not second and not gradient_at_end:
+        return ""
+    return _mix(second or first, target, t)
+
+
 def _mix(first: str, second: str, t: float) -> str:
     def channels(value: str) -> tuple[int, int, int]:
         value = value.lstrip("#")
@@ -142,6 +152,8 @@ def _partial_transform(states: dict[str, ObjectState], anim: Animation, progress
         scale=scale,
         stroke_color=_mix(source.stroke_color, target.stroke_color, progress),
         fill_color=_mix(source.fill_color, target.fill_color, progress),
+        stroke_color2=_mix_second(source.stroke_color2, source.stroke_color, target.stroke_color2 or target.stroke_color, progress, bool(target.stroke_color2)),
+        fill_color2=_mix_second(source.fill_color2, source.fill_color, target.fill_color2 or target.fill_color, progress, bool(target.fill_color2)),
     )
 
 
@@ -184,7 +196,9 @@ def _partial_modifier(state: ObjectState, anim: Animation, progress: float) -> O
     apply_to = params.get("apply_to", "both")
     stroke = _mix(state.stroke_color, color, progress) if apply_to in ("both", "stroke") else state.stroke_color
     fill = _mix(state.fill_color, color, progress) if apply_to in ("both", "fill") else state.fill_color
-    return replace(state, visible=True, stroke_color=stroke, fill_color=fill)
+    stroke2 = _mix_second(state.stroke_color2, state.stroke_color, color, progress) if apply_to in ("both", "stroke") else state.stroke_color2
+    fill2 = _mix_second(state.fill_color2, state.fill_color, color, progress) if apply_to in ("both", "fill") else state.fill_color2
+    return replace(state, visible=True, stroke_color=stroke, fill_color=fill, stroke_color2=stroke2, fill_color2=fill2)
 
 
 def apply_partial(states: dict[str, ObjectState], anim: Animation, progress: float, scene: Scene | None = None) -> None:
@@ -230,6 +244,8 @@ def apply_partial(states: dict[str, ObjectState], anim: Animation, progress: flo
             scale=state.scale * factor,
             stroke_color=_mix(state.stroke_color, color, progress),
             fill_color=_mix(state.fill_color, color, progress),
+            stroke_color2=_mix_second(state.stroke_color2, state.stroke_color, color, progress),
+            fill_color2=_mix_second(state.fill_color2, state.fill_color, color, progress),
         )
     elif kind in (AnimationKind.CIRCUMSCRIBE, AnimationKind.PASSING_FLASH, AnimationKind.BROADCAST):
         states[anim.target_id] = replace(state, outline=progress, outline_color=str(anim.params.get("color", "#F7D96F")))

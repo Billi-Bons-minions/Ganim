@@ -690,6 +690,10 @@ def build_drawing(scene: Scene, shape: SceneObject, state: ObjectState, resource
         bounds = QRectF()
         for primitive in primitives:
             bounds = bounds.united(_primitive_rect(primitive))
+    if state.fill_color2 or state.stroke_color2:
+        from manim_studio.ui.stage.gradients import apply_gradients
+
+        apply_gradients(primitives, shape, state)
     if bounds.width() < 4 or bounds.height() < 4:
         bounds = bounds.adjusted(-4, -4, 4, 4)
     return Drawing(primitives=primitives, bounds=bounds, hit_path=_hit_path(primitives, bounds, shape.kind), offset=offset)

@@ -521,3 +521,8 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
 
 ## Fuzz-Runde 10 (30 Sitzungen, nach Farbverläufen und Strichen)
 - 0 von 30 fehlgeschlagen. Eine Sitzung brauchte sehr lange: Der Fuzzer rendert ohne `-ql` (1080p, 60 fps), und die 3D-Vorlage mit Dauerdrehung zeichnet dann jedes Bild in voller Größe. Kein Fehler, nur langsam.
+
+## 9b. Import erweitert: Graph-Werkzeuge aus Manim-Skripten
+- **Was:** Der Skript-Import liest jetzt `ax.plot_derivative_graph(g)`, `ax.plot_antiderivative_graph(g, y_intercept=C)` (Manim integriert ab 0), `ax.get_area(g, x_range, bounded_graph=…)`, `ax.get_riemann_rectangles(…)`, `ax.get_secant_slope_group(x, g, dx)`, `ax.get_graph_label(g, label, x_val, direction)`, Punkte `Dot(ax.i2gp(x, g))` sowie Kurven aus `plot_parametric_curve` und `plot_polar_graph`.
+- **Test:** Ein typisches Analysis-Skript wird ohne übersprungene Zeilen eingelesen, ist gültig, erzeugt Code und läuft in Manim 0.19 und 0.22.
+- **Grenze:** Nicht gelesen werden u. a. `always_redraw` mit Werkzeugen und `ValueTracker` in Werkzeug-Positionen (Kopplung an Parameter). Solche Zeilen landen wie bisher in der Liste der übersprungenen Zeilen.

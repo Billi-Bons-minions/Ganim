@@ -38,6 +38,8 @@ All notable changes to Manim Studio are listed here. The format follows
 
 - Graph tools work on the integral function F(x) = C + ∫ f(t) dt: point, tangent (its slope is f), secant, area, Riemann sum, zeros, extrema (where f changes sign), inflection points (at the extrema of f), intersections, labels, value table and value labels, also with parameters.
 
+- The script import reads graph tools made by axes: `plot_derivative_graph`, `plot_antiderivative_graph`, `get_area` (also `bounded_graph`), `get_riemann_rectangles`, `get_secant_slope_group`, `get_graph_label`, points `Dot(ax.i2gp(x, graph))`, and curves from `plot_parametric_curve` and `plot_polar_graph`.
+
 - Dashed shapes: circle, ellipse, arc, square, rectangle, triangle, regular polygon, polygon, star and sector can be drawn *Dashed (outline only)* with a number of dashes and a dash ratio (Manim's `DashedVMobject`). The stage cuts the outline like Manim (equal arc lengths, in Manim's order), so every dash lies where it is in the video, also with a gradient (one per dash). Dashed shapes cannot be transformed, used as a path or united in a boolean shape (Manim only has the separate dashes); the import reads `DashedVMobject(…)`.
 
 ### Fixed

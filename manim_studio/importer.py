@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ast
 import math
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -17,7 +18,7 @@ from manim_studio.model.dashes import DASHED_KINDS, DEFAULT_DASHES, DEFAULT_RATI
 from manim_studio.model.entities import Animation, Project, Scene, SceneObject
 from manim_studio.model.factory import create_animation, create_object, create_play_step, create_scene, create_wait_step
 from manim_studio.model.gradients import FILLED_KINDS, GRADIENT_KINDS, SHEEN_CODE
-from manim_studio.model.types import MANIM_COLORS, AnimationKind, ObjectKind, StepKind, Visibility
+from manim_studio.model.types import CURVE_ANTIDERIVATIVE, CURVE_DERIVATIVE, CURVE_PARAMETRIC, CURVE_POLAR, MANIM_COLORS, AnimationKind, ObjectKind, StepKind, Visibility
 
 SCENE_BASES = {"Scene", "MovingCameraScene", "ThreeDScene", "ZoomedScene"}
 
@@ -247,6 +248,9 @@ def build_object(call: ast.Call, name: str, objects: dict[str, SceneObject]) -> 
         obj.params["num_dashes"] = int(_number(kwargs["num_dashes"])) if "num_dashes" in kwargs else DEFAULT_DASHES
         obj.params["dashed_ratio"] = _number(kwargs["dashed_ratio"]) if "dashed_ratio" in kwargs else DEFAULT_RATIO
         return obj
+    tool = _graph_tool(function, call, kwargs, name, objects)
+    if tool is not None:
+        return tool
     simple = {
         "Circle": (ObjectKind.CIRCLE, {"radius": "radius"}),
         "Square": (ObjectKind.SQUARE, {"side_length": "side_length"}),
@@ -366,6 +370,130 @@ def build_object(call: ast.Call, name: str, objects: dict[str, SceneObject]) -> 
         _style(obj, kwargs)
         return obj
     raise ImportProblem(f"object {function}")
+
+
+#: ``direction`` of Manim's ``get_graph_label`` → the label directions of the graph label.
+_LABEL_DIRECTIONS = {"UR": "up_right", "UP": "up", "RIGHT": "right", "DR": "down_right", "DOWN": "down", "DL": "down_left", "LEFT": "left", "UL": "up_left"}
+
+
+def _graph_argument(node: ast.AST, objects: dict[str, SceneObject]) -> SceneObject:
+    if isinstance(node, ast.Name) and node.id in objects and objects[node.id].kind == ObjectKind.FUNCTION_GRAPH:
+        return objects[node.id]
+    raise ImportProblem("graph")
+
+
+def _curve_term(node: ast.AST, wanted: str) -> str:
+    """A term of a lambda in the variable ``wanted`` (``t`` for curves)."""
+    variable, text = _term(node)
+    return text if variable == wanted else re.sub(rf"\b{variable}\b", wanted, text)
+
+
+def _graph_tool(function: str, call: ast.Call, kwargs: dict[str, ast.AST], name: str, objects: dict[str, SceneObject]) -> SceneObject | None:
+    """Graphs and tools made by methods of axes (``ax.get_area(graph, …)`` …); ``None`` for other calls."""
+    if function == "Dot" and call.args and isinstance(call.args[0], ast.Call) and _call_name(call.args[0]).rsplit(".", 1)[-1] in ("i2gp", "input_to_graph_point"):
+        inner = call.args[0]
+        graph = _graph_argument(inner.args[1], objects) if len(inner.args) > 1 else None
+        if graph is None:
+            raise ImportProblem("graph point")
+        obj = create_object(ObjectKind.GRAPH_POINT, name, graph_id=graph.id, x_value=_number(inner.args[0]), show_lines=False)
+        if "color" in kwargs:
+            obj.fill_color = _color(kwargs["color"])
+        if "radius" in kwargs:
+            obj.params["radius"] = _number(kwargs["radius"])
+        return obj
+    if "." not in function:
+        return None
+    axes_name, method = function.rsplit(".", 1)
+    axes = objects.get(axes_name)
+    if axes is None or axes.kind != ObjectKind.AXES:
+        return None
+    if method in ("plot_derivative_graph", "plot_antiderivative_graph") and call.args:
+        source = _graph_argument(call.args[0], objects)
+        if method == "plot_derivative_graph":
+            obj = create_object(ObjectKind.FUNCTION_GRAPH, name, curve=CURVE_DERIVATIVE, derive_from=source.id, axes_id=axes.id)
+        else:
+            # Manim integrates from 0 and adds y_intercept
+            constant = _number(kwargs["y_intercept"]) if "y_intercept" in kwargs else 0.0
+            obj = create_object(ObjectKind.FUNCTION_GRAPH, name, curve=CURVE_ANTIDERIVATIVE, derive_from=source.id, axes_id=axes.id, integral_from=0.0, integral_constant=constant)
+        obj.params["x_min"], obj.params["x_max"] = source.params.get("x_min", -5.0), source.params.get("x_max", 5.0)
+        _graph_range(obj, kwargs)
+        _style(obj, kwargs)
+        return obj
+    if method == "plot_parametric_curve" and call.args and isinstance(call.args[0], ast.Lambda):
+        body = call.args[0].body
+        if not (isinstance(body, ast.Call) and _call_name(body) in ("np.array", "array") and body.args and isinstance(body.args[0], (ast.List, ast.Tuple))):
+            raise ImportProblem("parametric curve")
+        parts = [_curve_term(ast.Lambda(args=call.args[0].args, body=element), "t") for element in body.args[0].elts[:2]]
+        obj = create_object(ObjectKind.FUNCTION_GRAPH, name, curve=CURVE_PARAMETRIC, x_expression=parts[0], y_expression=parts[1], axes_id=axes.id)
+        _t_range(obj, kwargs.get("t_range"))
+        _style(obj, kwargs)
+        return obj
+    if method == "plot_polar_graph" and call.args:
+        obj = create_object(ObjectKind.FUNCTION_GRAPH, name, curve=CURVE_POLAR, r_expression=_curve_term(call.args[0], "t"), axes_id=axes.id)
+        _t_range(obj, kwargs.get("theta_range"))
+        _style(obj, kwargs)
+        return obj
+    if method == "get_area" and call.args:
+        graph = _graph_argument(call.args[0], objects)
+        obj = create_object(ObjectKind.GRAPH_AREA, name, graph_id=graph.id)
+        _tool_range(obj, kwargs.get("x_range"))
+        if "bounded_graph" in kwargs:
+            obj.params["mode"] = "between"
+            obj.params["other_graph_id"] = _graph_argument(kwargs["bounded_graph"], objects).id
+        if "color" in kwargs:
+            obj.fill_color = obj.stroke_color = _color(kwargs["color"])
+        if "opacity" in kwargs:
+            obj.fill_opacity = _number(kwargs["opacity"])
+        return obj
+    if method == "get_riemann_rectangles" and call.args:
+        graph = _graph_argument(call.args[0], objects)
+        obj = create_object(ObjectKind.RIEMANN, name, graph_id=graph.id)
+        _tool_range(obj, kwargs.get("x_range"))
+        if "dx" in kwargs:
+            obj.params["dx"] = _number(kwargs["dx"])
+        sample = kwargs.get("input_sample_type")
+        if isinstance(sample, ast.Constant) and sample.value in ("left", "right", "center"):
+            obj.params["sample"] = sample.value
+        if "color" in kwargs and not isinstance(kwargs["color"], (ast.List, ast.Tuple)):
+            obj.fill_color = _color(kwargs["color"])
+        if "fill_opacity" in kwargs:
+            obj.fill_opacity = _number(kwargs["fill_opacity"])
+        return obj
+    if method == "get_secant_slope_group" and len(call.args) >= 2:
+        graph = _graph_argument(call.args[1], objects)
+        obj = create_object(ObjectKind.SECANT, name, graph_id=graph.id, x_value=_number(call.args[0]))
+        if "dx" in kwargs:
+            obj.params["h"] = _number(kwargs["dx"])
+        if "secant_line_color" in kwargs:
+            obj.stroke_color = _color(kwargs["secant_line_color"])
+        return obj
+    if method == "get_graph_label" and call.args:
+        graph = _graph_argument(call.args[0], objects)
+        obj = create_object(ObjectKind.GRAPH_LABEL, name, graph_id=graph.id)
+        label = kwargs.get("label", call.args[1] if len(call.args) > 1 else None)
+        if isinstance(label, ast.Constant) and isinstance(label.value, str):
+            obj.params["text"], obj.params["use_latex"] = label.value, True  # Manim writes a string label with MathTex
+        elif isinstance(label, ast.Call) and _call_name(label) in ("MathTex", "Tex", "Text") and label.args:
+            obj.params["text"], obj.params["use_latex"] = _string(label.args[0]), _call_name(label) != "Text"
+        if "x_val" in kwargs:
+            obj.params["x_value"] = _number(kwargs["x_val"])
+        direction = kwargs.get("direction")
+        if isinstance(direction, ast.Name) and direction.id in _LABEL_DIRECTIONS:
+            obj.params["direction"] = _LABEL_DIRECTIONS[direction.id]
+        if "color" in kwargs:
+            obj.fill_color = _color(kwargs["color"])
+        return obj
+    return None
+
+
+def _tool_range(obj: SceneObject, values: ast.AST | None) -> None:
+    if isinstance(values, (ast.List, ast.Tuple)) and len(values.elts) >= 2:
+        obj.params["x_min"], obj.params["x_max"] = _number(values.elts[0]), _number(values.elts[1])
+
+
+def _t_range(obj: SceneObject, values: ast.AST | None) -> None:
+    if isinstance(values, (ast.List, ast.Tuple)) and len(values.elts) >= 2:
+        obj.params["t_min"], obj.params["t_max"] = _number(values.elts[0]), _number(values.elts[1])
 
 
 #: Manim's boolean operations (and the union helper of generated scripts).

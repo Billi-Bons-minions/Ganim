@@ -62,7 +62,7 @@ All of these clips were made from the built-in templates and the projects in [ex
 - Interactive tour, hover previews for every animation, a list of all keyboard shortcuts (*F1*)
 - Dark and light theme, adjustable UI scale, German and English
 - Autosave and recovery after a crash, project packages (project and images in one file), your own styles, building blocks and templates
-- Import of simple Manim scripts, custom code steps for advanced users, plugins (see [examples/plugins](examples/plugins))
+- Import of simple Manim scripts (shapes, text, axes with graphs and their tools such as areas, Riemann sums, secants and points), custom code steps for advanced users, plugins (see [examples/plugins](examples/plugins))
 - Clear error messages: missing Manim/LaTeX/FFmpeg is detected at start, render errors are explained (for LaTeX, with the formula that failed), and the full render log is one click away
 
 ### What Manim Studio does not do (yet)

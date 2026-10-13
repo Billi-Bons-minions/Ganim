@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 from typing import Callable
 
 from manim_studio.codegen.animations import STUDIO_MAP, STUDIO_PREPARE_MAP
 from manim_studio.codegen.data_code import bar_chart_code, bar_label_lines, data_plot_code
 from manim_studio.codegen.errors import CodegenError
-from manim_studio.codegen.formatting import assign, call
+from manim_studio.codegen.formatting import INDENT, assign, call, indent_lines
 from manim_studio.codegen.graph_code import axis_label_lines, graph_object_code, renames
 from manim_studio.codegen.literals import (
     LiteralError,
@@ -41,6 +42,7 @@ from manim_studio.codegen.three_d_code import axes_3d_code, curve_3d_code, solid
 from manim_studio.model import graphs
 from manim_studio.model.angles import ANGLE_LINE_KEYS, angle_lines
 from manim_studio.model.assets import resolve_asset_path
+from manim_studio.model.dashes import dash_settings, is_dashed
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.fields import field_expressions
 from manim_studio.model.geometry import param_float, polar_grid
@@ -277,6 +279,15 @@ _CONSTRUCTORS: dict[ObjectKind, Callable[[SceneObject], list[str]]] = {
 }
 
 
+def _constructor(obj: SceneObject) -> list[str]:
+    """The Manim object; a dashed shape is its outline cut into dashes (``DashedVMobject``, without fill)."""
+    if not is_dashed(obj):
+        return _CONSTRUCTORS[obj.kind](obj)
+    base = _CONSTRUCTORS[obj.kind](dataclasses.replace(obj, fill_opacity=0.0))
+    count, ratio = dash_settings(obj)
+    return ["DashedVMobject("] + indent_lines(base[:-1] + [base[-1] + ","], 1) + [f"{INDENT}num_dashes={fmt_int(count)},", f"{INDENT}dashed_ratio={fmt_float(ratio)},", ")"]
+
+
 def _placement(obj: SceneObject, variable: str) -> list[str]:
     lines = [f"{variable}.move_to({py_point(obj.x, obj.y)})"]
     if round(obj.rotation, 6) != 0:
@@ -463,7 +474,7 @@ def object_code(
         elif obj.kind == ObjectKind.IMAGE:
             lines, place = assign(variable, image_code(obj, base_dir)), True
         else:
-            lines, place = assign(variable, _CONSTRUCTORS[obj.kind](obj)), True
+            lines, place = assign(variable, _constructor(obj)), True
         lines += _post_style(obj, variable)
         if place:
             lines += _placement(obj, variable)

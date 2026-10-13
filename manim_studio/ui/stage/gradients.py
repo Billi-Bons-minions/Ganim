@@ -11,6 +11,7 @@ from __future__ import annotations
 from PySide6.QtCore import QPointF, QRectF
 from PySide6.QtGui import QBrush, QColor, QLinearGradient, QPen
 
+from manim_studio.model.dashes import is_dashed
 from manim_studio.model.entities import SceneObject
 from manim_studio.model.gradients import gradient_line, sheen_direction
 from manim_studio.model.state import ObjectState
@@ -48,8 +49,16 @@ def apply_gradients(primitives: list[Primitive], shape: SceneObject, state: Obje
     from manim_studio.ui.stage.drawing_extra import placement_transform
 
     back, invertible = placement_transform(("", "", state.x, state.y, state.rotation, state.scale, tuple(state.matrix))).inverted()
+    if not invertible:
+        return
+    # every dash of a dashed shape is a VMobject of its own with its own gradient
+    for group in [[primitive] for primitive in primitives] if is_dashed(shape) else [primitives]:
+        _paint_group(group, shape, state, back)
+
+
+def _paint_group(primitives: list[Primitive], shape: SceneObject, state: ObjectState, back) -> None:
     line = gradient_points(primitives, shape, state)
-    if not invertible or line is None:
+    if line is None:
         return
     (sx, sy), (ex, ey) = line
     start, end = back.map(QPointF(sx * PX, -sy * PX)), back.map(QPointF(ex * PX, -ey * PX))

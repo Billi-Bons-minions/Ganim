@@ -1394,7 +1394,7 @@ STRINGS: dict[str, str] = {
     "choice.operation.exclusion": "Exclusion (A △ B)",
     "param.first_shape": "Shape A",
     "param.second_shape": "Shape B",
-    "issue.boolean_shapes_missing": "The boolean shape needs two different closed shapes (circle, rectangle, polygon, star, annulus, sector or another boolean shape).",
+    "issue.boolean_shapes_missing": "The boolean shape needs two different closed shapes that are not dashed (circle, rectangle, polygon, star, annulus, sector or another boolean shape).",
     "issue.boolean_empty": "The result is empty at the start – for example because the two shapes do not overlap.",
     "codegen.boolean_shapes_missing": "“{detail}” needs two closed shapes.",
     "template.venn.name": "Sets: intersection and difference",
@@ -1490,4 +1490,7 @@ STRINGS: dict[str, str] = {
     "choice.gradient_direction.down": "↓ down",
     "choice.gradient_direction.dl": "↙ lower left",
     "choice.gradient_direction.left": "← left",
+    "param.dashed": "Dashed (outline only)",
+    "param.num_dashes": "Number of dashes",
+    "issue.path_dashed": "“{detail}” is dashed and cannot be used as a path (Manim only has the separate dashes).",
 }

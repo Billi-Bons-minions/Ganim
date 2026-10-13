@@ -504,3 +504,12 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
 
 ## Bühne = Video: Linienenden und Ecken
 - Beim Bildvergleich der Farbverläufe gefunden: Die Bühne zeichnete runde Linienenden und Ecken, Manim (Cairo) gerade Enden und spitze Ecken. Die Gehrungsgrenze liegt bei Cairo bei 10 Linienbreiten, gemessen von der Innenecke; bei Qt entspricht das 5, weil Qt von der Linienmitte misst. Gilt so in 0.19 und 0.22 (AUTO = Cairo-Standard). Jetzt gleich, Bildvergleich mit dicken Linien, Stern, Dreieck und Bogen deckungsgleich.
+
+## 8c. Gestrichelte Formen
+- **Was:** Kreis, Ellipse, Bogen, Quadrat, Rechteck, Dreieck, n-Eck, Vieleck, Stern und Sektor haben *Gestrichelt (nur Rand)*, *Anzahl Striche* (Manims Standard 15) und *Strichanteil* (0,5). Erzeugt wird `DashedVMobject(Form(…, fill_opacity=0), num_dashes=…, dashed_ratio=…)`. Der Import liest das wieder ein.
+- **Manim nachgerechnet:** `DashedVMobject` teilt den Umriss nach Bogenlänge. Geschlossene Umrisse haben gleich viele Lücken wie Striche, offene beginnen und enden mit einem Strich. Das Modell (`model/dashes.py`) schneidet den Umriss in Manims Punktreihenfolge (`paths.local_outline`, neu auch für den Sektor). `move_to` zentriert den Rahmen der *Striche*, die Bühne genauso. Test: Anfang und Ende jedes Strichs von zehn Formen und der Strichlinie (gedreht, skaliert) wie in Manim 0.19 und 0.22, Abweichung < 0,03. Bildvergleich deckungsgleich, auch mit Farbverlauf (in Manim hat jeder Strich seinen eigenen Verlauf, auf der Bühne jetzt auch).
+- **Entscheidungen:**
+  - Gestrichelte Formen sind nur Rand, ohne Füllung. Ein gefüllter `DashedVMobject` füllt in Manim jeden Strich als Kreissegment, das sieht falsch aus. Wer Füllung will, legt eine zweite Form darunter.
+  - Verwandeln (alle Arten) ist für gestrichelte Formen gesperrt: Manim verformt dabei jeden Strich einzeln in die andere Form. Als Pfad und als Teil einer Mengenform gehen sie ebenfalls nicht, weil ein `DashedVMobject` keine eigenen Punkte hat. Validierung und Auswahlfilter sagen das.
+  - Gestrichelte Funktionsgraphen und Pfeile vorerst nicht: Werkzeuge am Graphen brauchen den echten Graphen, und Pfeilspitzen behandelt `DashedVMobject` erst ab 0.20 richtig.
+- **Nebenbei (Bühne = Video):** Die Strichlinie setzte ihre Striche anders als `DashedLine` (letzter Strich endete vor dem Ende). Der Sektor lief auf der Bühne andersherum als in Manim (Mitte → Bogenende → zurück), deshalb begann *Erzeugen* an der falschen Stelle. Beides jetzt wie Manim.

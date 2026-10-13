@@ -23,6 +23,7 @@ from PySide6.QtGui import (
 )
 
 from manim_studio.model.curved import curved_bounds, curved_parts
+from manim_studio.model.dashes import dash_polylines, is_dashed
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.extents import base_size, highlight_box, rotated_extent
 from manim_studio.model.geometry import param_float, tick_values
@@ -88,18 +89,26 @@ def double_arrow_primitives(obj: SceneObject, state: ObjectState) -> list[Primit
     ]
 
 
-def dashed_line_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
-    length = param_float(obj.params, "length", 3.0)
-    dash = max(param_float(obj.params, "dash_length", 0.15), 0.01)
-    ratio = max(0.05, min(0.95, param_float(obj.params, "dashed_ratio", 0.5)))
-    count = max(2, math.ceil(length / dash * ratio))
-    piece = length / count
+def dashed_line_primitives(scene: Scene, obj: SceneObject, state: ObjectState) -> list[Primitive]:
+    """Manim's DashedLine: the dashes start and end at the ends of the line."""
     path = QPainterPath()
-    for index in range(count):
-        start = -length / 2 + index * piece
-        path.moveTo(pt(start, 0))
-        path.lineTo(pt(start + piece * ratio, 0))
+    for dash in dash_polylines(scene, obj):
+        path.moveTo(pt(*dash[0]))
+        for point in dash[1:]:
+            path.lineTo(pt(*point))
     return [_stroke_primitive(path, obj, state)]
+
+
+def dash_primitives(scene: Scene, obj: SceneObject, state: ObjectState) -> list[Primitive]:
+    """A dashed shape: one open piece per dash (Manim's DashedVMobject), the outline's pen, no fill."""
+    pen = _pen(state.stroke_color, obj.stroke_width, obj.stroke_opacity, state.scale) if obj.stroke_width > 0 else None
+    primitives = []
+    for dash in dash_polylines(scene, obj):
+        path = QPainterPath(pt(*dash[0]))
+        for point in dash[1:]:
+            path.lineTo(pt(*point))
+        primitives.append(Primitive(path=path, pen=pen))
+    return primitives
 
 
 def number_line_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
@@ -258,7 +267,8 @@ def lens_primitives(scene: Scene, obj: SceneObject, state: ObjectState) -> list[
 
 def sector_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
     points = arc_points(param_float(obj.params, "radius", 1.5), param_float(obj.params, "start_angle", 0.0), param_float(obj.params, "angle", 90.0))
-    return [_shape_primitive(_polygon([(0.0, 0.0)] + points), obj, state)]
+    # Manim's order: center, out to the end of the arc, back along it (AnnularSector with inner radius 0)
+    return [_shape_primitive(_polygon([(0.0, 0.0)] + points[::-1]), obj, state)]
 
 
 def annulus_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
@@ -717,10 +727,14 @@ def tex_primitives(obj: SceneObject, state: ObjectState, resources: StageResourc
 def extra_drawing(scene: Scene, obj: SceneObject, state: ObjectState, resources: StageResources) -> tuple[list[Primitive], bool] | None:
     """Primitives for the additional kinds or ``None`` for other kinds."""
     kind = obj.kind
+    if is_dashed(obj):
+        # centered on the dashes like Manim's move_to (its bounding box has only the dashes)
+        return dash_primitives(scene, obj, state), True
+    if kind == ObjectKind.DASHED_LINE:
+        return dashed_line_primitives(scene, obj, state), True
     simple = {
         ObjectKind.VECTOR: vector_primitives,
         ObjectKind.DOUBLE_ARROW: double_arrow_primitives,
-        ObjectKind.DASHED_LINE: dashed_line_primitives,
         ObjectKind.NUMBER_LINE: number_line_primitives,
         ObjectKind.ARC: arc_primitives,
         ObjectKind.CURVED_ARROW: curved_arrow_primitives,

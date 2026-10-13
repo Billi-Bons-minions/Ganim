@@ -13,6 +13,7 @@ import math
 from dataclasses import dataclass, field
 from typing import Any
 
+from manim_studio.model.dashes import DASHED_KINDS, DEFAULT_DASHES, DEFAULT_RATIO
 from manim_studio.model.entities import Animation, Project, Scene, SceneObject
 from manim_studio.model.factory import create_animation, create_object, create_play_step, create_scene, create_wait_step
 from manim_studio.model.gradients import FILLED_KINDS, GRADIENT_KINDS, SHEEN_CODE
@@ -237,6 +238,15 @@ def build_object(call: ast.Call, name: str, objects: dict[str, SceneObject]) -> 
     """Create a model object for a Manim constructor call."""
     function = _call_name(call)
     kwargs = _kwargs(call)
+    if function == "DashedVMobject" and call.args and isinstance(call.args[0], ast.Call):
+        # the outline of a shape cut into dashes
+        obj = build_object(call.args[0], name, objects)
+        if obj.kind not in DASHED_KINDS:
+            raise ImportProblem(function)
+        obj.params["dashed"] = True
+        obj.params["num_dashes"] = int(_number(kwargs["num_dashes"])) if "num_dashes" in kwargs else DEFAULT_DASHES
+        obj.params["dashed_ratio"] = _number(kwargs["dashed_ratio"]) if "dashed_ratio" in kwargs else DEFAULT_RATIO
+        return obj
     simple = {
         "Circle": (ObjectKind.CIRCLE, {"radius": "radius"}),
         "Square": (ObjectKind.SQUARE, {"side_length": "side_length"}),

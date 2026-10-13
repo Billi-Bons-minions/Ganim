@@ -1394,7 +1394,7 @@ STRINGS: dict[str, str] = {
     "choice.operation.exclusion": "Symmetrische Differenz (A △ B)",
     "param.first_shape": "Form A",
     "param.second_shape": "Form B",
-    "issue.boolean_shapes_missing": "Die Mengenform braucht zwei verschiedene geschlossene Formen (Kreis, Rechteck, Vieleck, Stern, Ring, Sektor oder eine andere Mengenform).",
+    "issue.boolean_shapes_missing": "Die Mengenform braucht zwei verschiedene geschlossene, nicht gestrichelte Formen (Kreis, Rechteck, Vieleck, Stern, Ring, Sektor oder eine andere Mengenform).",
     "issue.boolean_empty": "Das Ergebnis ist am Anfang leer – zum Beispiel, weil sich die beiden Formen nicht überlappen.",
     "codegen.boolean_shapes_missing": "„{detail}“ braucht zwei geschlossene Formen.",
     "template.venn.name": "Mengen: Schnitt und Differenz",
@@ -1490,4 +1490,7 @@ STRINGS: dict[str, str] = {
     "choice.gradient_direction.down": "↓ unten",
     "choice.gradient_direction.dl": "↙ unten links",
     "choice.gradient_direction.left": "← links",
+    "param.dashed": "Gestrichelt (nur Rand)",
+    "param.num_dashes": "Anzahl Striche",
+    "issue.path_dashed": "„{detail}“ ist gestrichelt und kann deshalb nicht als Pfad benutzt werden (Manim hat nur die einzelnen Striche).",
 }

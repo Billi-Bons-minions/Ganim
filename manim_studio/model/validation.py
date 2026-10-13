@@ -10,6 +10,7 @@ from pathlib import Path
 
 from manim_studio.model import graphs, groups
 from manim_studio.model.assets import resolve_asset_path
+from manim_studio.model.dashes import is_dashed
 from manim_studio.model.data import bar_values, data_points
 from manim_studio.model.entities import STEP_LAGGED, STEP_TOGETHER, Animation, Scene, SceneObject, Step
 from manim_studio.model.expression import check_expression, is_valid_name
@@ -394,6 +395,8 @@ def _animation_issues(scene: Scene, step_index: int, anim: Animation) -> list[Is
             add(ERROR, f"{key}_missing", object_id=target.id)
         elif anim.kind == AnimationKind.MOVE_ALONG_PATH and local_outline(scene, other) is None:
             add(ERROR, "path_unsupported", other.name, other.id)
+        elif anim.kind == AnimationKind.MOVE_ALONG_PATH and is_dashed(other):
+            add(ERROR, "path_dashed", other.name, other.id)
     if anim.kind == AnimationKind.NETWORK_PARTS and target.kind == ObjectKind.NETWORK:
         from manim_studio.model.networks import network_parts
 

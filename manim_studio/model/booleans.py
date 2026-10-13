@@ -59,6 +59,13 @@ def is_boolean(obj: SceneObject | None) -> bool:
     return obj is not None and obj.kind == ObjectKind.BOOLEAN_SHAPE
 
 
+def _dashed(shape: SceneObject) -> bool:
+    """Dashed shapes are only an outline (DashedVMobject), Manim cannot unite them."""
+    from manim_studio.model.dashes import is_dashed
+
+    return is_dashed(shape)
+
+
 def operation(obj: SceneObject) -> str:
     value = str(obj.params.get("operation", UNION))
     return value if value in OPERATIONS else UNION
@@ -67,7 +74,7 @@ def operation(obj: SceneObject) -> str:
 def operands(scene: Scene, obj: SceneObject) -> tuple[SceneObject, SceneObject] | None:
     """The two shapes of a boolean shape (``None`` if one is missing, unsuitable or part of a cycle)."""
     found = [scene.object_by_id(obj.params.get(key)) for key in OPERAND_KEYS]
-    if any(shape is None or shape.kind not in OPERAND_KINDS or shape.id == obj.id for shape in found):
+    if any(shape is None or shape.kind not in OPERAND_KINDS or shape.id == obj.id or _dashed(shape) for shape in found):
         return None
     if found[0].id == found[1].id or obj.id in _descendants(scene, obj, set()):
         return None
@@ -88,7 +95,7 @@ def _descendants(scene: Scene, obj: SceneObject, seen: set[str]) -> set[str]:
 
 def can_use(scene: Scene, boolean_id: str, candidate: SceneObject) -> bool:
     """``True`` if ``candidate`` may become a shape of the boolean shape (no cycle)."""
-    if candidate.kind not in OPERAND_KINDS or candidate.id == boolean_id:
+    if candidate.kind not in OPERAND_KINDS or candidate.id == boolean_id or _dashed(candidate):
         return False
     return not is_boolean(candidate) or boolean_id not in _descendants(scene, candidate, set())
 

@@ -45,6 +45,11 @@ def local_outline(scene: Scene, obj: SceneObject) -> list[Point] | None:
     if kind == ObjectKind.ARC:
         r = param_float(p, "radius", 1.5)
         return _arc(r, r, param_float(p, "start_angle", 0.0), param_float(p, "angle", 90.0))
+    if kind == ObjectKind.SECTOR:
+        # Manim's AnnularSector with inner radius 0: center, out to the end of the arc, back along it, to the center
+        r = param_float(p, "radius", 1.5)
+        arc = _arc(r, r, param_float(p, "start_angle", 0.0), param_float(p, "angle", 90.0))
+        return [(0.0, 0.0)] + arc[::-1] + [(0.0, 0.0)]
     if kind in (ObjectKind.SQUARE, ObjectKind.RECTANGLE):
         w = param_float(p, "side_length" if kind == ObjectKind.SQUARE else "width", 2.0 if kind == ObjectKind.SQUARE else 4.0)
         h = w if kind == ObjectKind.SQUARE else param_float(p, "height", 2.0)

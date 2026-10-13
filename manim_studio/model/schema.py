@@ -11,6 +11,7 @@ from enum import Enum
 from typing import Any
 
 from manim_studio.model.booleans import OPERAND_KINDS
+from manim_studio.model.dashes import DASHED_KINDS, DEFAULT_DASHES, DEFAULT_RATIO
 from manim_studio.model.data import DATA_STYLES, REGRESSIONS
 from manim_studio.model.gradients import DEFAULT_DIRECTION, FILLED_KINDS, GRADIENT_KINDS, SHEEN_DIRECTIONS
 from manim_studio.model.types import (
@@ -814,6 +815,16 @@ for _kind in sorted(GRADIENT_KINDS, key=lambda kind: kind.value):
     _modes = ("none", "fill", "stroke", "both") if _kind in FILLED_KINDS else ("none", "stroke")
     KIND_INFO[_kind] = KindInfo(_info.kind, _info.params + _gradient_params(_modes), _info.style, _info.default_style)
 
+# dashed outlines (DashedVMobject) for shapes
+_DASH_PARAMS = (
+    ParamSpec("dashed", ParamType.BOOL, False),
+    ParamSpec("num_dashes", ParamType.INT, DEFAULT_DASHES, minimum=1, maximum=500, visible_when=("dashed", (True,))),
+    ParamSpec("dashed_ratio", ParamType.FLOAT, DEFAULT_RATIO, minimum=0.05, maximum=0.95, step=0.05, visible_when=("dashed", (True,))),
+)
+for _kind in sorted(DASHED_KINDS, key=lambda kind: kind.value):
+    _info = KIND_INFO[_kind]
+    KIND_INFO[_kind] = KindInfo(_info.kind, _info.params + _DASH_PARAMS, _info.style, _info.default_style)
+
 #: Shift directions offered for FadeIn/FadeOut.
 SHIFT_CHOICES = ("none", "up", "down", "left", "right")
 #: Which colors a color change affects.
@@ -1040,6 +1051,8 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
         return anim_kind in (AnimationKind.FADE_IN, AnimationKind.FADE_OUT)
     if obj_kind == ObjectKind.GROUP and anim_kind in (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM):
         return False
+    if obj_kind in DASHED_KINDS and params.get("dashed") and anim_kind in TRANSFORM_ANIMATIONS:
+        return False  # Manim would bend every dash on its own into the other shape
     if anim_kind == AnimationKind.SET_VALUE:
         if obj_kind == ObjectKind.DECIMAL_NUMBER and (params.get("parameter_id") or str(params.get("formula", "")).strip()):
             return False  # its updater shows the parameter or formula and would undo the change

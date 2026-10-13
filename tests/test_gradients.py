@@ -34,7 +34,7 @@ def gradient_scene() -> Scene:
 
 
 def test_params_and_states() -> None:
-    assert [spec.key for spec in KIND_INFO[ObjectKind.CIRCLE].params][-3:] == ["gradient", "gradient_color", "gradient_direction"]
+    assert {"gradient", "gradient_color", "gradient_direction"} <= {spec.key for spec in KIND_INFO[ObjectKind.CIRCLE].params}
     assert KIND_INFO[ObjectKind.LINE].param("gradient").choices == ("none", "stroke")
     assert KIND_INFO[ObjectKind.TEXT].param("gradient") is None
     scene = gradient_scene()

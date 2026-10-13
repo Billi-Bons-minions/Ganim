@@ -36,7 +36,10 @@ All notable changes to Manim Studio are listed here. The format follows
 
 - Color gradients for shapes and lines (*Color gradient*: fill, outline or both, a second color and its direction; Manim's `set_fill([a, b])`, `set_stroke([a, b])` and `set_sheen_direction`). The stage lays the gradient out like Manim (across the bounding box, turning with the object); a color change makes it one color again, a transform blends it. The script import reads two-color `set_fill`/`set_stroke`/`set_color` and `set_sheen_direction`.
 
+- Dashed shapes: circle, ellipse, arc, square, rectangle, triangle, regular polygon, polygon, star and sector can be drawn *Dashed (outline only)* with a number of dashes and a dash ratio (Manim's `DashedVMobject`). The stage cuts the outline like Manim (equal arc lengths, in Manim's order), so every dash lies where it is in the video, also with a gradient (one per dash). Dashed shapes cannot be transformed, used as a path or united in a boolean shape (Manim only has the separate dashes); the import reads `DashedVMobject(…)`.
+
 ### Fixed
+- The dashed line on the stage has its dashes where Manim's `DashedLine` puts them (the last dash ends at the end of the line), and a sector runs in Manim's order (*Create* starts at its center like in the video).
 - Lines and outlines on the stage end and turn corners like in the video: flat ends and pointed corners (Cairo's defaults, which Manim keeps) instead of round ones; visible with thick lines.
 - Manim's `Union` leaves a hole where two shapes drawn in opposite directions overlap (e.g. a sector and a triangle). Generated scripts unite the two areas themselves (`studio_union`), so the video shows the real union like the stage.
 - The stage draws texts in Manim's default font (Pango's serif font) instead of the interface font, so texts and labels are as wide as in the video.

@@ -266,6 +266,19 @@ def highlight_code(obj: SceneObject, variable: str, target_variable: str) -> lis
     return [f"{variable} = always_redraw(lambda: {shape})"]
 
 
+STUDIO_OUTLINE = "studio_outline"
+STUDIO_OUTLINE_SOURCE = '''def studio_outline(shape):
+    """The outline of a shape as a plain VMobject, without curves of length 0.
+
+    A sector starts with an inner arc of radius 0. Manim 0.19.1 turns every dash
+    of a dashed Sector into a single point; a plain outline is cut correctly.
+    """
+    curves = shape.points.reshape(-1, 4, 3)
+    moving = np.abs(curves - curves[:, :1]).max(axis=(1, 2)) > 1e-9
+    outline = VMobject().set_points(curves[moving].reshape(-1, 3))
+    return outline.match_style(shape)'''
+
+
 STUDIO_UNION = "studio_union"
 STUDIO_UNION_SOURCE = '''def studio_union(first, second, **style):
     """The union of two filled areas.

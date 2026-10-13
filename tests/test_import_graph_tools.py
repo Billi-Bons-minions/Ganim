@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import math
+import shutil
 
 import pytest
 
@@ -82,6 +83,7 @@ def test_imported_scene_is_valid_and_generates() -> None:
 
 @pytest.mark.manim
 @pytest.mark.skipif(not HAS_MANIM, reason="Manim is not installed")
+@pytest.mark.skipif(shutil.which("latex") is None or shutil.which("dvisvgm") is None, reason="LaTeX is not installed (the graph label is MathTex)")
 def test_imported_scene_renders(tmp_path) -> None:
     from manim_studio.model.entities import Project
     from tests.test_manim_integration import run_manim

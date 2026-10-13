@@ -25,6 +25,7 @@ from manim_studio.codegen.literals import (
 from manim_studio.codegen.objects_extra import (
     EXTRA_CONSTRUCTORS,
     STUDIO_ANGLE,
+    STUDIO_OUTLINE,
     STUDIO_UNION,
     angle_code,
     boolean_code,
@@ -284,6 +285,8 @@ def _constructor(obj: SceneObject) -> list[str]:
     if not is_dashed(obj):
         return _CONSTRUCTORS[obj.kind](obj)
     base = _CONSTRUCTORS[obj.kind](dataclasses.replace(obj, fill_opacity=0.0))
+    if obj.kind == ObjectKind.SECTOR:
+        base = [f"{STUDIO_OUTLINE}("] + indent_lines(base, 1) + [")"]
     count, ratio = dash_settings(obj)
     return ["DashedVMobject("] + indent_lines(base[:-1] + [base[-1] + ","], 1) + [f"{INDENT}num_dashes={fmt_int(count)},", f"{INDENT}dashed_ratio={fmt_float(ratio)},", ")"]
 
@@ -475,6 +478,8 @@ def object_code(
             lines, place = assign(variable, image_code(obj, base_dir)), True
         else:
             lines, place = assign(variable, _constructor(obj)), True
+            if is_dashed(obj) and obj.kind == ObjectKind.SECTOR:
+                helpers.add(STUDIO_OUTLINE)
         lines += _post_style(obj, variable)
         if place:
             lines += _placement(obj, variable)

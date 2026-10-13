@@ -534,3 +534,9 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
 
 ## 10b. README-GIFs
 - Drei neue GIFs aus den Vorlagen gerendert (640×360, 15 fps, wie die bisherigen): komplexe Abbildung w = z², Integralfunktion F′ = f, Lupe. Sie stehen als neue Zeile in der Tabelle oben in der README. Größe 0,3–1,1 MB wie die alten.
+
+## CI rot nach den gestrichelten Formen (Manim 0.19.1, ohne LaTeX)
+- Die CI testet mit Python 3.10 und Manim **0.19.1**, meine zweite venv hatte 0.19.0. Zwei Funde:
+  - In 0.19.1 macht `DashedVMobject` aus jedem Strich eines gestrichelten **Sektors** einen einzelnen Punkt (der kopierte `Sector` verliert seine Punkte). Das Skript übergibt deshalb den Umriss des Sektors als einfaches `VMobject` (`studio_outline`, ohne die Kurven der Länge 0 des Innenbogens). Die Striche liegen damit in 0.19.0, 0.19.1 und 0.22 gleich (Test gegen alle drei).
+  - Der Render-Test des Imports braucht LaTeX (`get_graph_label` mit Text-Label ist MathTex) und wird ohne LaTeX jetzt übersprungen.
+- Die zweite venv hat jetzt 0.19.1 wie die CI.

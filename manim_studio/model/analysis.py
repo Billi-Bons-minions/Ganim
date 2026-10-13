@@ -128,7 +128,7 @@ def _clean(value: float) -> float:
     return 0.0 if rounded == 0 else rounded
 
 
-def _changes_sign(function: Callable[[float], float], x: float, width: float) -> int:
+def changes_sign(function: Callable[[float], float], x: float, width: float) -> int:
     """Return +1/-1 for an increasing/decreasing sign change at ``x``, 0 otherwise."""
     f = safe(function)
     for step in (width, width / 10, width / 100):
@@ -156,7 +156,7 @@ def extrema(expression: Expression, low: float, high: float, values: dict[str, f
     width = (high - low) / SAMPLES
     points = []
     for x in find_roots(df, low, high):
-        change = _changes_sign(df, x, width)
+        change = changes_sign(df, x, width)
         y = f(x)
         if change == 0 or math.isnan(y):
             continue
@@ -173,7 +173,7 @@ def inflection_points(expression: Expression, low: float, high: float, values: d
     points = []
     for x in find_roots(d2f, low, high):
         y = f(x)
-        if _changes_sign(d2f, x, width) != 0 and not math.isnan(y):
+        if changes_sign(d2f, x, width) != 0 and not math.isnan(y):
             points.append(SpecialPoint(_clean(x), _clean(y), KIND_INFLECTION))
     return points
 

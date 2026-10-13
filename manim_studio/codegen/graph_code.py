@@ -201,10 +201,7 @@ def graph_constructor(scene: Scene, graph: SceneObject, names: dict[str, str], h
         if source is None or source.id == graph.id:
             raise CodegenError("expression_invalid", graph.name)
         helpers.add(STUDIO_INTEGRAL)
-        start = fmt_float(param_float(graph.params, "integral_from", 0.0))
-        constant = fmt_float(param_float(graph.params, "integral_constant", 0.0))
-        integrand = f"lambda x: {pieces_code(_function_pieces(scene, source), rename)}"
-        function = f"lambda x: {constant} + {STUDIO_INTEGRAL}({integrand}, {start}, x)"
+        function = f"lambda x: {_curve_code(scene, graph, rename)}"
         low, high = graphs.x_range(graph)
         if axes_variable is None:
             return call("FunctionGraph", [function], [("x_range", py_range(low, high))] + style, 2)
@@ -251,7 +248,7 @@ def _tool_parts(scene: Scene, obj: SceneObject, names: dict[str, str]) -> tuple[
         raise CodegenError("graph_missing", obj.name)
     axes = bound_axes(scene, graph)
     assert axes is not None
-    if obj.kind != ObjectKind.GRAPH_LABEL and not graphs.is_function_curve(graph):
+    if obj.kind != ObjectKind.GRAPH_LABEL and not graphs.is_tool_graph(graph):
         raise CodegenError("graph_not_function", obj.name)
     return graph, names[graph.id], names[axes.id]
 
@@ -270,7 +267,7 @@ def area_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> list[str
     mode = obj.params.get("mode", "under")
     if mode == "between":
         other = scene.object_by_id(obj.params.get("other_graph_id"))
-        if other is None or other.id not in names or not graphs.is_function_curve(other):
+        if other is None or other.id not in names or not graphs.is_tool_graph(other):
             raise CodegenError("other_graph_missing", obj.name)
         kwargs.append(("bounded_graph", names[other.id]))
     elif mode in ("above", "below"):
@@ -302,9 +299,27 @@ def riemann_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> list[
     return call(f"{axes_variable}.get_riemann_rectangles", [graph_variable], kwargs, 2)
 
 
+def _curve_code(scene: Scene, graph: SceneObject, rename: dict[str, str]) -> str:
+    """Body of ``lambda x: …`` for a tool graph: its term, or ``C + ∫ f`` for an integral function."""
+    if not graphs.is_antiderivative(graph):
+        return pieces_code(_function_pieces(scene, graph), rename)
+    source = scene.object_by_id(graph.params.get("derive_from"))
+    if source is None or source.id == graph.id:
+        raise CodegenError("expression_invalid", graph.name)
+    start = fmt_float(param_float(graph.params, "integral_from", 0.0))
+    constant = fmt_float(param_float(graph.params, "integral_constant", 0.0))
+    return f"{constant} + {STUDIO_INTEGRAL}(lambda x: {pieces_code(_function_pieces(scene, source), rename)}, {start}, x)"
+
+
 def _slope_code(scene: Scene, graph: SceneObject, rename: dict[str, str]) -> str:
+    """Body of ``lambda x: …`` for the slope; the slope of an integral function is its integrand."""
     from manim_studio.model.calculus import derivative
 
+    if graphs.is_antiderivative(graph):
+        source = scene.object_by_id(graph.params.get("derive_from"))
+        if source is None or source.id == graph.id:
+            raise CodegenError("expression_invalid", graph.name)
+        return pieces_code(_function_pieces(scene, source), rename)
     pieces = [Piece(derivative(piece.expression), piece.low, piece.high) for piece in _function_pieces(scene, graph)]
     return pieces_code(pieces, rename)
 
@@ -328,7 +343,7 @@ def tangent_code(scene: Scene, obj: SceneObject, names: dict[str, str], variable
             return [], "\n".join(plot)
         return [], "\n".join(["VGroup("] + [f"{INDENT}{line}" for line in plot[:-1]] + [f"{INDENT}{plot[-1]},", f"{INDENT}{_static_label(scene, obj, axes_variable)},", ")"])
     rename = renames(scene, names)
-    function_code = pieces_code(_function_pieces(scene, graph), rename)
+    function_code = _curve_code(scene, graph, rename)
     if not labelled:
         lines = [
             "",
@@ -421,7 +436,7 @@ def tool_label_code(scene: Scene, obj: SceneObject, names: dict[str, str], varia
         text = f"Text({py_str(label.text)}, {style})"
         return [], _placed_label(text, label.placement, axes_variable, *numbers, str(label.side), fmt_float(label.buff)) + _shift_code(obj)
     rename = renames(scene, names)
-    function_code = pieces_code(_function_pieces(scene, graph), rename)
+    function_code = _curve_code(scene, graph, rename)
     decimals = int(param_float(obj.params, "decimals", 2.0))
     lines = ["", f"def {variable}_build():", f"{INDENT}curve = lambda x: {function_code}"]
     if tool.kind == ObjectKind.TANGENT:
@@ -485,9 +500,9 @@ def _lower_code(scene: Scene, area: SceneObject, graph: SceneObject, rename: dic
     mode = area.params.get("mode", "under")
     if mode == "between":
         other = scene.object_by_id(area.params.get("other_graph_id"))
-        if other is None or not graphs.is_function_curve(other):
+        if other is None or not graphs.is_tool_graph(other):
             raise CodegenError("other_graph_missing", area.name)
-        return pieces_code(_function_pieces(scene, other), rename)
+        return _curve_code(scene, other, rename)
     if mode in ("above", "below"):
         return f"{fmt_float(param_float(axes.params, 'y_max' if mode == 'above' else 'y_min', 0.0))} + 0 * x"
     return f"{fmt_float(graphs.baseline(axes))} + 0 * x"
@@ -535,7 +550,7 @@ def secant_code(scene: Scene, obj: SceneObject, names: dict[str, str], variable:
             parts.append(_static_label(scene, obj, axes_variable))
         return [], "\n".join(["VGroup("] + [f"{INDENT}{part}," for part in parts] + [")"])
     rename = renames(scene, names)
-    function_code = pieces_code(_function_pieces(scene, graph), rename)
+    function_code = _curve_code(scene, graph, rename)
     parts = _secant_parts(axes_variable, obj, "x0", "y0", "x1", "y1", ("left", "y0 + slope * (left - x0)"), ("right", "y0 + slope * (right - x0)"))
     labelled = obj.params.get("label", "none") in graphs.LINE_LABEL_STYLES
     curve = "curve" if labelled else f"(lambda x: {function_code})"
@@ -602,7 +617,7 @@ def graph_point_code(scene: Scene, obj: SceneObject, names: dict[str, str], vari
         label = py_str(graphs.point_label(x0, y0)) if show_label else None
         return [], _group(_point_parts(axes_variable, fmt_float(x0), fmt_float(y0), obj, label))
     rename = renames(scene, names)
-    function_code = pieces_code(_function_pieces(scene, graph), rename)
+    function_code = _curve_code(scene, graph, rename)
     label = 'f"({x0:.2f} | {y0:.2f})"' if show_label else None
     body = _group(_point_parts(axes_variable, "x0", "y0", obj, label)).split("\n")
     lines = [
@@ -620,7 +635,7 @@ def markers_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> str:
     _graph, _graph_variable, axes_variable = _tool_parts(scene, obj, names)
     if obj.params.get("feature") == "intersections":
         other = scene.object_by_id(obj.params.get("other_graph_id"))
-        if other is None or not graphs.is_function_curve(other):
+        if other is None or not graphs.is_tool_graph(other):
             raise CodegenError("other_graph_missing", obj.name)
     parts: list[str] = []
     for special in graphs.marker_points(scene, obj):

@@ -326,7 +326,7 @@ def _tool_issues(scene: Scene, obj: SceneObject, add) -> None:
     if graphs.tool_graph(scene, obj) is None:
         add(ERROR, "graph_needs_axes", graph.name)
         return
-    if not graphs.is_function_curve(graph) or graphs.function_pieces(scene, graph) is None:
+    if not graphs.is_tool_graph(graph) or graphs.graph_function(scene, graph) is None:
         add(ERROR, "graph_not_function", graph.name)
         return
     needs_other = (obj.kind == ObjectKind.GRAPH_AREA and params.get("mode") == "between") or (
@@ -334,7 +334,7 @@ def _tool_issues(scene: Scene, obj: SceneObject, add) -> None:
     )
     if needs_other:
         other = scene.object_by_id(params.get("other_graph_id"))
-        if other is None or other.id == graph.id or not graphs.is_function_curve(other):
+        if other is None or other.id == graph.id or not graphs.is_tool_graph(other):
             add(ERROR, "other_graph_missing")
     if obj.kind in (ObjectKind.GRAPH_AREA, ObjectKind.RIEMANN) and float(params.get("x_min", 0)) >= float(params.get("x_max", 1)):
         add(ERROR, "graph_range_invalid")

@@ -142,10 +142,10 @@ def tool_label(scene: Scene, obj: SceneObject, values: graphs.Values | None = No
     tool = label_tool(scene, obj)
     content = label_content(scene, obj)
     graph = graphs.tool_graph(scene, tool) if tool is not None else None
-    pieces = graphs.function_pieces(scene, graph) if graph is not None else None
-    if tool is None or content is None or pieces is None:
-        return None
     values = graphs.scene_values(scene, values)
+    curve = graphs.graph_function(scene, graph, values) if graph is not None else None
+    if tool is None or content is None or curve is None:
+        return None
     decimals = max(0, min(6, int(param_float(obj.params, "decimals", 2.0))))
     name = function_name(graph)
     if tool.kind in (ObjectKind.TANGENT, ObjectKind.SECANT):
@@ -157,11 +157,11 @@ def tool_label(scene: Scene, obj: SceneObject, values: graphs.Values | None = No
         else:
             slope = graphs.tangent_slope(scene, tool, values)
             x = graphs.tool_x(scene, tool, values)
-            y = graphs.evaluate_pieces(pieces, x, values)
+            y = curve(x)
             if slope is None or not math.isfinite(y):
                 return None
             line_name = "t"
-        side = graphs.label_side(str(obj.params.get("label_side", "auto")), lambda t: graphs.evaluate_pieces(pieces, t, values), x, y)
+        side = graphs.label_side(str(obj.params.get("label_side", "auto")), curve, x, y)
         return ToolLabel(label_text(content, decimals, slope, y - slope * x, line_name), x, y, BESIDE, slope, side)
     if tool.kind == ObjectKind.GRAPH_POINT:
         point = graphs.graph_point(scene, tool, values)
@@ -200,7 +200,7 @@ def area_functions(scene: Scene, area: SceneObject, values: graphs.Values | None
     mode = area.params.get("mode", "under")
     if mode == "between":
         other = scene.object_by_id(area.params.get("other_graph_id"))
-        lower = graphs.graph_function(scene, other, values) if other is not None and graphs.is_function_curve(other) else None
+        lower = graphs.graph_function(scene, other, values) if other is not None and graphs.is_tool_graph(other) else None
     elif axes is None:
         lower = None
     elif mode in ("above", "below"):

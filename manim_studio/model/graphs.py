@@ -16,10 +16,15 @@ from manim_studio.model.analysis import (
     FEATURE_EXTREMA,
     FEATURE_INFLECTION,
     FEATURE_INTERSECTIONS,
+    KIND_INFLECTION,
+    KIND_INTERSECTION,
     KIND_MAXIMUM,
     KIND_MINIMUM,
+    KIND_ZERO,
     SpecialPoint,
+    changes_sign,
     extrema,
+    find_roots,
     inflection_points,
     intersections,
     zeros,
@@ -177,9 +182,21 @@ def scene_values(scene: Scene, values: Values | None) -> Values:
     return values if values is not None else initial_values(scene)
 
 
+def is_antiderivative(graph: SceneObject | None) -> bool:
+    """``True`` for an integral function F(x) = C + ∫ f(t) dt."""
+    return graph is not None and graph.kind == ObjectKind.FUNCTION_GRAPH and graph.params.get("curve") == CURVE_ANTIDERIVATIVE
+
+
+def is_tool_graph(graph: SceneObject | None) -> bool:
+    """``True`` for graphs y = f(x) that tools (tangent, point, area …) can use, the integral function included."""
+    return is_function_curve(graph) or is_antiderivative(graph)
+
+
 def graph_function(scene: Scene, graph: SceneObject, values: Values | None = None) -> Callable[[float], float] | None:
-    """Return ``f`` of a function-like graph (``nan`` where undefined)."""
+    """Return ``f`` of a function-like graph (``nan`` where undefined); F for an integral function."""
     values = scene_values(scene, values)
+    if is_antiderivative(graph):
+        return cached_antiderivative(scene, graph, values)
     pieces = function_pieces(scene, graph)
     if pieces is None:
         return None
@@ -190,6 +207,35 @@ def graph_function(scene: Scene, graph: SceneObject, values: Values | None = Non
 INTEGRAL_STEPS = 200
 #: Table steps of the stage's integral function (trapezoids; differs from Simpson by far less than a pixel).
 INTEGRAL_TABLE_STEPS = 4000
+
+
+def slope_function(scene: Scene, graph: SceneObject, values: Values | None = None) -> Callable[[float], float] | None:
+    """The slope f′ of a tool graph; for an integral function F it is the integrand f itself."""
+    values = scene_values(scene, values)
+    if is_antiderivative(graph):
+        source = scene.object_by_id(graph.params.get("derive_from"))
+        pieces = function_pieces(scene, source) if source is not None and source.id != graph.id else None
+    else:
+        base = function_pieces(scene, graph)
+        pieces = [Piece(derivative(piece.expression), piece.low, piece.high) for piece in base] if base is not None else None
+    if pieces is None:
+        return None
+    return lambda x: evaluate_pieces(pieces, x, values)
+
+
+_ANTIDERIVATIVES: dict[tuple, Callable[[float], float] | None] = {}
+
+
+def cached_antiderivative(scene: Scene, graph: SceneObject, values: Values | None = None) -> Callable[[float], float] | None:
+    """``antiderivative_function`` for tools that ask for F many times (same graph, integrand and values)."""
+    source = scene.object_by_id(graph.params.get("derive_from"))
+    values = scene_values(scene, values)
+    key = (graph.id, repr(sorted(graph.params.items())), repr(sorted(source.params.items())) if source is not None else "", tuple(sorted(values.items())))
+    if key not in _ANTIDERIVATIVES:
+        if len(_ANTIDERIVATIVES) > 64:
+            _ANTIDERIVATIVES.clear()
+        _ANTIDERIVATIVES[key] = antiderivative_function(scene, graph, values)
+    return _ANTIDERIVATIVES[key]
 
 
 def antiderivative_function(scene: Scene, graph: SceneObject, values: Values | None = None) -> Callable[[float], float] | None:
@@ -558,14 +604,13 @@ def riemann_rectangles(scene: Scene, obj: SceneObject, values: Values | None = N
 def tangent_points(scene: Scene, obj: SceneObject, values: Values | None = None) -> list[Point]:
     """End points of a tangent line in axes coordinates."""
     graph = tool_graph(scene, obj)
-    pieces = function_pieces(scene, graph) if graph is not None else None
-    if pieces is None:
-        return []
     values = scene_values(scene, values)
+    function = graph_function(scene, graph, values) if graph is not None else None
+    slope_of = slope_function(scene, graph, values) if graph is not None else None
+    if function is None or slope_of is None:
+        return []
     x0 = tool_x(scene, obj, values)
-    y0 = evaluate_pieces(pieces, x0, values)
-    slope_pieces = [Piece(derivative(piece.expression), piece.low, piece.high) for piece in pieces]
-    slope = evaluate_pieces(slope_pieces, x0, values)
+    y0, slope = function(x0), slope_of(x0)
     if not (math.isfinite(y0) and math.isfinite(slope)):
         return []
     half = param_float(obj.params, "width", 3.0) / 2
@@ -602,14 +647,14 @@ def secant_h(scene: Scene, obj: SceneObject, values: Values | None) -> float:
 def secant(scene: Scene, obj: SceneObject, values: Values | None = None) -> Secant | None:
     """The secant of a graph tool (``None`` where f is undefined); for h = 0 it is the tangent."""
     graph = tool_graph(scene, obj)
-    pieces = function_pieces(scene, graph) if graph is not None else None
-    if pieces is None:
-        return None
     values = scene_values(scene, values)
+    function = graph_function(scene, graph, values) if graph is not None else None
+    if function is None:
+        return None
     x0 = tool_x(scene, obj, values)
     h = secant_h(scene, obj, values)
     x1 = x0 + h
-    y0, y1 = evaluate_pieces(pieces, x0, values), evaluate_pieces(pieces, x1, values)
+    y0, y1 = function(x0), function(x1)
     if not (math.isfinite(y0) and math.isfinite(y1)):
         return None
     if abs(h) < SECANT_MIN_H:
@@ -715,6 +760,8 @@ def graph_point(scene: Scene, obj: SceneObject, values: Values | None = None) ->
 def marker_points(scene: Scene, obj: SceneObject, values: Values | None = None) -> list[SpecialPoint]:
     """Zeros, extrema, inflection points or intersections of a graph."""
     graph = tool_graph(scene, obj)
+    if is_antiderivative(graph):
+        return _antiderivative_markers(scene, obj, graph, scene_values(scene, values))
     pieces = function_pieces(scene, graph) if graph is not None else None
     if graph is None or pieces is None:
         return []
@@ -750,6 +797,52 @@ def marker_points(scene: Scene, obj: SceneObject, values: Values | None = None) 
     if limits is not None:
         points = [point for point in points if limits[0] - 1e-9 <= point.y <= limits[1] + 1e-9]
     return points
+
+
+def _antiderivative_markers(scene: Scene, obj: SceneObject, graph: SceneObject, values: Values) -> list[SpecialPoint]:
+    """Special points of F(x) = C + ∫ f: extrema where f changes sign, inflection points at the extrema of f."""
+    function = graph_function(scene, graph, values)
+    source = scene.object_by_id(graph.params.get("derive_from"))
+    pieces = function_pieces(scene, source) if source is not None and source.id != graph.id else None
+    if function is None or pieces is None:
+        return []
+    low, high = x_range(graph)
+    feature = obj.params.get("feature", "zeros")
+    points: list[SpecialPoint] = []
+    if feature == FEATURE_INTERSECTIONS:
+        other = scene.object_by_id(obj.params.get("other_graph_id"))
+        other_function = graph_function(scene, other, values) if other is not None and other.id != graph.id and is_tool_graph(other) else None
+        if other is None or other_function is None:
+            return []
+        low, high = max(low, x_range(other)[0]), min(high, x_range(other)[1])
+        points = [SpecialPoint(_rounded(x), _rounded(function(x)), KIND_INTERSECTION) for x in find_roots(lambda x: function(x) - other_function(x), low, high)]
+    elif feature == FEATURE_EXTREMA:
+        for piece in pieces:
+            a, b = max(low, piece.low), min(high, piece.high)
+            if b > a:
+                # F' = f: an extremum of F is a zero of f, a minimum where f turns positive
+                for special in zeros(piece.expression, a, b, values):
+                    change = changes_sign(lambda x, e=piece.expression: e.evaluate(x, values), special.x, (b - a) / 400)
+                    if change:
+                        points.append(SpecialPoint(special.x, _rounded(function(special.x)), KIND_MINIMUM if change > 0 else KIND_MAXIMUM))
+    elif feature == FEATURE_INFLECTION:
+        for piece in pieces:
+            a, b = max(low, piece.low), min(high, piece.high)
+            if b > a:
+                # F'' = f': inflection points of F lie at the extrema of f
+                points += [SpecialPoint(special.x, _rounded(function(special.x)), KIND_INFLECTION) for special in extrema(piece.expression, a, b, values)]
+    else:
+        points = [SpecialPoint(_rounded(x), 0.0, KIND_ZERO) for x in find_roots(function, low, high)]
+    points = [point for point in points if math.isfinite(point.y)]
+    limits = y_limits(scene, graph)
+    if limits is not None:
+        points = [point for point in points if limits[0] - 1e-9 <= point.y <= limits[1] + 1e-9]
+    return points
+
+
+def _rounded(value: float) -> float:
+    rounded = round(value, 9)
+    return 0.0 if rounded == 0 else rounded
 
 
 def format_coordinate(value: float) -> str:
@@ -820,7 +913,7 @@ def label_anchor(scene: Scene, obj: SceneObject, values: Values | None = None) -
     if graph is None:
         return None
     x0 = param_float(obj.params, "x_value", 2.0)
-    if is_function_curve(graph):
+    if is_tool_graph(graph):
         function = graph_function(scene, graph, values)
         y0 = function(x0) if function is not None else math.nan
     else:

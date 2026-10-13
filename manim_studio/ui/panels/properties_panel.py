@@ -519,6 +519,8 @@ class PropertiesPanel(QScrollArea):
             return spec.is_visible(self._object(object_id).params, defaults)
 
         allowed = graphs.is_function_curve if spec.key in FUNCTION_GRAPH_REFS else (lambda obj: True)
+        if spec.key in ("graph_id", "other_graph_id"):
+            allowed = graphs.is_tool_graph  # tools also work on an integral function F
         if spec.key == "attach_target":
             allowed = lambda obj: can_follow(self.editor.scene(), object_id, obj)  # noqa: E731
         if spec.key in OPERAND_KEYS:
@@ -656,15 +658,17 @@ class PropertiesPanel(QScrollArea):
         form.section(tr("section.graph_tools"))
         obj = self._object(object_id)
         scene = self.editor.scene()
-        usable = graphs.is_function_curve(obj) and is_bound(scene, obj)
-        others = [o for o in scene.objects if o.id != object_id and graphs.is_function_curve(o) and is_bound(scene, o)]
+        usable = graphs.is_tool_graph(obj) and is_bound(scene, obj)
+        others = [o for o in scene.objects if o.id != object_id and graphs.is_tool_graph(o) and is_bound(scene, o)]
+        # F has no term: its derivative is f again, and it cannot be integrated once more
+        termless = graphs.is_antiderivative(obj)
         container, flow = flow_container(px(4))
         for key, action, params in GRAPH_ACTIONS:
             button = QToolButton()
             button.setText(tr(f"graph_action.{key}"))
             button.setToolTip(tr(f"graph_action.{key}_tip"))
             button.setProperty("variant", "button")
-            button.setEnabled(usable and (key != "intersections" or bool(others)))
+            button.setEnabled(usable and (key != "intersections" or bool(others)) and not (termless and action in ("derivative", "second_derivative", "antiderivative")))
             if action in ("derivative", "second_derivative"):
                 order = 1 if action == "derivative" else 2
                 button.clicked.connect(lambda _checked=False, order=order: self.controller.add_derivative(object_id, order))

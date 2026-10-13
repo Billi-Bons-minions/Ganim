@@ -513,3 +513,11 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
   - Verwandeln (alle Arten) ist für gestrichelte Formen gesperrt: Manim verformt dabei jeden Strich einzeln in die andere Form. Als Pfad und als Teil einer Mengenform gehen sie ebenfalls nicht, weil ein `DashedVMobject` keine eigenen Punkte hat. Validierung und Auswahlfilter sagen das.
   - Gestrichelte Funktionsgraphen und Pfeile vorerst nicht: Werkzeuge am Graphen brauchen den echten Graphen, und Pfeilspitzen behandelt `DashedVMobject` erst ab 0.20 richtig.
 - **Nebenbei (Bühne = Video):** Die Strichlinie setzte ihre Striche anders als `DashedLine` (letzter Strich endete vor dem Ende). Der Sektor lief auf der Bühne andersherum als in Manim (Mitte → Bogenende → zurück), deshalb begann *Erzeugen* an der falschen Stelle. Beides jetzt wie Manim.
+
+## 9a. Graph-Werkzeuge an der Integralfunktion
+- **Was:** Punkt, Tangente, Sekante, Fläche, Riemann-Summe, Nullstellen/Extrema/Wendepunkte/Schnittpunkte, Beschriftung, Wertetabelle und Wertbeschriftung gehen jetzt auch an F(x) = C + ∫ f(t) dt, auch wenn f Parameter enthält. Ableitung und Integralfunktion *von F* bleiben gesperrt (F hat keinen Term; F′ ist wieder f).
+- **Wie:** Das Modell kennt „Werkzeug-Graphen“ (`is_tool_graph`): F rechnet über die numerische Tabelle (jetzt zwischengespeichert), die Steigung von F ist der Integrand f. Extrema von F sind Nullstellen von f mit Vorzeichenwechsel, Wendepunkte von F liegen bei den Extrema von f. Im Skript ist F `C + studio_integral(f, a, x)`; Manims `get_area`/`get_riemann_rectangles` nutzen `underlying_function` des `studio_plot`-Graphen.
+- **Test:** F = x³/3 − x zu f = x² − 1: alle Werkzeuge analytisch geprüft; Punkt, Tangente, Riemann-Rechtecke und Extrema wie in Manim (0.19 und 0.22). Bildvergleich deckungsgleich.
+
+## Fuzz-Runde 10 (30 Sitzungen, nach Farbverläufen und Strichen)
+- 0 von 30 fehlgeschlagen. Eine Sitzung brauchte sehr lange: Der Fuzzer rendert ohne `-ql` (1080p, 60 fps), und die 3D-Vorlage mit Dauerdrehung zeichnet dann jedes Bild in voller Größe. Kein Fehler, nur langsam.

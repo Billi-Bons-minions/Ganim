@@ -232,7 +232,7 @@ class EditorController(QObject):
         return next((symbol for symbol in PARAMETER_SYMBOLS if symbol not in used), f"p{len(used) + 1}")
 
     def _function_graphs(self) -> list:
-        return [o for o in self.scene().objects if graphs.is_function_curve(o) and bound_axes(self.scene(), o) is not None]
+        return [o for o in self.scene().objects if graphs.is_tool_graph(o) and bound_axes(self.scene(), o) is not None]
 
     def _attach(self, obj) -> None:
         """Connect a new graph to axes and a new graph tool to a graph (the selected one if possible)."""

@@ -36,6 +36,8 @@ All notable changes to Manim Studio are listed here. The format follows
 
 - Color gradients for shapes and lines (*Color gradient*: fill, outline or both, a second color and its direction; Manim's `set_fill([a, b])`, `set_stroke([a, b])` and `set_sheen_direction`). The stage lays the gradient out like Manim (across the bounding box, turning with the object); a color change makes it one color again, a transform blends it. The script import reads two-color `set_fill`/`set_stroke`/`set_color` and `set_sheen_direction`.
 
+- Graph tools work on the integral function F(x) = C + ∫ f(t) dt: point, tangent (its slope is f), secant, area, Riemann sum, zeros, extrema (where f changes sign), inflection points (at the extrema of f), intersections, labels, value table and value labels, also with parameters.
+
 - Dashed shapes: circle, ellipse, arc, square, rectangle, triangle, regular polygon, polygon, star and sector can be drawn *Dashed (outline only)* with a number of dashes and a dash ratio (Manim's `DashedVMobject`). The stage cuts the outline like Manim (equal arc lengths, in Manim's order), so every dash lies where it is in the video, also with a gradient (one per dash). Dashed shapes cannot be transformed, used as a path or united in a boolean shape (Manim only has the separate dashes); the import reads `DashedVMobject(…)`.
 
 ### Fixed

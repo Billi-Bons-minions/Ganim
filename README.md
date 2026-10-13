@@ -24,6 +24,8 @@ All of these clips were made from the built-in templates and the projects in [ex
 | A shear applied to the coordinate grid | 3D solids with a camera move | Stream lines of a vector field |
 | ![Coupled objects](docs/images/coupling.gif) | ![Polar curves](docs/images/polar.gif) | ![Vectors in space](docs/images/vectors.gif) |
 | A label follows a dot; a dot driven by a parameter | Polar grid, a rose turns into a cardioid | Vector addition in space with a camera orbit |
+| ![Complex map](docs/images/complex_map.gif) | ![Integral function](docs/images/integral.gif) | ![Zoom lens](docs/images/lens.gif) |
+| The complex plane bent by w = z² | The slope of F is the value of f | A zoom lens: up close the graph is its tangent |
 
 ## Features
 

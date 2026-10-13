@@ -531,3 +531,6 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
 - f(x) = ½(x − 1)(x − 3) und F = ∫₀ˣ f. Die Flächen von 0 bis 1 (über der Achse) und von 1 bis 3 (darunter) heben sich auf, deshalb kehrt F bei x = 3 auf 0 zurück. Eine Tangente wandert an F (Parameter a), ihre Steigung „m = …“ steht daneben, ein Punkt auf f zeigt denselben Wert. Am Ende erscheinen die Extrema von F, genau über den Nullstellen von f.
 - Bildvergleich Endbild Bühne/Video deckungsgleich. Die Steigungsbeschriftung steht über der Tangente, sonst läge sie am Ende auf der x-Achse.
 - Zwei neue Beispielprojekte in `examples/`: *calculus* (Tangente wandert, Integralfunktion) und *maps-and-sets* (komplexe Abbildung, Venn-Diagramm, Lupe). Die alten Beispieldateien habe ich nicht neu geschrieben (nur neue IDs, sonst gleich).
+
+## 10b. README-GIFs
+- Drei neue GIFs aus den Vorlagen gerendert (640×360, 15 fps, wie die bisherigen): komplexe Abbildung w = z², Integralfunktion F′ = f, Lupe. Sie stehen als neue Zeile in der Tabelle oben in der README. Größe 0,3–1,1 MB wie die alten.

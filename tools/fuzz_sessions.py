@@ -8,7 +8,7 @@ like a user would. Afterwards it checks that
 * saving and loading gives the identical project,
 * every scene without validation errors generates code without errors,
 * the stage can compute every moment of every scene,
-* Manim accepts the generated script (``manim render --dry_run -a``).
+* Manim accepts the generated script (``manim render -ql --dry_run -a``).
 
 Usage (offscreen, from the repository root)::
 
@@ -352,7 +352,8 @@ def check_project(project, work: Path, dry_run: bool) -> list[str]:
     (work / "script.py").write_text(script, encoding="utf-8")
     if dry_run:
         result = subprocess.run(
-            [sys.executable, "-m", "manim", "render", "--dry_run", "-a", "--media_dir", str(work / "media"), str(work / "script.py")],
+            # low quality: the dry run still draws every frame, at 1080p60 3D scenes take minutes
+            [sys.executable, "-m", "manim", "render", "-ql", "--dry_run", "-a", "--media_dir", str(work / "media"), str(work / "script.py")],
             capture_output=True,
             text=True,
             timeout=600,

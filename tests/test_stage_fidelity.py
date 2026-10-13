@@ -135,3 +135,20 @@ def test_text_size_like_manim_for_any_font(qapp, family: str, lines: str, spacin
     manim_text = Text(lines, font=family, font_size=36, **({"line_spacing": spacing} if spacing else {}))
     assert bounds.width() / PX == pytest.approx(manim_text.width, rel=0.02)
     assert bounds.height() / PX == pytest.approx(manim_text.height, rel=0.03)
+
+
+def test_pens_like_cairo(qapp) -> None:
+    """Manim keeps Cairo's line ends and corners: flat ends, pointed corners (miter limit 10 widths)."""
+    from PySide6.QtCore import Qt
+
+    from manim_studio.model.entities import Scene
+    from manim_studio.model.state import states_after
+    from manim_studio.model.types import ObjectKind
+    from manim_studio.ui.stage.drawing import StageResources, build_drawing
+    from tests.helpers import make_object
+
+    line = make_object(ObjectKind.LINE, "L", "l")
+    scene = Scene(id="s", name="S", objects=[line])
+    pen = build_drawing(scene, line, states_after(scene, -1)["l"], StageResources()).primitives[0].pen
+    assert pen.capStyle() == Qt.PenCapStyle.FlatCap and pen.joinStyle() == Qt.PenJoinStyle.MiterJoin
+    assert pen.miterLimit() == 5.0  # Qt measures from the middle of the line: half of Cairo's 10

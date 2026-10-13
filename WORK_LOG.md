@@ -501,3 +501,6 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
 - **Zustand:** Zweite Farben stehen im Zustand (`fill_color2`/`stroke_color2`). *Farbe ändern* macht das Objekt einfarbig (wie `set_color` mit einer Farbe), unterwegs mischt die Bühne beide Farben zum Ziel wie Manim (eine Farbe wird auf zwei gestreckt). *Verwandeln* mischt die Verläufe.
 - **Entscheidungen:** Keine Verläufe für Texte (Manim färbt dort Buchstaben einzeln, eigenes Thema), Pfeile (Spitze ist ein eigenes Teilobjekt mit eigenem Verlauf) und Mengenformen (werden mit `always_redraw` neu gebaut).
 - **Grenze:** Während einer Drehung mischt Manim die Glanzrichtung linear (nicht drehend); die Bühne dreht sie mit. Sichtbar nur mitten in einer Drehung eines Objekts mit Verlauf und nur wenig.
+
+## Bühne = Video: Linienenden und Ecken
+- Beim Bildvergleich der Farbverläufe gefunden: Die Bühne zeichnete runde Linienenden und Ecken, Manim (Cairo) gerade Enden und spitze Ecken. Die Gehrungsgrenze liegt bei Cairo bei 10 Linienbreiten, gemessen von der Innenecke; bei Qt entspricht das 5, weil Qt von der Linienmitte misst. Gilt so in 0.19 und 0.22 (AUTO = Cairo-Standard). Jetzt gleich, Bildvergleich mit dicken Linien, Stern, Dreieck und Bogen deckungsgleich.

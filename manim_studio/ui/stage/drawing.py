@@ -114,8 +114,11 @@ def _color(hex_color: str, opacity: float = 1.0) -> QColor:
 
 def _pen(hex_color: str, width: float, opacity: float, scale: float) -> QPen:
     pen = QPen(_color(hex_color, opacity), max(0.0, width) * STROKE_UNIT / max(scale, 0.01))
-    pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-    pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+    # Cairo's defaults, which Manim keeps: flat ends and pointed corners up to a miter of 10 line widths
+    # (Qt measures the miter from the middle of the line, so 10 widths there are 5 here)
+    pen.setJoinStyle(Qt.PenJoinStyle.MiterJoin)
+    pen.setMiterLimit(5.0)
+    pen.setCapStyle(Qt.PenCapStyle.FlatCap)
     return pen
 
 

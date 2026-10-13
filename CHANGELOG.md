@@ -37,6 +37,7 @@ All notable changes to Manim Studio are listed here. The format follows
 - Color gradients for shapes and lines (*Color gradient*: fill, outline or both, a second color and its direction; Manim's `set_fill([a, b])`, `set_stroke([a, b])` and `set_sheen_direction`). The stage lays the gradient out like Manim (across the bounding box, turning with the object); a color change makes it one color again, a transform blends it. The script import reads two-color `set_fill`/`set_stroke`/`set_color` and `set_sheen_direction`.
 
 ### Fixed
+- Lines and outlines on the stage end and turn corners like in the video: flat ends and pointed corners (Cairo's defaults, which Manim keeps) instead of round ones; visible with thick lines.
 - Manim's `Union` leaves a hole where two shapes drawn in opposite directions overlap (e.g. a sector and a triangle). Generated scripts unite the two areas themselves (`studio_union`), so the video shows the real union like the stage.
 - The stage draws texts in Manim's default font (Pango's serif font) instead of the interface font, so texts and labels are as wide as in the video.
 - Axes and number lines with an arrow tip no longer show the last tick and number on the stage (Manim leaves them out; the tip sits there); ranges that do not contain 0 start their ticks at the first value like Manim.

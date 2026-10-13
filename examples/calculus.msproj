@@ -1,0 +1,974 @@
+{
+  "format": "manim-studio-project",
+  "version": 1,
+  "scenes": [
+    {
+      "id": "258da453cf7d",
+      "name": "A tangent slides along the graph",
+      "background_color": "#000000",
+      "objects": [
+        {
+          "id": "b11249537bb8",
+          "kind": "parameter",
+          "name": "a",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "symbol": "a",
+            "value": -1.5,
+            "minimum": -2.0,
+            "maximum": 2.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "fb1d3b9a083c",
+          "kind": "axes",
+          "name": "Axes 1",
+          "x": 0.0,
+          "y": -0.3,
+          "rotation": 0.0,
+          "stroke_color": "#FFFFFF",
+          "fill_color": "#58C4DD",
+          "stroke_width": 2.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "x_min": -3.0,
+            "x_max": 3.0,
+            "x_step": 1.0,
+            "x_length": 10.0,
+            "y_min": -2.0,
+            "y_max": 2.0,
+            "y_step": 1.0,
+            "y_length": 6.0,
+            "show_numbers": false,
+            "tips": true,
+            "x_label": "x",
+            "y_label": "y"
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "8ad527950244",
+          "kind": "function_graph",
+          "name": "f",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#F7D96F",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "curve": "function",
+            "expression": "x^3/3 - x",
+            "derive_from": null,
+            "derive_order": "1",
+            "integral_from": 0.0,
+            "integral_constant": 0.0,
+            "pieces": [
+              [
+                "x^2",
+                "-5",
+                "1"
+              ],
+              [
+                "2 - x",
+                "1",
+                "5"
+              ]
+            ],
+            "x_expression": "2cos(t)",
+            "y_expression": "sin(2t)",
+            "r_expression": "2sin(3t)",
+            "implicit_expression": "x^2 + y^2 - 4",
+            "x_min": -5.0,
+            "x_max": 5.0,
+            "t_min": 0.0,
+            "t_max": 6.2832,
+            "axes_id": "fb1d3b9a083c",
+            "clip": true
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "6d461ff7ceaf",
+          "kind": "tangent",
+          "name": "Tangent 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#FF862F",
+          "fill_color": "#58C4DD",
+          "stroke_width": 3.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "graph_id": "8ad527950244",
+            "x_value": 1.0,
+            "x_parameter": "b11249537bb8",
+            "width": 2.5,
+            "label": "none",
+            "label_side": "auto",
+            "decimals": 2
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "40658d29b0d4",
+          "kind": "graph_point",
+          "name": "Point on graph 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FF862F",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "graph_id": "8ad527950244",
+            "x_value": 1.0,
+            "x_parameter": "b11249537bb8",
+            "show_lines": false,
+            "show_label": false,
+            "radius": 0.08
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "450d70c5b24d",
+          "kind": "tool_label",
+          "name": "Label (Tangent 1)",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FF862F",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "tool_id": "6d461ff7ceaf",
+            "content": "term",
+            "decimals": 2,
+            "label_side": "auto",
+            "font_size": 24.0,
+            "shift_x": 0.0,
+            "shift_y": 0.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        }
+      ],
+      "steps": [
+        {
+          "id": "218075b26877",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "0aa4810b76c2",
+              "kind": "create",
+              "target_id": "fb1d3b9a083c",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "3c60a18428d5",
+              "kind": "create",
+              "target_id": "8ad527950244",
+              "run_time": 1.5,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "cba38388ec3c",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "5ae4cc0b89e8",
+              "kind": "create",
+              "target_id": "6d461ff7ceaf",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "bd4afa61a9fc",
+              "kind": "fade_in",
+              "target_id": "40658d29b0d4",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "c1bc9954e160",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "1b102152b5e6",
+              "kind": "write",
+              "target_id": "450d70c5b24d",
+              "run_time": 1.0,
+              "rate_func": "linear",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "ae76f8dcb19d",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "8bf92c9467f1",
+              "kind": "set_value",
+              "target_id": "b11249537bb8",
+              "run_time": 6.0,
+              "rate_func": "smooth",
+              "params": {
+                "value": 1.5
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "1ac537f2bb81",
+          "kind": "wait",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        }
+      ]
+    },
+    {
+      "id": "741db98a83d2",
+      "name": "Integral function: F′ = f",
+      "background_color": "#000000",
+      "objects": [
+        {
+          "id": "1c692c2e1fb6",
+          "kind": "parameter",
+          "name": "a",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "symbol": "a",
+            "value": 0.6,
+            "minimum": 0.0,
+            "maximum": 4.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "b282289b19fd",
+          "kind": "axes",
+          "name": "Axes 1",
+          "x": 0.0,
+          "y": -0.4,
+          "rotation": 0.0,
+          "stroke_color": "#FFFFFF",
+          "fill_color": "#58C4DD",
+          "stroke_width": 2.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "x_min": -1.0,
+            "x_max": 4.5,
+            "x_step": 1.0,
+            "x_length": 11.0,
+            "y_min": -1.5,
+            "y_max": 2.5,
+            "y_step": 1.0,
+            "y_length": 6.0,
+            "show_numbers": false,
+            "tips": true,
+            "x_label": "x",
+            "y_label": "y"
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "f5196c11b22d",
+          "kind": "function_graph",
+          "name": "f",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "curve": "function",
+            "expression": "0.5x^2 - 2x + 1.5",
+            "derive_from": null,
+            "derive_order": "1",
+            "integral_from": 0.0,
+            "integral_constant": 0.0,
+            "pieces": [
+              [
+                "x^2",
+                "-5",
+                "1"
+              ],
+              [
+                "2 - x",
+                "1",
+                "5"
+              ]
+            ],
+            "x_expression": "2cos(t)",
+            "y_expression": "sin(2t)",
+            "r_expression": "2sin(3t)",
+            "implicit_expression": "x^2 + y^2 - 4",
+            "x_min": -0.6,
+            "x_max": 4.3,
+            "t_min": 0.0,
+            "t_max": 6.2832,
+            "axes_id": "b282289b19fd",
+            "clip": true
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "7e99d9551dbb",
+          "kind": "function_graph",
+          "name": "F",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#F7D96F",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "curve": "antiderivative",
+            "expression": "sin(x)",
+            "derive_from": "f5196c11b22d",
+            "derive_order": "1",
+            "integral_from": 0.0,
+            "integral_constant": 0.0,
+            "pieces": [
+              [
+                "x^2",
+                "-5",
+                "1"
+              ],
+              [
+                "2 - x",
+                "1",
+                "5"
+              ]
+            ],
+            "x_expression": "2cos(t)",
+            "y_expression": "sin(2t)",
+            "r_expression": "2sin(3t)",
+            "implicit_expression": "x^2 + y^2 - 4",
+            "x_min": -0.6,
+            "x_max": 4.3,
+            "t_min": 0.0,
+            "t_max": 6.2832,
+            "axes_id": "b282289b19fd",
+            "clip": true
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "dd159eb49fd4",
+          "kind": "graph_label",
+          "name": "Graph label 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "graph_id": "f5196c11b22d",
+            "text": "f",
+            "use_latex": false,
+            "x_value": 4.1,
+            "direction": "right",
+            "font_size": 36.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "2e9962d14f96",
+          "kind": "graph_label",
+          "name": "Graph label 2",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#F7D96F",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "graph_id": "7e99d9551dbb",
+            "text": "F",
+            "use_latex": false,
+            "x_value": 4.1,
+            "direction": "right",
+            "font_size": 36.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "96edda0f12b8",
+          "kind": "graph_area",
+          "name": "Area 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#58C4DD",
+          "stroke_width": 0.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.35,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "graph_id": "f5196c11b22d",
+            "mode": "under",
+            "other_graph_id": null,
+            "x_min": 0.0,
+            "x_max": 1.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "6d5045098ede",
+          "kind": "graph_area",
+          "name": "Area 2",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FC6255",
+          "stroke_width": 0.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.35,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "graph_id": "f5196c11b22d",
+            "mode": "under",
+            "other_graph_id": null,
+            "x_min": 1.0,
+            "x_max": 3.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "48a25fc21d16",
+          "kind": "tangent",
+          "name": "Tangent 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#FF862F",
+          "fill_color": "#58C4DD",
+          "stroke_width": 3.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 0.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "graph_id": "7e99d9551dbb",
+            "x_value": 1.0,
+            "x_parameter": "1c692c2e1fb6",
+            "width": 1.6,
+            "label": "none",
+            "label_side": "auto",
+            "decimals": 2
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "d57f3b30934f",
+          "kind": "graph_point",
+          "name": "Point on graph 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FF862F",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "graph_id": "7e99d9551dbb",
+            "x_value": 1.0,
+            "x_parameter": "1c692c2e1fb6",
+            "show_lines": false,
+            "show_label": false,
+            "radius": 0.08
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "294ed2534173",
+          "kind": "graph_point",
+          "name": "Point on graph 2",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#58C4DD",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "graph_id": "f5196c11b22d",
+            "x_value": 1.0,
+            "x_parameter": "1c692c2e1fb6",
+            "show_lines": false,
+            "show_label": false,
+            "radius": 0.08
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "8e1524fada3a",
+          "kind": "tool_label",
+          "name": "Label (Tangent 1)",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FF862F",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "tool_id": "48a25fc21d16",
+            "content": "slope",
+            "decimals": 2,
+            "label_side": "above",
+            "font_size": 24.0,
+            "shift_x": 0.0,
+            "shift_y": 0.0
+          },
+          "locked": false,
+          "editor_hidden": false
+        },
+        {
+          "id": "49bd25f49443",
+          "kind": "graph_markers",
+          "name": "Special points 1",
+          "x": 0.0,
+          "y": 0.0,
+          "rotation": 0.0,
+          "stroke_color": "#58C4DD",
+          "fill_color": "#FC6255",
+          "stroke_width": 4.0,
+          "stroke_opacity": 1.0,
+          "fill_opacity": 1.0,
+          "z_index": 0,
+          "visibility": "auto",
+          "params": {
+            "graph_id": "7e99d9551dbb",
+            "feature": "extrema",
+            "other_graph_id": null,
+            "show_labels": false,
+            "radius": 0.08
+          },
+          "locked": false,
+          "editor_hidden": false
+        }
+      ],
+      "steps": [
+        {
+          "id": "1717d68c92eb",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "719a2d39092f",
+              "kind": "create",
+              "target_id": "b282289b19fd",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "7406cbfa6c20",
+              "kind": "create",
+              "target_id": "f5196c11b22d",
+              "run_time": 1.5,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "78fa0c8a2361",
+              "kind": "write",
+              "target_id": "dd159eb49fd4",
+              "run_time": 1.0,
+              "rate_func": "linear",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "e96ecf16ebba",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "ad6720b28ec6",
+              "kind": "fade_in",
+              "target_id": "96edda0f12b8",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            },
+            {
+              "id": "33069e807544",
+              "kind": "fade_in",
+              "target_id": "6d5045098ede",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "f49570fa685d",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "18a37cc3167a",
+              "kind": "create",
+              "target_id": "7e99d9551dbb",
+              "run_time": 2.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "89573d944451",
+              "kind": "write",
+              "target_id": "2e9962d14f96",
+              "run_time": 1.0,
+              "rate_func": "linear",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "1f42f478f1d3",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "38d7f8737a1c",
+              "kind": "create",
+              "target_id": "48a25fc21d16",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {},
+              "delay": 0.0
+            },
+            {
+              "id": "3ce05a175b17",
+              "kind": "fade_in",
+              "target_id": "d57f3b30934f",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            },
+            {
+              "id": "079510ea5086",
+              "kind": "fade_in",
+              "target_id": "294ed2534173",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "e9a812b7ae8c",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "dbd096b47378",
+              "kind": "write",
+              "target_id": "8e1524fada3a",
+              "run_time": 1.0,
+              "rate_func": "linear",
+              "params": {},
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "874637bfa823",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "7151863f06dd",
+              "kind": "set_value",
+              "target_id": "1c692c2e1fb6",
+              "run_time": 6.0,
+              "rate_func": "smooth",
+              "params": {
+                "value": 3.7
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "59450799f63b",
+          "kind": "play",
+          "wait_time": 1.0,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [
+            {
+              "id": "3833e6eb048c",
+              "kind": "fade_in",
+              "target_id": "49bd25f49443",
+              "run_time": 1.0,
+              "rate_func": "smooth",
+              "params": {
+                "shift": "none",
+                "scale": 1.0
+              },
+              "delay": 0.0
+            }
+          ],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        },
+        {
+          "id": "375c5e8b28e3",
+          "kind": "wait",
+          "wait_time": 1.5,
+          "mode": "together",
+          "lag_ratio": 0.25,
+          "animations": [],
+          "section": "",
+          "subcaption": "",
+          "sound": "",
+          "sound_gain": 0.0,
+          "sound_offset": 0.0,
+          "code": ""
+        }
+      ]
+    }
+  ],
+  "render": {
+    "quality": "h",
+    "width": 1920,
+    "height": 1080,
+    "fps": 60,
+    "format": "mp4",
+    "output_dir": "",
+    "png_after_step": -1,
+    "transparent": false,
+    "scenes": "current",
+    "transition": "cut",
+    "save_sections": false
+  },
+  "aspect": "16:9"
+}

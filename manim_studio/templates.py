@@ -410,6 +410,48 @@ def venn_diagram() -> Scene:
     return scene
 
 
+def integral_function() -> Scene:
+    """F(x) = ∫₀ˣ f(t) dt: the slope of F is the value of f; the areas above and below cancel at x = 3."""
+    scene = create_scene(tr("template.integral.name"))
+    position = _add(scene, create_object(ObjectKind.PARAMETER, "a", symbol="a", value=0.6, minimum=0.0, maximum=4.0))
+    axes = _add(
+        scene,
+        create_object(ObjectKind.AXES, tr("kind.axes") + " 1", 0.0, -0.4, x_min=-1.0, x_max=4.5, y_min=-1.5, y_max=2.5, x_length=11.0, y_length=6.0, x_label="x", y_label="y"),
+    )
+    # f(x) = (x − 1)(x − 3)/2: F rises up to x = 1, falls back to 0 at x = 3 and rises again
+    graph = _add(scene, create_object(ObjectKind.FUNCTION_GRAPH, "f", expression="0.5x^2 - 2x + 1.5", axes_id=axes.id, x_min=-0.6, x_max=4.3))
+    integral = _add(
+        scene,
+        create_object(ObjectKind.FUNCTION_GRAPH, "F", curve="antiderivative", derive_from=graph.id, integral_from=0.0, integral_constant=0.0, axes_id=axes.id, x_min=-0.6, x_max=4.3),
+    )
+    graph.stroke_color, integral.stroke_color = "#58C4DD", "#F7D96F"
+    label_f = _add(scene, create_object(ObjectKind.GRAPH_LABEL, tr("kind.graph_label") + " 1", graph_id=graph.id, text="f", x_value=4.1, direction="right"))
+    label_big = _add(scene, create_object(ObjectKind.GRAPH_LABEL, tr("kind.graph_label") + " 2", graph_id=integral.id, text="F", x_value=4.1, direction="right"))
+    label_f.fill_color, label_big.fill_color = graph.stroke_color, integral.stroke_color
+    above = _add(scene, create_object(ObjectKind.GRAPH_AREA, tr("kind.graph_area") + " 1", graph_id=graph.id, x_min=0.0, x_max=1.0))
+    below = _add(scene, create_object(ObjectKind.GRAPH_AREA, tr("kind.graph_area") + " 2", graph_id=graph.id, x_min=1.0, x_max=3.0))
+    above.fill_opacity = below.fill_opacity = 0.35
+    below.fill_color = "#FC6255"
+    tangent = _add(scene, create_object(ObjectKind.TANGENT, tr("kind.tangent") + " 1", graph_id=integral.id, x_parameter=position.id, width=1.6))
+    tangent.stroke_color = "#FF862F"
+    on_integral = _add(scene, create_object(ObjectKind.GRAPH_POINT, tr("kind.graph_point") + " 1", graph_id=integral.id, x_parameter=position.id, show_lines=False))
+    on_graph = _add(scene, create_object(ObjectKind.GRAPH_POINT, tr("kind.graph_point") + " 2", graph_id=graph.id, x_parameter=position.id, show_lines=False))
+    on_integral.fill_color, on_graph.fill_color = tangent.stroke_color, graph.stroke_color
+    # the slope of the tangent at F is the value of f below it
+    slope = _add(scene, create_object(ObjectKind.TOOL_LABEL, tr("tool_label.name", tool=tangent.name), tool_id=tangent.id, content="slope", label_side="above"))
+    slope.fill_color = tangent.stroke_color
+    extrema = _add(scene, create_object(ObjectKind.GRAPH_MARKERS, tr("kind.graph_markers") + " 1", graph_id=integral.id, feature="extrema", show_labels=False))
+    _play(scene, create_animation(AnimationKind.CREATE, axes.id), create_animation(AnimationKind.CREATE, graph.id, run_time=1.5), create_animation(AnimationKind.WRITE, label_f.id))
+    _play(scene, create_animation(AnimationKind.FADE_IN, above.id), create_animation(AnimationKind.FADE_IN, below.id))
+    _play(scene, create_animation(AnimationKind.CREATE, integral.id, run_time=2.0), create_animation(AnimationKind.WRITE, label_big.id))
+    _play(scene, create_animation(AnimationKind.CREATE, tangent.id), *(create_animation(AnimationKind.FADE_IN, point.id) for point in (on_integral, on_graph)))
+    _play(scene, create_animation(AnimationKind.WRITE, slope.id))
+    _play(scene, create_animation(AnimationKind.SET_VALUE, position.id, run_time=6.0, value=3.7))
+    _play(scene, create_animation(AnimationKind.FADE_IN, extrema.id))
+    scene.steps.append(create_wait_step(1.5))
+    return scene
+
+
 BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("title", "text", title_and_subtitle),
     BuiltinTemplate("analysis", "graph", analyze_function),
@@ -429,4 +471,5 @@ BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("venn", "a_fade_in", venn_diagram),
     BuiltinTemplate("complex_map", "a_apply_complex", complex_map),
     BuiltinTemplate("lens", "zoom_in", zoom_lens),
+    BuiltinTemplate("integral", "graph", integral_function),
 )

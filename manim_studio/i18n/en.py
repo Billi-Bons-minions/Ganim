@@ -1493,4 +1493,5 @@ STRINGS: dict[str, str] = {
     "param.dashed": "Dashed (outline only)",
     "param.num_dashes": "Number of dashes",
     "issue.path_dashed": "“{detail}” is dashed and cannot be used as a path (Manim only has the separate dashes).",
+    "template.integral.name": "Integral function: F′ = f",
 }

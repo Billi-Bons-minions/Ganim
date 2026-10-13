@@ -58,7 +58,7 @@ All of these clips were made from the built-in templates and the projects in [ex
 - Export of the generated Python script; the code view shows it at any time
 
 **More**
-- 18 templates (e.g. title card, function analysis, secant to tangent, sliding tangent, Pythagorean theorem, orbit, 3D solids, conic sections, presentation slide, graph theory, linear map, complex map w = z², a zoom lens on a tangent, sets with a Venn diagram) and 5 example projects in the welcome dialog
+- 19 templates (e.g. title card, function analysis, secant to tangent, sliding tangent, integral function F′ = f, Pythagorean theorem, orbit, 3D solids, conic sections, presentation slide, graph theory, linear map, complex map w = z², a zoom lens on a tangent, sets with a Venn diagram) and 5 example projects in the welcome dialog
 - Interactive tour, hover previews for every animation, a list of all keyboard shortcuts (*F1*)
 - Dark and light theme, adjustable UI scale, German and English
 - Autosave and recovery after a crash, project packages (project and images in one file), your own styles, building blocks and templates

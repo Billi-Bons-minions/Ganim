@@ -128,6 +128,8 @@ EXAMPLES = {
     "3d-and-fields.msproj": lambda: from_templates("3D and vector fields", "solids", "flow"),
     "polar-curves.msproj": polar_curves,
     "vectors-in-space.msproj": vectors_in_space,
+    "calculus.msproj": lambda: from_templates("Calculus", "tangent", "integral"),
+    "maps-and-sets.msproj": lambda: from_templates("Maps and sets", "complex_map", "venn", "lens"),
 }
 
 

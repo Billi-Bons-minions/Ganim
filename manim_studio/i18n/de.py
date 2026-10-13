@@ -1493,4 +1493,5 @@ STRINGS: dict[str, str] = {
     "param.dashed": "Gestrichelt (nur Rand)",
     "param.num_dashes": "Anzahl Striche",
     "issue.path_dashed": "„{detail}“ ist gestrichelt und kann deshalb nicht als Pfad benutzt werden (Manim hat nur die einzelnen Striche).",
+    "template.integral.name": "Integralfunktion: F′ = f",
 }

@@ -526,3 +526,8 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
 - **Was:** Der Skript-Import liest jetzt `ax.plot_derivative_graph(g)`, `ax.plot_antiderivative_graph(g, y_intercept=C)` (Manim integriert ab 0), `ax.get_area(g, x_range, bounded_graph=…)`, `ax.get_riemann_rectangles(…)`, `ax.get_secant_slope_group(x, g, dx)`, `ax.get_graph_label(g, label, x_val, direction)`, Punkte `Dot(ax.i2gp(x, g))` sowie Kurven aus `plot_parametric_curve` und `plot_polar_graph`.
 - **Test:** Ein typisches Analysis-Skript wird ohne übersprungene Zeilen eingelesen, ist gültig, erzeugt Code und läuft in Manim 0.19 und 0.22.
 - **Grenze:** Nicht gelesen werden u. a. `always_redraw` mit Werkzeugen und `ValueTracker` in Werkzeug-Positionen (Kopplung an Parameter). Solche Zeilen landen wie bisher in der Liste der übersprungenen Zeilen.
+
+## 10a. Vorlage „Integralfunktion: F′ = f“
+- f(x) = ½(x − 1)(x − 3) und F = ∫₀ˣ f. Die Flächen von 0 bis 1 (über der Achse) und von 1 bis 3 (darunter) heben sich auf, deshalb kehrt F bei x = 3 auf 0 zurück. Eine Tangente wandert an F (Parameter a), ihre Steigung „m = …“ steht daneben, ein Punkt auf f zeigt denselben Wert. Am Ende erscheinen die Extrema von F, genau über den Nullstellen von f.
+- Bildvergleich Endbild Bühne/Video deckungsgleich. Die Steigungsbeschriftung steht über der Tangente, sonst läge sie am Ende auf der x-Achse.
+- Zwei neue Beispielprojekte in `examples/`: *calculus* (Tangente wandert, Integralfunktion) und *maps-and-sets* (komplexe Abbildung, Venn-Diagramm, Lupe). Die alten Beispieldateien habe ich nicht neu geschrieben (nur neue IDs, sonst gleich).

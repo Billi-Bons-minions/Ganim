@@ -36,7 +36,7 @@ All notable changes to Manim Studio are listed here. The format follows
 
 - Color gradients for shapes and lines (*Color gradient*: fill, outline or both, a second color and its direction; Manim's `set_fill([a, b])`, `set_stroke([a, b])` and `set_sheen_direction`). The stage lays the gradient out like Manim (across the bounding box, turning with the object); a color change makes it one color again, a transform blends it. The script import reads two-color `set_fill`/`set_stroke`/`set_color` and `set_sheen_direction`.
 
-- Graph tools work on the integral function F(x) = C + ∫ f(t) dt: point, tangent (its slope is f), secant, area, Riemann sum, zeros, extrema (where f changes sign), inflection points (at the extrema of f), intersections, labels, value table and value labels, also with parameters.
+- Graph tools work on the integral function F(x) = C + ∫ f(t) dt: point, tangent (its slope is f), secant, area, Riemann sum, zeros, extrema (where f changes sign), inflection points (at the extrema of f), intersections, labels, value table and value labels, also with parameters. Template "Integral function: F′ = f" (now 19 templates): the tangent at F slides along it and its slope is the value of f; the areas above and below the x-axis cancel where F returns to 0.
 
 - The script import reads graph tools made by axes: `plot_derivative_graph`, `plot_antiderivative_graph`, `get_area` (also `bounded_graph`), `get_riemann_rectangles`, `get_secant_slope_group`, `get_graph_label`, points `Dot(ax.i2gp(x, graph))`, and curves from `plot_parametric_curve` and `plot_polar_graph`.
 

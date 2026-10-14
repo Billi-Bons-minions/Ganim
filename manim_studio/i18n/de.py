@@ -1302,7 +1302,7 @@ STRINGS: dict[str, str] = {
     "choice.attach.formula": "Position aus Formel",
     "prop.attach_none_note": "Ein gekoppeltes Objekt bewegt sich automatisch mit: mit einem anderen Objekt (z. B. eine Beschriftung neben einem Punkt) oder nach einer Formel mit Parametern.",
     "prop.attach_follow_note": "Der Abstand zum Objekt bleibt so, wie du ihn am Anfang auf der Bühne einstellst. Bewegen und Verwandeln sind dann nicht mehr als Animation möglich.",
-    "prop.attach_formula_note": "Die Formeln dürfen Parameter ({symbols}) und Funktionswerte von Graphen ({functions}) verwenden, z. B. x = a, y = f(a). Animiere einen Parameter mit „Wert ändern“, dann wandert das Objekt mit.",
+    "prop.attach_formula_note": "Die Formeln dürfen Parameter ({symbols}) und Funktionswerte von Graphen ({functions}) und Koordinaten anderer Objekte (A.x, A.y, dist(A, B)) verwenden, z. B. x = a, y = f(a) oder x = (A.x + B.x)/2. Animiere einen Parameter mit „Wert ändern“, dann wandert das Objekt mit.",
     "issue.attach_target_missing": "Es ist kein Objekt gewählt, dem es folgen soll.",
     "issue.attach_cycle": "Die Objekte folgen einander im Kreis („{detail}“).",
     "issue.attach_only_parameters": "Die Positionsformel darf nur Zahlen, Parameter und Funktionswerte wie f(a) enthalten (kein x).",
@@ -1514,4 +1514,6 @@ STRINGS: dict[str, str] = {
     "codegen.attach_corners_missing": "„{detail}“ soll durch Objekte laufen, aber eines fehlt.",
     "status.line_between": "Die Linie verbindet die beiden ausgewählten Objekte und folgt ihnen.",
     "status.polygon_through": "Das Vieleck läuft durch die ausgewählten Objekte und folgt ihnen.",
+    "expr.unknown_object": "„{detail}“ ist kein Objekt mit Position (oder der Name ist nicht eindeutig). A.x, A.y und dist(A, B) brauchen Objekte mit einfachen, eindeutigen Namen.",
+    "issue.attach_formula_self": "Die Position kann nicht aus der eigenen Position berechnet werden.",
 }

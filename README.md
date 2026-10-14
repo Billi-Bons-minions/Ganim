@@ -47,7 +47,7 @@ All of these clips were made from the built-in templates and the projects in [ex
 - Disappear: Fade out, Uncreate, Unwrite, Shrink to center
 - Steps play their animations together, staggered or one after another. A 2D camera can move and zoom, and **objects can be coupled** (Manim updaters): a label can follow a moving dot, a line or arrow can run between two objects and a polygon through several (a triangle follows its corners), the camera can follow an object, and a position can come from a formula like `x = 2 cos(w)`, `y = 2 sin(w)` driven by a parameter.
 
-**Parameters (ValueTracker)**: sliders such as `a` can be used in every formula (graphs, areas, tangents, surfaces, vector fields, positions) and animated with *Change value*. A number on screen can show a parameter or a formula of parameters (e.g. `a^2/2`). Formulas of numbers, positions and computed results can also use **values of function graphs**: name a graph `f` and write `f(a)`, `f(2) + 1` or `g(a)` for its derivative `g`. The stage updates live.
+**Parameters (ValueTracker)**: sliders such as `a` can be used in every formula (graphs, areas, tangents, surfaces, vector fields, positions) and animated with *Change value*. A number on screen can show a parameter or a formula of parameters (e.g. `a^2/2`). Formulas of numbers, positions and computed results can also use **values of function graphs**: name a graph `f` and write `f(a)`, `f(2) + 1` or `g(a)` for its derivative `g`. They can also use **coordinates of objects**: `A.x`, `A.y` and `dist(A, B)` (e.g. the live length of a segment or a midpoint). The stage updates live.
 
 **Stage and timeline**
 - The stage uses Manim's coordinates and shows every moment of the animation: press *Space* to play it on the stage without rendering

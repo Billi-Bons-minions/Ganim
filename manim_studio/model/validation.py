@@ -256,6 +256,12 @@ def _attach_issues(scene: Scene, obj: SceneObject, add) -> None:
         elif follows_circularly(scene, obj):
             add(ERROR, "attach_cycle", target.name)
     elif mode == ATTACH_FORMULA:
+        from manim_studio.model.attach import position_formulas
+        from manim_studio.model.graphs import position_users
+
+        formulas = position_formulas(scene, obj)
+        if formulas is not None and any(obj.id in position_users(scene, formula) for formula in formulas):
+            add(ERROR, "attach_formula_self")  # its own position would chase itself
         error = formula_error(scene, obj)
         if error == "only_parameters":
             add(ERROR, "attach_only_parameters")

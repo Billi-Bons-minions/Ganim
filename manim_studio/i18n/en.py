@@ -1302,7 +1302,7 @@ STRINGS: dict[str, str] = {
     "choice.attach.formula": "position from formula",
     "prop.attach_none_note": "A coupled object moves by itself: along with another object (e.g. a label next to a dot) or by a formula with parameters.",
     "prop.attach_follow_note": "It keeps the distance you set on the stage at the start. Moving and transforming it are then no longer possible as animations.",
-    "prop.attach_formula_note": "The formulas may use parameters ({symbols}) and values of graphs ({functions}), e.g. x = a, y = f(a). Animate a parameter with “Change value” and the object moves along.",
+    "prop.attach_formula_note": "The formulas may use parameters ({symbols}) and values of graphs ({functions}) and coordinates of other objects (A.x, A.y, dist(A, B)), e.g. x = a, y = f(a) or x = (A.x + B.x)/2. Animate a parameter with “Change value” and the object moves along.",
     "issue.attach_target_missing": "No object is chosen to follow.",
     "issue.attach_cycle": "The objects follow each other in a circle (“{detail}”).",
     "issue.attach_only_parameters": "The position formula may only contain numbers, parameters and graph values such as f(a) (no x).",
@@ -1514,4 +1514,6 @@ STRINGS: dict[str, str] = {
     "codegen.attach_corners_missing": "“{detail}” should run through objects, but one is missing.",
     "status.line_between": "The line connects the two selected objects and follows them.",
     "status.polygon_through": "The polygon runs through the selected objects and follows them.",
+    "expr.unknown_object": "“{detail}” is not an object with a position (or the name is not unique). A.x, A.y and dist(A, B) need objects with plain, unique names.",
+    "issue.attach_formula_self": "The position cannot be computed from the object's own position.",
 }

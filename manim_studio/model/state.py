@@ -198,9 +198,14 @@ def _initial_value(obj: SceneObject) -> float:
 
 def parameter_values(scene: Scene, states: dict[str, ObjectState]) -> dict[str, float]:
     """Return the current value of every parameter symbol."""
-    from manim_studio.model.graphs import parameter_objects, parameter_symbol
+    from manim_studio.model.graphs import parameter_objects, parameter_symbol, position_objects, position_symbol
 
-    return {parameter_symbol(obj): states[obj.id].value for obj in parameter_objects(scene) if obj.id in states and parameter_symbol(obj)}
+    values = {parameter_symbol(obj): states[obj.id].value for obj in parameter_objects(scene) if obj.id in states and parameter_symbol(obj)}
+    # where the objects are now, for formulas with A.x, A.y or dist(A, B)
+    for name, obj in position_objects(scene).items():
+        if obj.id in states:
+            values[position_symbol(name, "x")], values[position_symbol(name, "y")] = states[obj.id].x, states[obj.id].y
+    return values
 
 
 def _apply_color(state: ObjectState, anim: Animation) -> ObjectState:

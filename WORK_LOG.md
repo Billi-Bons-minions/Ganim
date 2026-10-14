@@ -616,3 +616,13 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 
 ## README-GIFs: Thales, Wertetabelle, Venn
 - Drei weitere GIFs aus den Vorlagen (640×360, 15 fps) als neue Tabellenzeile: Satz des Thales (Bogenbahn, verbundene Linien, gestrichelter Kreis, rechter Winkel), Wertetabelle und Graph (Zellen-Hervorhebung), Venn-Diagramm (Mengenformen). Das Venn-GIF ist mit 1,5 MB etwas größer als die anderen; eine kleinere Farbpalette machte es größer, daher so gelassen.
+
+## Koordinaten von Objekten in Formeln: A.x, A.y, dist(A, B)
+- **Warum:** Mit Linien und Vielecken zwischen Punkten fehlten Messwerte (Länge einer Strecke) und abhängige Punkte (Mittelpunkt).
+- **Was:** In Formeln von Zahlen, Positionen und berechneten Ergebnissen (wo schon `f(a)` geht) stehen `A.x`, `A.y` (Mitte des Objekts A) und `dist(A, B)`. Objekte brauchen einen einfachen, eindeutigen Namen und eine eigene Position.
+- **Wie:** Vor dem Parsen werden die Verweise zu Hilfssymbolen (`pos_x_A`); die Bühne setzt die aktuellen Koordinaten aus den Zuständen ein, das Skript `a.get_center()[0]`. Eine Zahl mit solchem Verweis wird nach den Objekten erzeugt (ihr Updater liest sie sofort); berechnete Ergebnisse mit Verweisen werden laufend neu gerechnet.
+- **Entscheidungen:**
+  - Schreibweise `A.x` statt `x(A)`, weil `x` in Formeln der Platzhalter ist.
+  - Eine Position darf sich nicht aus sich selbst berechnen (Fehler in der Validierung).
+- **Test:** Strecke AB, B bewegt sich; Länge als Zahl und Mittelpunkt M in jedem Bild wie in Manim (0.19.1 und 0.22).
+- **Dabei beachtet:** Der Zwischenspeicher der Integralfunktion nimmt nur noch die Parameter als Schlüssel; sonst hätte jede Objektbewegung F neu berechnet.

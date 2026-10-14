@@ -177,8 +177,11 @@ def parameter_scene() -> Scene:
 
 def test_parameter_animation_changes_values_over_time() -> None:
     scene = parameter_scene()
-    assert parameter_values(scene, states_after(scene, START)) == {"a": 1.0}
-    assert parameter_values(scene, states_after(scene, 0)) == {"a": 3.0}
+    def parameters(values: dict) -> dict:
+        return {name: value for name, value in values.items() if not name.startswith(graphs.POSITION_PREFIX)}  # (positions of objects come along)
+
+    assert parameters(parameter_values(scene, states_after(scene, START))) == {"a": 1.0}
+    assert parameters(parameter_values(scene, states_after(scene, 0))) == {"a": 3.0}
     middle = parameter_values(scene, state_at_time(scene, 0.5))["a"]
     assert 1.0 < middle < 3.0
     point = scene.object_by_id("p")

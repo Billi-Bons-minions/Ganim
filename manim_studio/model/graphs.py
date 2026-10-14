@@ -9,7 +9,8 @@ generator, which keeps the stage and the rendered video in sync.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, replace
 from typing import Callable
 
 from manim_studio.model.analysis import (
@@ -93,8 +94,66 @@ def parameter_symbols(scene: Scene) -> tuple[str, ...]:
 
 
 def initial_values(scene: Scene) -> Values:
-    """Return every parameter's start value."""
-    return {parameter_symbol(obj): param_float(obj.params, "value", 0.0) for obj in parameter_objects(scene) if parameter_symbol(obj)}
+    """Return every parameter's start value (and the start positions of objects formulas can use)."""
+    values = {parameter_symbol(obj): param_float(obj.params, "value", 0.0) for obj in parameter_objects(scene) if parameter_symbol(obj)}
+    for name, obj in position_objects(scene).items():
+        values[position_symbol(name, "x")], values[position_symbol(name, "y")] = obj.x, obj.y
+    return values
+
+
+#: ``A.x`` and ``A.y`` in formulas: the coordinates of the center of the object named ``A``.
+_POSITION_REFERENCE = re.compile(r"(?<![\w.])([A-Za-z_][A-Za-z0-9_]*)\.([xy])(?![\w(])")
+#: ``dist(A, B)``: the distance between the centers of two objects.
+_DISTANCE = re.compile(r"(?<![\w.])dist\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*[,;]\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)")
+#: Symbols that stand for coordinates of objects start with this.
+POSITION_PREFIX = "pos_"
+
+
+def position_symbol(name: str, axis: str) -> str:
+    """The symbol a formula uses for ``name.axis`` (``A.x`` → ``pos_x_A``)."""
+    return f"{POSITION_PREFIX}{axis}_{name}"
+
+
+def position_objects(scene: Scene) -> dict[str, SceneObject]:
+    """Objects whose coordinates formulas may use, by name: a plain, unique name and a position of their own."""
+    from manim_studio.model.attach import FOLLOWABLE_KINDS
+
+    names = [obj.name.strip() for obj in scene.objects]
+    taken = set(parameter_symbols(scene))
+    return {
+        obj.name.strip(): obj
+        for obj in scene.objects
+        if obj.kind in FOLLOWABLE_KINDS and is_valid_name(obj.name.strip()) and names.count(obj.name.strip()) == 1 and obj.name.strip() not in taken
+    }
+
+
+def expand_positions(scene: Scene, text: str) -> str:
+    """Replace ``A.x``, ``A.y`` and ``dist(A, B)`` by symbols of the objects' coordinates."""
+    objects = position_objects(scene)
+
+    def known(name: str) -> str:
+        if name not in objects:
+            raise ExpressionError("unknown_object", name)
+        return name
+
+    def distance(match: re.Match) -> str:
+        a, b = known(match.group(1)), known(match.group(2))
+        return f"sqrt(({a}.x - {b}.x)^2 + ({a}.y - {b}.y)^2)"
+
+    text = _DISTANCE.sub(distance, text)
+    return _POSITION_REFERENCE.sub(lambda match: position_symbol(known(match.group(1)), match.group(2)), text)
+
+
+def uses_positions(expression: Expression) -> bool:
+    """``True`` if a formula reads coordinates of objects (it changes when they move)."""
+    return any(symbol.startswith(POSITION_PREFIX) for symbol in expression.used_parameters())
+
+
+def position_users(scene: Scene, expression: Expression) -> list[str]:
+    """Ids of the objects whose coordinates a formula reads."""
+    objects = position_objects(scene)
+    used = expression.used_parameters()
+    return [obj.id for name, obj in objects.items() if position_symbol(name, "x") in used or position_symbol(name, "y") in used]
 
 
 def parse(scene: Scene, text: str, variable: str = "x") -> Expression | None:
@@ -230,7 +289,9 @@ def cached_antiderivative(scene: Scene, graph: SceneObject, values: Values | Non
     """``antiderivative_function`` for tools that ask for F many times (same graph, integrand and values)."""
     source = scene.object_by_id(graph.params.get("derive_from"))
     values = scene_values(scene, values)
-    key = (graph.id, repr(sorted(graph.params.items())), repr(sorted(source.params.items())) if source is not None else "", tuple(sorted(values.items())))
+    # only the parameters count: coordinates of moving objects (A.x …) do not change F
+    parameters = tuple(sorted((name, value) for name, value in values.items() if not name.startswith(POSITION_PREFIX)))
+    key = (graph.id, repr(sorted(graph.params.items())), repr(sorted(source.params.items())) if source is not None else "", parameters)
     if key not in _ANTIDERIVATIVES:
         if len(_ANTIDERIVATIVES) > 64:
             _ANTIDERIVATIVES.clear()
@@ -1125,8 +1186,10 @@ def parse_formula(scene: Scene, text: str) -> Expression:
     from manim_studio.model.attach import FORMULA_VARIABLE
 
     symbols = parameter_symbols(scene)
+    positions = tuple(position_symbol(name, axis) for name in position_objects(scene) for axis in ("x", "y"))
     try:
-        expression = parse_expression(text, FORMULA_VARIABLE, symbols, formula_functions(scene))
+        expression = parse_expression(expand_positions(scene, text), FORMULA_VARIABLE, symbols + positions, formula_functions(scene))
+        expression = replace(expression, source=text)
     except ExpressionError as error:
         names = [obj.name.strip() for obj in scene.objects if obj.kind == ObjectKind.FUNCTION_GRAPH]
         if error.code == "unknown_function" and error.detail in names:

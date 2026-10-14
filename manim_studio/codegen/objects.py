@@ -558,7 +558,7 @@ def object_code(
         from manim_studio.model.latex_term import result_term
 
         term = result_term(scene, obj)
-        if term is not None and graphs.parameter_users(scene, obj):
+        if term is not None and (graphs.parameter_users(scene, obj) or graphs.uses_positions(term)):
             # recompute "= result" in every frame; become() keeps the formula where it is
             code = term.to_numpy(renames(scene, names), pad_variable=False)
             decimals = int(param_float(obj.params, "result_decimals", 2.0))
@@ -619,6 +619,12 @@ def dependencies(scene: Scene, obj: SceneObject) -> list[str]:
         result += [str(obj.params.get(key)) for key in ("attach_start", "attach_end") if obj.params.get(key)]
     if attach_mode(obj) == ATTACH_CORNERS:
         result += [str(corner) for corner in obj.params.get("attach_corners", []) or []]
+    # a number or result that reads A.x, A.y or dist(A, B) is updated at once: A must exist
+    from manim_studio.model.latex_term import result_term
+
+    formula = graphs.number_formula(scene, obj) or result_term(scene, obj)
+    if formula is not None:
+        result += graphs.position_users(scene, formula)
     for key in ("graph_id", "other_graph_id"):
         if obj.params.get(key):
             result.append(str(obj.params.get(key)))

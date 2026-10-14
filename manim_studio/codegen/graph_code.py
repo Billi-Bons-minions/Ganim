@@ -63,13 +63,18 @@ Kwargs = list[tuple[str, str]]
 
 
 def renames(scene: Scene, names: dict[str, str]) -> dict[str, str]:
-    """Map parameter symbols onto ``tracker.get_value()`` code."""
+    """Map parameter symbols onto ``tracker.get_value()`` code and object coordinates onto ``mob.get_center()[…]``."""
     symbols = set(graphs.parameter_symbols(scene))
-    return {
+    result = {
         graphs.parameter_symbol(obj): f"{names[obj.id]}.get_value()"
         for obj in graphs.parameter_objects(scene)
         if graphs.parameter_symbol(obj) in symbols and obj.id in names
     }
+    for name, obj in graphs.position_objects(scene).items():
+        if obj.id in names:
+            result[graphs.position_symbol(name, "x")] = f"{names[obj.id]}.get_center()[0]"
+            result[graphs.position_symbol(name, "y")] = f"{names[obj.id]}.get_center()[1]"
+    return result
 
 
 def parameter_code(obj: SceneObject, variable: str) -> list[str]:

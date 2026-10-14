@@ -40,6 +40,8 @@ All notable changes to Manim Studio are listed here. The format follows
 
 - The script import reads graph tools made by axes: `plot_derivative_graph`, `plot_antiderivative_graph`, `get_area` (also `bounded_graph`), `get_riemann_rectangles`, `get_secant_slope_group`, `get_graph_label`, points `Dot(ax.i2gp(x, graph))`, and curves from `plot_parametric_curve` and `plot_polar_graph`.
 
+- Formulas of numbers, positions and computed results can use coordinates of objects: `A.x`, `A.y` and `dist(A, B)` (objects with a plain, unique name). A number shows the length of a segment live, a dot with the position `x = (A.x + B.x)/2`, `y = (A.y + B.y)/2` stays the midpoint. In the script they read `a.get_center()`.
+
 - Polygons can run through three or more objects (coupling *through objects (corners)*, `always_redraw(lambda: Polygon(a.get_center(), …))`), filled, dashed or with a gradient: e.g. the area of a triangle that follows its corners. Select three or more dots and click *Polygon*; select two and click *Line* (or an arrow) for a line between them. The import reads polygons, also through objects.
 
 - Lines, arrows, double arrows and dashed lines can run between two objects (coupling *between two objects*: from center to center, `always_redraw(lambda: Line(a.get_center(), b.get_center()))`). When the objects move, the line follows on the stage like in the video, e.g. the sides of a triangle whose corners are dots. The import reads such lines. Template "Thales’ theorem" (now 21 templates): C walks on the circle (on arcs), the sides follow and the angle at C stays 90°.

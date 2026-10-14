@@ -40,6 +40,8 @@ All notable changes to Manim Studio are listed here. The format follows
 
 - The script import reads graph tools made by axes: `plot_derivative_graph`, `plot_antiderivative_graph`, `get_area` (also `bounded_graph`), `get_riemann_rectangles`, `get_secant_slope_group`, `get_graph_label`, points `Dot(ax.i2gp(x, graph))`, and curves from `plot_parametric_curve` and `plot_polar_graph`.
 
+- The import reads graphs that Manim Studio writes with `studio_plot` (clipped graphs and piecewise functions), so they survive the way back from an exported script.
+
 - *Name as label* on points and shapes: a text with the object's name at its upper right that follows it (e.g. A, B, C at the corners of a triangle). The template "Thales’ theorem" labels its corners.
 
 - Polygons can be a *Smooth curve* through their points (Manim's `set_points_smoothly`, the same spline) and/or open (*Closed* off: `set_points_as_corners` without the edge back), also dashed, with a gradient or through objects. Handy as free curves and as paths for *Move along path*. The import reads both.

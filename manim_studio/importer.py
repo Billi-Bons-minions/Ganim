@@ -368,6 +368,8 @@ def build_object(call: ast.Call, name: str, objects: dict[str, SceneObject]) -> 
         _graph_range(obj, kwargs)
         _style(obj, kwargs)
         return obj
+    if function == "studio_plot" and len(call.args) >= 3 and isinstance(call.args[1], ast.Lambda):
+        return _studio_plot(call, kwargs, name, objects)
     if function.endswith(".plot") and call.args:
         axes = objects.get(function.rsplit(".", 1)[0])
         _variable, term = _term(call.args[0])
@@ -512,6 +514,48 @@ def _graph_tool(function: str, call: ast.Call, kwargs: dict[str, ast.AST], name:
             obj.fill_color = _color(kwargs["color"])
         return obj
     return None
+
+
+def _bound(node: ast.AST) -> str:
+    return f"{_number(node):g}"
+
+
+def _studio_plot(call: ast.Call, kwargs: dict[str, ast.AST], name: str, objects: dict[str, SceneObject]) -> SceneObject:
+    """``studio_plot(ax, lambda x: …, [a, b], y_range=…, breaks=…)``: a clipped graph or, with ``… if lo <= x < hi else …``, a piecewise one."""
+    axes = objects.get(call.args[0].id) if isinstance(call.args[0], ast.Name) else None
+    if axes is None or axes.kind != ObjectKind.AXES:
+        raise ImportProblem("studio_plot")
+    function = call.args[1]
+    variable = function.args.args[0].arg if function.args.args else "x"
+    body = function.body
+    if isinstance(body, ast.IfExp):
+        pieces = []
+        while isinstance(body, ast.IfExp):
+            test = body.test
+            if not (isinstance(test, ast.Compare) and len(test.ops) in (1, 2)):
+                raise ImportProblem("piecewise")
+            parts = [test.left, *test.comparators]
+            names = [index for index, part in enumerate(parts) if isinstance(part, ast.Name) and part.id == variable]
+            if len(names) != 1:
+                raise ImportProblem("piecewise")
+            low = _bound(parts[names[0] - 1]) if names[0] > 0 else ""
+            high = _bound(parts[names[0] + 1]) if names[0] + 1 < len(parts) else ""
+            _var, term = _term(ast.Lambda(args=function.args, body=body.body))
+            pieces.append([term, low, high])
+            body = body.orelse
+        obj = create_object(ObjectKind.FUNCTION_GRAPH, name, curve="piecewise", pieces=pieces, axes_id=axes.id)
+    else:
+        if any(isinstance(node, ast.Name) and node.id == "studio_integral" for node in ast.walk(body)):
+            raise ImportProblem("studio_plot")  # an integral function: plot_antiderivative_graph is read instead
+        _var, term = _term(function)
+        obj = create_object(ObjectKind.FUNCTION_GRAPH, name, expression=term, axes_id=axes.id)
+    values = call.args[2]
+    if isinstance(values, (ast.List, ast.Tuple)) and len(values.elts) >= 2:
+        obj.params["x_min"], obj.params["x_max"] = _number(values.elts[0]), _number(values.elts[1])
+    limits = kwargs.get("y_range")
+    obj.params["clip"] = not (isinstance(limits, ast.Constant) and limits.value is None)
+    _style(obj, kwargs)
+    return obj
 
 
 def _tool_range(obj: SceneObject, values: ast.AST | None) -> None:

@@ -71,7 +71,7 @@ All of these clips were made from the built-in templates and the projects in [ex
 
 ### What Manim Studio does not do (yet)
 - It has no installer or app bundle yet: you install it with Python (see below).
-- The script import (*File → Import Manim script*) is meant for simple scenes: it reads basic shapes (also dashed or with color gradients), boolean shapes, lines and (curved) arrows, text and formulas, axes and number planes, function graphs with their derivatives and integral functions, parametric and polar curves, the common graph tools (areas, Riemann sums, secants, graph labels, points), numbers, `ValueTracker`s, groups and the common animations. Everything else, including part of what Manim Studio itself writes (tools that follow parameters, 3D, networks, vector fields, lists), is skipped and listed. To keep working on a project, save it as `.msproj`.
+- The script import (*File → Import Manim script*) is meant for simple scenes: it reads basic shapes (also dashed or with color gradients), boolean shapes, lines and (curved) arrows, text and formulas, axes and number planes, function graphs (also piecewise) with their derivatives and integral functions, parametric and polar curves, the common graph tools (areas, Riemann sums, secants, graph labels, points), numbers, `ValueTracker`s, groups and the common animations. Everything else, including part of what Manim Studio itself writes (tools that follow parameters, 3D, networks, vector fields, lists), is skipped and listed. To keep working on a project, save it as `.msproj`.
 - 3D scenes are limited to the objects listed above. The stage sorts whole 3D objects by depth, Manim sorts every face; where solids cut into each other the overlap can look a little different.
 
 ## Installation

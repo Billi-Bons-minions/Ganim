@@ -91,3 +91,21 @@ def test_imported_scene_renders(tmp_path) -> None:
     _report, scene = imported()
     result = run_manim(tmp_path, generate_script(Project(scenes=[scene])), "Analysis", "--dry_run")
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+
+
+def test_studio_plot_round_trip() -> None:
+    """Graphs Manim Studio writes with studio_plot (clipped or piecewise) come back."""
+    from manim_studio.model.entities import Project, Scene
+    from tests.helpers import make_object
+
+    axes = make_object(ObjectKind.AXES, "Achsen", "ax")
+    pieces = make_object(ObjectKind.FUNCTION_GRAPH, "g", "g", curve="piecewise", pieces=[["x^2", "-5", "1"], ["2 - x", "1", "5"]], axes_id="ax")
+    pole = make_object(ObjectKind.FUNCTION_GRAPH, "h", "h", expression="1/x", axes_id="ax", x_min=-4.0, x_max=4.0)
+    code = generate_script(Project(scenes=[Scene(id="s", name="S", objects=[axes, pieces, pole])]))
+    assert code.count("studio_plot(") >= 3  # definition and two calls
+    report = import_script(code)
+    assert not report.skipped, report.skipped
+    by_name = {obj.name: obj for obj in report.project.scenes[0].objects}
+    assert by_name["g"].params["curve"] == "piecewise" and [row[1:] for row in by_name["g"].params["pieces"]] == [["-5", "1"], ["1", "5"]]
+    assert by_name["h"].params["expression"] == "1 / x" and (by_name["h"].params["x_min"], by_name["h"].params["x_max"]) == (-4.0, 4.0)
+    assert not has_errors(validate_scene(report.project.scenes[0]))

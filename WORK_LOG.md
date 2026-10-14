@@ -648,13 +648,17 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 - Koordinaten von Objekten in Formeln (`A.x`, `A.y`, `dist(A, B)`)
 - Glatte und offene Kurven durch Punkte
 - Name als Beschriftung
+- Import: Stückfunktionen und abgeschnittene Graphen (`studio_plot`)
 - Bühne = Video: Zahlen wie `DecimalNumber`; Test „Platonische Körper“ schneller
 - README-GIFs: Thales, Wertetabelle, Venn; Fuzz-Runde 11 ohne Befund
 
 ## Offen / Ideen
-- Import: Stückfunktionen über `studio_plot`, Werkzeuge mit Parametern (`always_redraw`-Bauteile)
+- Import: Werkzeuge mit Parametern (`always_redraw`-Bauteile mit `ValueTracker`)
 - 3D: Tiefensortierung pro Fläche statt pro Körper
 - Bögen/Sektoren: Manim misst `move_to` nur an den Ankern; bei ungewöhnlichen Winkeln liegt die Mitte auf der Bühne um bis zu ~1 % des Radius anders (selten sichtbar)
 
 ## Deine Entscheidungen
 - Release/Tag/PyPI weiter offen (deine Freigabe).
+
+## Import: studio_plot (Stückfunktionen und abgeschnittene Graphen)
+- Der Import liest jetzt `studio_plot(ax, lambda x: …, [a, b], y_range=…, breaks=…)`, wie Manim Studio Graphen mit Polstellen oder Stücke schreibt. Eine Kette `A if lo <= x < hi else (B if … else np.nan)` wird zur Stückfunktion. `y_range=None` heißt „nicht abschneiden“. Integralfunktionen über `studio_plot` bleiben übersprungen; sie kommen über `plot_antiderivative_graph`.

@@ -496,6 +496,12 @@ def thales() -> Scene:
         corners[name] = _add(scene, create_object(ObjectKind.DOT, name, *on_circle(degrees), radius=0.1))
         corners[name].z_index = 1  # the corners lie on top of the sides
     corners["C"].fill_color = "#FC6255"
+    # the names of the corners next to them (C's label goes along)
+    labels = {}
+    for name, (dx, dy) in (("A", (-0.35, -0.3)), ("B", (0.35, -0.3)), ("C", (-0.3, 0.35))):
+        corner = corners[name]
+        labels[name] = _add(scene, create_object(ObjectKind.TEXT, tr("name_label.name", name=name), corner.x + dx, corner.y + dy, text=name, font_size=36.0, attach="follow", attach_target=corner.id))
+        labels[name].fill_color = corner.fill_color
     # the sides run between the corners and follow C
     sides = {}
     for start, end in (("A", "B"), ("C", "A"), ("C", "B")):
@@ -506,8 +512,8 @@ def thales() -> Scene:
     angle.stroke_color = "#FC6255"
     title = _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " 1", 0.0, 3.3, text=tr("template.thales.caption"), font_size=36.0))
     _play(scene, create_animation(AnimationKind.CREATE, circle.id, run_time=1.5), create_animation(AnimationKind.WRITE, title.id))
-    _play(scene, *(create_animation(AnimationKind.FADE_IN, corners[name].id) for name in ("A", "B")), create_animation(AnimationKind.CREATE, sides["AB"].id))
-    _play(scene, create_animation(AnimationKind.FADE_IN, corners["C"].id), *(create_animation(AnimationKind.CREATE, sides[key].id) for key in ("CA", "CB")))
+    _play(scene, *(create_animation(AnimationKind.FADE_IN, corners[name].id) for name in ("A", "B")), *(create_animation(AnimationKind.WRITE, labels[name].id) for name in ("A", "B")), create_animation(AnimationKind.CREATE, sides["AB"].id))
+    _play(scene, create_animation(AnimationKind.FADE_IN, corners["C"].id), create_animation(AnimationKind.WRITE, labels["C"].id), *(create_animation(AnimationKind.CREATE, sides[key].id) for key in ("CA", "CB")))
     _play(scene, create_animation(AnimationKind.CREATE, angle.id))
     # C walks on the circle: an arc with the central angle between the two places
     for start, end, run_time in ((120.0, 45.0, 2.0), (45.0, 160.0, 2.5), (160.0, 95.0, 1.5)):

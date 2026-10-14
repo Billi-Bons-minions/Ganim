@@ -632,3 +632,29 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 - **Manim nachgerechnet:** Die Glättung ist ein C²-Spline mit Manims Randbedingungen (offen: Zeilen (2,1) und (2,7), zweite Griffe 2A − H bzw. (A + H)/2 am Ende; geschlossen: zyklisch mit 4). Das Modell (`model/curves.py`) löst dieselben Gleichungen; Griffe gleich wie Manim (Abweichung 0). Wichtig gefunden: `move_to` eines VMobjects misst nur die *Anker* (nicht die Griffe); die Kurve wird daher um die Box ihrer Punkte zentriert, auch wenn sie darüber hinausschwingt.
 - **Entscheidung:** Glatte oder offene Vielecke können nicht Teil einer Mengenform sein (die Mengenform rechnet mit echten Vielecken).
 - **Test:** Alle Bézier-Punkte von offener/geschlossener glatter Kurve und Linienzug nach `move_to` wie in Manim (0.19.1 und 0.22), Strich-Enden einer gestrichelten Kurve, Verlaufslinie einer glatten Kurve (auch sie misst nur die Anker), Bildvergleich deckungsgleich.
+
+## Name als Beschriftung
+- **Was:** Knopf *Name als Beschriftung* bei Punkten und Formen: ein Text mit dem Objektnamen oben rechts neben dem Objekt, der ihm folgt (Kopplung „folgt“). Für Geometrie (Ecken A, B, C). Die Thales-Vorlage beschriftet ihre Ecken; GIF neu gerendert.
+- **Test:** Im echten Fenster: Beschriftung entsteht mit dem Namen, folgt beim Bewegen, Skript enthält den Updater. Bildvergleich der Vorlage mitten in der Bewegung deckungsgleich.
+
+# Zusammenfassung der Session 14.10. (laufend aktualisiert)
+
+## Fertig (je ein Commit, mit Tests gegen Manim 0.19.1 und 0.22, Doku; gepusht)
+- Gestrichelte Funktionsgraphen (Werkzeuge rechnen weiter am Graphen)
+- Tabellen wie Manims `Table` auf der Bühne; Tabellenzellen/-zeilen/-spalten hervorheben; Hintergrund hinter dem Ziel
+- Vorlagen „Wertetabelle und Graph“ und „Satz des Thales“ (jetzt 21 Vorlagen)
+- Farbverlauf für Texte (Buchstabe für Buchstabe)
+- Linien/Pfeile zwischen zwei Objekten; Vielecke durch Objekte; Erzeugen aus der Auswahl
+- Koordinaten von Objekten in Formeln (`A.x`, `A.y`, `dist(A, B)`)
+- Glatte und offene Kurven durch Punkte
+- Name als Beschriftung
+- Bühne = Video: Zahlen wie `DecimalNumber`; Test „Platonische Körper“ schneller
+- README-GIFs: Thales, Wertetabelle, Venn; Fuzz-Runde 11 ohne Befund
+
+## Offen / Ideen
+- Import: Stückfunktionen über `studio_plot`, Werkzeuge mit Parametern (`always_redraw`-Bauteile)
+- 3D: Tiefensortierung pro Fläche statt pro Körper
+- Bögen/Sektoren: Manim misst `move_to` nur an den Ankern; bei ungewöhnlichen Winkeln liegt die Mitte auf der Bühne um bis zu ~1 % des Radius anders (selten sichtbar)
+
+## Deine Entscheidungen
+- Release/Tag/PyPI weiter offen (deine Freigabe).

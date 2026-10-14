@@ -1518,4 +1518,7 @@ STRINGS: dict[str, str] = {
     "issue.attach_formula_self": "The position cannot be computed from the object's own position.",
     "param.smooth": "Smooth curve",
     "param.closed": "Closed",
+    "name_label.add": "Name as label",
+    "name_label.add_tip": "Puts a text with the object's name at its upper right that follows the object (e.g. A, B, C at the corners of a triangle).",
+    "name_label.name": "Label {name}",
 }

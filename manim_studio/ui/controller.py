@@ -289,6 +289,30 @@ class EditorController(QObject):
             params.setdefault("x_max", min(high, 2.0 if kind == ObjectKind.GRAPH_AREA else 3.0))
         return self.add_object(kind, 0.0, 0.0, name=name, graph_id=graph_id, **params)
 
+    def add_name_label(self, object_id: str) -> str | None:
+        """A text with the object's name at its upper right that follows it (e.g. the corners A, B, C of a triangle)."""
+        from manim_studio.model.attach import FOLLOWABLE_KINDS
+        from manim_studio.model.extents import base_size
+
+        scene = self.scene()
+        target = scene.object_by_id(object_id)
+        if target is None or target.kind not in FOLLOWABLE_KINDS:
+            return None
+        width, height = base_size(scene, target)
+        x, y = target.x + width / 2 + 0.25, target.y + height / 2 + 0.25
+        color = target.fill_color if target.kind == ObjectKind.DOT else "#FFFFFF"
+        return self.add_object(
+            ObjectKind.TEXT,
+            x,
+            y,
+            name=tr("name_label.name", name=target.name),
+            attributes={"fill_color": color},
+            text=target.name,
+            font_size=36.0,
+            attach="follow",
+            attach_target=object_id,
+        )
+
     def add_tool_label(self, tool_id: str) -> str | None:
         """A value label for a tangent, secant, point or area; it takes over the tool's own label."""
         tool = self.scene().object_by_id(tool_id)

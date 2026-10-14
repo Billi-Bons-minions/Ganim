@@ -110,6 +110,8 @@ TRANSFORM_TARGET_KINDS = (
 )
 #: Object references that must point to graphs of the form y = f(x).
 FUNCTION_GRAPH_REFS = ("graph_id", "other_graph_id", "derive_from")
+#: Objects that get a "name as label" button: points and shapes (texts are labels already).
+NAME_LABEL_KINDS = frozenset({ObjectKind.DOT, ObjectKind.CIRCLE, ObjectKind.SQUARE, ObjectKind.RECTANGLE, ObjectKind.TRIANGLE, ObjectKind.ELLIPSE, ObjectKind.POLYGON, ObjectKind.REGULAR_POLYGON, ObjectKind.STAR})
 #: Formulas of parameters (and graph values such as f(a)) instead of terms in x.
 FORMULA_KEYS = ("formula", "attach_x", "attach_y")
 #: Quick actions on a function graph: (key, kind or special action, extra params).
@@ -633,6 +635,13 @@ class PropertiesPanel(QScrollArea):
             for spec in info.params:
                 self._object_param_row(form, object_id, spec)
             form.note(lambda: self._analysis_note(object_id))
+        if kind in NAME_LABEL_KINDS:
+            button = QToolButton()
+            button.setText(tr("name_label.add"))
+            button.setToolTip(tr("name_label.add_tip"))
+            button.setProperty("variant", "button")
+            button.clicked.connect(lambda _checked=False: self.controller.add_name_label(object_id))
+            form.layout.addRow(button)
         if kind in LABELED_TOOL_KINDS:
             button = QToolButton()
             button.setText(tr("tool_label.add"))

@@ -1518,4 +1518,7 @@ STRINGS: dict[str, str] = {
     "issue.attach_formula_self": "Die Position kann nicht aus der eigenen Position berechnet werden.",
     "param.smooth": "Glatte Kurve",
     "param.closed": "Geschlossen",
+    "name_label.add": "Name als Beschriftung",
+    "name_label.add_tip": "Legt einen Text mit dem Namen des Objekts oben rechts daneben, der dem Objekt folgt (z. B. A, B, C an den Ecken eines Dreiecks).",
+    "name_label.name": "Beschriftung {name}",
 }

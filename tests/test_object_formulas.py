@@ -83,3 +83,34 @@ def test_frames_like_manim(tmp_path) -> None:
             states = state_at_time(scene, time)
             assert length == pytest.approx(formula.evaluate(0.0, parameter_values(scene, states)), abs=2e-3), time
             assert (mx, my) == pytest.approx((states["m"].x, states["m"].y), abs=2e-3), time
+
+
+def test_angles() -> None:
+    a, b, c = (make_object(ObjectKind.DOT, name, key, x, y) for name, key, x, y in (("A", "a", 0.0, 0.0), ("B", "b", 4.0, 0.0), ("C", "c", 1.0, 3.0)))
+    scene = Scene(id="s", name="S", objects=[a, b, c])
+    values = graphs.initial_values(scene)
+    total = graphs.parse_formula(scene, "angle(B, A, C) + angle(A, B, C) + angle(A, C, B)")
+    assert total.evaluate(0.0, values) == pytest.approx(180.0)
+    assert graphs.parse_formula(scene, "angle(B, A, C)").evaluate(0.0, values) == pytest.approx(math.degrees(math.atan2(3, 1)))
+    # what the user types is limited, not what dist/angle become
+    assert graphs.formula_error(scene, " + ".join(["angle(A, B, C)"] * 5)) is None
+
+
+@pytest.mark.manim
+@pytest.mark.skipif(not HAS_MANIM, reason="Manim is not installed")
+def test_angle_like_manim(tmp_path) -> None:
+    from tests.test_manim_integration import run_manim
+
+    scene = formula_scene()
+    scene.objects.append(make_object(ObjectKind.DOT, "D", "d", -2.0, 2.0))
+    scene.objects.append(make_object(ObjectKind.DECIMAL_NUMBER, "Winkel", "w", -3.0, 3.0, formula="angle(B, A, D)", decimals=3))
+    report = "print('ANGLE', round(float(winkel.get_value()), 4))"
+    scene.steps.append(Step(id="report", kind=StepKind.CODE, code=report, wait_time=0.0))
+    result = run_manim(tmp_path, generate_script(make_project(scene)), "Strecke", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+    from manim_studio.model.state import states_after
+
+    states = states_after(scene, 0)
+    ours = graphs.number_formula(scene, scene.object_by_id("w")).evaluate(0.0, parameter_values(scene, states))
+    theirs = float(re.search(r"ANGLE (\S+)", result.stdout).group(1))
+    assert ours == pytest.approx(theirs, abs=1e-3)

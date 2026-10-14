@@ -463,7 +463,11 @@ def _binary(op: ast.operator, left: float, right: float) -> float:
 
 
 def parse_expression(
-    text: str, variable: str = VARIABLE, parameters: tuple[str, ...] | list[str] = NO_PARAMETERS, functions: dict[str, Expression] | None = None
+    text: str,
+    variable: str = VARIABLE,
+    parameters: tuple[str, ...] | list[str] = NO_PARAMETERS,
+    functions: dict[str, Expression] | None = None,
+    max_length: int = MAX_LENGTH,
 ) -> Expression:
     """Parse and validate a term or raise :class:`ExpressionError`.
 
@@ -472,7 +476,7 @@ def parse_expression(
     """
     if not text or not text.strip():
         raise ExpressionError("empty")
-    if len(text) > MAX_LENGTH:
+    if len(text) > max_length:
         raise ExpressionError("too_long")
     parameters = tuple(sorted(set(parameters) - {variable}))
     taken = {variable, *parameters, *FUNCTIONS, *CONSTANTS}

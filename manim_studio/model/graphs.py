@@ -32,6 +32,7 @@ from manim_studio.model.analysis import (
 )
 from manim_studio.model.calculus import derivative
 from manim_studio.model.entities import Scene, SceneObject
+from manim_studio.model.expression import MAX_LENGTH as MAX_EXPRESSION_LENGTH
 from manim_studio.model.expression import Expression, ExpressionError, evaluate_number, is_valid_name, parse_expression
 from manim_studio.model.geometry import (
     GRAPH_SAMPLES,
@@ -103,6 +104,8 @@ def initial_values(scene: Scene) -> Values:
 
 #: ``A.x`` and ``A.y`` in formulas: the coordinates of the center of the object named ``A``.
 _POSITION_REFERENCE = re.compile(r"(?<![\w.])([A-Za-z_][A-Za-z0-9_]*)\.([xy])(?![\w(])")
+#: ``angle(A, B, C)``: the angle at ``B`` between ``BA`` and ``BC`` in degrees (0 … 180).
+_ANGLE = re.compile(r"(?<![\w.])angle\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*[,;]\s*([A-Za-z_][A-Za-z0-9_]*)\s*[,;]\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)")
 #: ``dist(A, B)``: the distance between the centers of two objects.
 _DISTANCE = re.compile(r"(?<![\w.])dist\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*[,;]\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)")
 #: Symbols that stand for coordinates of objects start with this.
@@ -140,6 +143,17 @@ def expand_positions(scene: Scene, text: str) -> str:
         a, b = known(match.group(1)), known(match.group(2))
         return f"sqrt(({a}.x - {b}.x)^2 + ({a}.y - {b}.y)^2)"
 
+    def angle(match: re.Match) -> str:
+        # Kahan's formula 2·atan(|u·|v| − v·|u|| / |u·|v| + v·|u||) stays exact for very small and very wide angles
+        a, b, c = (known(match.group(index)) for index in (1, 2, 3))
+        u = (f"({a}.x - {b}.x)", f"({a}.y - {b}.y)")
+        v = (f"({c}.x - {b}.x)", f"({c}.y - {b}.y)")
+        lu, lv = f"dist({a}, {b})", f"dist({c}, {b})"
+        minus = " + ".join(f"({p}*{lv} - {q}*{lu})^2" for p, q in zip(u, v))
+        plus = " + ".join(f"({p}*{lv} + {q}*{lu})^2" for p, q in zip(u, v))
+        return f"(2*atan(sqrt({minus}) / sqrt({plus})) * 180/pi)"
+
+    text = _ANGLE.sub(angle, text)
     text = _DISTANCE.sub(distance, text)
     return _POSITION_REFERENCE.sub(lambda match: position_symbol(known(match.group(1)), match.group(2)), text)
 
@@ -1188,7 +1202,10 @@ def parse_formula(scene: Scene, text: str) -> Expression:
     symbols = parameter_symbols(scene)
     positions = tuple(position_symbol(name, axis) for name in position_objects(scene) for axis in ("x", "y"))
     try:
-        expression = parse_expression(expand_positions(scene, text), FORMULA_VARIABLE, symbols + positions, formula_functions(scene))
+        if len(text) > MAX_EXPRESSION_LENGTH:
+            raise ExpressionError("too_long")
+        # dist and angle are written out: the long text is ours, the limit applies to what was typed
+        expression = parse_expression(expand_positions(scene, text), FORMULA_VARIABLE, symbols + positions, formula_functions(scene), max_length=20 * MAX_EXPRESSION_LENGTH)
         expression = replace(expression, source=text)
     except ExpressionError as error:
         names = [obj.name.strip() for obj in scene.objects if obj.kind == ObjectKind.FUNCTION_GRAPH]

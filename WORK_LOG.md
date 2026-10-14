@@ -645,7 +645,8 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 - Vorlagen „Wertetabelle und Graph“, „Satz des Thales“ und „Dreieck messen“ (jetzt 22 Vorlagen)
 - Farbverlauf für Texte (Buchstabe für Buchstabe)
 - Linien/Pfeile zwischen zwei Objekten; Vielecke durch Objekte; Erzeugen aus der Auswahl
-- Koordinaten von Objekten in Formeln (`A.x`, `A.y`, `dist(A, B)`)
+- Koordinaten von Objekten in Formeln (`A.x`, `A.y`, `dist(A, B)`, `angle(A, B, C)`)
+- Bögen und Sektoren nach ihren Ankern zentriert (Bühne = Video)
 - Glatte und offene Kurven durch Punkte
 - Name als Beschriftung
 - Import: Stückfunktionen und abgeschnittene Graphen (`studio_plot`)
@@ -667,3 +668,6 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 
 ## Bühne = Video: Bögen und Sektoren nach ihren Ankern zentriert
 - Manims `move_to` misst bei einem Bogen nur seine 9 Anker (gleichmäßig über den Winkel). Liegt der Scheitel zwischen zwei Ankern (z. B. Bogen ab 30° über 200°), sitzt der Bogen im Video etwas höher als die Mitte der echten Kurve. Die Bühne nimmt jetzt dieselbe Ankerbox (auch für den Farbverlauf). Test: Startpunkt von Bogen und Sektor wie in Manim (vorher 0,02 daneben).
+
+## angle(A, B, C) in Formeln
+- Winkel bei B zwischen BA und BC in Grad. Ausgeschrieben mit Kahans Formel `2·atan(|u·|v| − v·|u|| / |u·|v| + v·|u||)` (die Formelsprache hat kein atan2; acos verliert nahe 0° und 180° Genauigkeit). Die 500-Zeichen-Grenze gilt für die getippte Formel, nicht für die ausgeschriebene. Test: Winkelsumme 180°, Wert wie atan2 und wie in Manim.

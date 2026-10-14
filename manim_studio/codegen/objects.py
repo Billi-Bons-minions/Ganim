@@ -44,6 +44,7 @@ from manim_studio.codegen.three_d_code import axes_3d_code, curve_3d_code, solid
 from manim_studio.model import graphs
 from manim_studio.model.angles import ANGLE_LINE_KEYS, angle_lines
 from manim_studio.model.assets import resolve_asset_path
+from manim_studio.model.attach import ATTACH_BETWEEN, attach_mode, connection_targets
 from manim_studio.model.dashes import dash_settings, is_dashed
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.fields import field_expressions
@@ -293,6 +294,30 @@ def _constructor(obj: SceneObject) -> list[str]:
     return ["DashedVMobject("] + indent_lines(base[:-1] + [base[-1] + ","], 1) + [f"{INDENT}num_dashes={fmt_int(count)},", f"{INDENT}dashed_ratio={fmt_float(ratio)},", ")"]
 
 
+def connection_code(obj: SceneObject, start: str, end: str) -> str:
+    """A line or arrow from the center of one object to the center of another (inside ``always_redraw``)."""
+    points = [f"{start}.get_center()", f"{end}.get_center()"]
+    style = [f"{key}={value}" for key, value in _line_style(obj)]
+    if obj.kind == ObjectKind.DASHED_LINE:
+        dashes = [f"dash_length={fmt_float(float(obj.params.get('dash_length', 0.15)))}", f"dashed_ratio={fmt_float(float(obj.params.get('dashed_ratio', 0.5)))}"]
+        return f"DashedLine({', '.join(points + dashes + style)})"
+    name = {ObjectKind.ARROW: "Arrow", ObjectKind.DOUBLE_ARROW: "DoubleArrow"}.get(obj.kind, "Line")
+    buff = ["buff=0"] if name != "Line" else []
+    return f"{name}({', '.join(points + buff + style)}){_gradient_chain(obj)}"
+
+
+def _gradient_chain(obj: SceneObject) -> str:
+    """A gradient inside ``always_redraw`` (the line is built anew in every frame, unturned)."""
+    _fill, stroke = gradient_parts(obj)
+    if not stroke:
+        return ""
+    chain = f".set_stroke([{py_color(obj.stroke_color)}, {py_color(gradient_color(obj))}])"
+    direction = str(obj.params.get("gradient_direction", DEFAULT_DIRECTION))
+    if direction != DEFAULT_DIRECTION and direction in SHEEN_CODE:
+        chain += f".set_sheen_direction({SHEEN_CODE[direction]})"
+    return chain
+
+
 def _placement(obj: SceneObject, variable: str) -> list[str]:
     lines = [f"{variable}.move_to({py_point(obj.x, obj.y)})"]
     if round(obj.rotation, 6) != 0:
@@ -304,6 +329,8 @@ def _gradient_lines(obj: SceneObject, variable: str) -> list[str]:
     """Two-color fill or stroke; set before turning the object, so its direction turns with it."""
     if obj.kind == ObjectKind.TEXT:
         return []  # a text's letters get their colors in Text(gradient=…)
+    if attach_mode(obj) == ATTACH_BETWEEN:
+        return []  # part of the always_redraw line (connection_code)
     fill, stroke = gradient_parts(obj)
     lines = []
     if fill:
@@ -457,6 +484,13 @@ def object_code(
             if round(obj.rotation, 6) != 0:
                 raise CodegenError("camera_rotation_2d", obj.name)
             return camera_code(obj, variable)
+        ends = connection_targets(scene, obj)
+        if ends is not None:
+            if any(end.id not in names for end in ends):
+                raise CodegenError("attach_between_missing", obj.name)
+            special = ([f"{variable} = always_redraw(lambda: {connection_code(obj, *(names[end.id] for end in ends))})"], False)
+        elif attach_mode(obj) == ATTACH_BETWEEN:
+            raise CodegenError("attach_between_missing", obj.name)
         if special is not None:
             lines, place = special
         elif obj.kind == ObjectKind.AXES_3D:
@@ -559,6 +593,8 @@ def dependencies(scene: Scene, obj: SceneObject) -> list[str]:
         result.append(str(obj.params.get("tool_id")))
     if obj.kind == ObjectKind.GROUP:
         result += [str(member) for member in obj.params.get("members", [])]
+    if attach_mode(obj) == ATTACH_BETWEEN:
+        result += [str(obj.params.get(key)) for key in ("attach_start", "attach_end") if obj.params.get(key)]
     for key in ("graph_id", "other_graph_id"):
         if obj.params.get(key):
             result.append(str(obj.params.get(key)))

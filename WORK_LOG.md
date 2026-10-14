@@ -588,3 +588,13 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 - **Was:** Texte haben *Farbverlauf: Buchstaben* mit zweiter Farbe → `Text(…, gradient=(a, b))` (auch zentrierte/rechtsbündige `Paragraph`). Der Import liest `gradient=`.
 - **Manim nachgelesen (0.19.1 und 0.22 gleich):** Pango bekommt pro *Zeichen* des Strings eine Farbe aus `color_gradient(gradient, len(text))`, Leerzeichen und Zeilenumbrüche zählen mit. Die Bühne zeichnet den Text Zeichen für Zeichen (Position über die Laufweite des Zeilenanfangs, so bleibt die Unterschneidung) in genau diesen Farben. Test: Farbe jedes Buchstabens wie in Manim (±1 je Kanal), Bildvergleich deckungsgleich.
 - **Entscheidung:** Farbverlauf und farbige Wörter schließen sich aus. Manim bricht bei Überschneidung mit „Ambiguous style“ ab; die Validierung meldet das vorher.
+
+## Linien zwischen zwei Objekten
+- **Warum:** Für Geometrie-Animationen (bewegter Eckpunkt, das Dreieck folgt; Punkt auf dem Thaleskreis mit der neuen Bogenbahn) fehlte eine Linie, die zwischen Punkten hängt.
+- **Was:** Neue Kopplungsart *zwischen zwei Objekten* für Linie, Pfeil, Doppelpfeil und Strichlinie (*Anfang bei*/*Ende bei*; beim Umschalten werden die Objekte gewählt, die den Linienenden am nächsten sind). Im Skript `always_redraw(lambda: Line(a.get_center(), b.get_center(), …))`; die Enden werden vorher erzeugt. Der Import liest das wieder ein.
+- **Entscheidungen:**
+  - Nur Linienarten; andere Objekte bieten die Wahl gar nicht an.
+  - Bewegen, Drehen, Skalieren, Farbe ändern und Verwandeln sind gesperrt (wie bei gekoppelten Hervorhebungen): `always_redraw` baut die Linie jedes Bild neu und würde das sofort überschreiben.
+  - Keine Ketten: Ein Ende darf folgen oder eine Formel haben, aber nicht selbst zwischen Objekten laufen.
+- **Test:** Dreieck aus drei Punkten, ein Punkt wandert auf einem Bogen; in jedem Bild liegen Linie, Pfeil und Strichlinie wie in Manim (0.19.1 und 0.22). Bildvergleich deckungsgleich.
+- **Farbverlauf:** Ein Verlauf einer verbundenen Linie steht mit in der `always_redraw`-Funktion (`Line(…).set_stroke([a, b])`). Weil Manim diese Linie nie dreht, dreht sich die Verlaufsrichtung auch auf der Bühne nicht mit. Test mit einer schrägen Seite wie in Manim.

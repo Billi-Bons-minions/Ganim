@@ -1500,4 +1500,10 @@ STRINGS: dict[str, str] = {
     "template.value_table.name": "Wertetabelle und Graph",
     "choice.gradient.letters": "Buchstaben",
     "issue.text_gradient_words": "Ein Text mit Farbverlauf kann keine farbigen Wörter haben (Manim kann einem Buchstaben nicht zwei Farben geben).",
+    "choice.attach.between": "zwischen zwei Objekten",
+    "param.attach_start": "Anfang bei",
+    "param.attach_end": "Ende bei",
+    "prop.attach_between_note": "Die Linie läuft von der Mitte des einen zur Mitte des anderen Objekts und folgt beiden, wenn sie sich bewegen (z. B. die Seiten eines Dreiecks aus Punkten). Bewegen, Drehen, Skalieren, Farbe ändern und Verwandeln gehen dann nicht als Animation.",
+    "issue.attach_between_missing": "Die Linie braucht zwei verschiedene Objekte für Anfang und Ende (keine Linie, die selbst zwischen Objekten läuft).",
+    "codegen.attach_between_missing": "„{detail}“ soll zwischen zwei Objekten laufen, aber eines fehlt.",
 }

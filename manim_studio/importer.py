@@ -367,6 +367,9 @@ def build_object(call: ast.Call, name: str, objects: dict[str, SceneObject]) -> 
     if function == "always_redraw" and call.args and isinstance(call.args[0], ast.Lambda) and isinstance(call.args[0].body, ast.Call):
         if _call_name(call.args[0].body) in BOOLEAN_FUNCTIONS:
             return build_object(call.args[0].body, name, objects)
+        line = _connected_line(call.args[0].body, name, objects)
+        if line is not None:
+            return line
     if function in BOOLEAN_FUNCTIONS and len(call.args) == 2:
         first, second = (_boolean_operand(arg, objects) for arg in call.args)
         obj = create_object(ObjectKind.BOOLEAN_SHAPE, name, operation=BOOLEAN_FUNCTIONS[function], first_shape=first, second_shape=second)
@@ -501,6 +504,35 @@ def _tool_range(obj: SceneObject, values: ast.AST | None) -> None:
 def _t_range(obj: SceneObject, values: ast.AST | None) -> None:
     if isinstance(values, (ast.List, ast.Tuple)) and len(values.elts) >= 2:
         obj.params["t_min"], obj.params["t_max"] = _number(values.elts[0]), _number(values.elts[1])
+
+
+def _center_of(node: ast.AST, objects: dict[str, SceneObject]) -> SceneObject | None:
+    """``a.get_center()`` → the object ``a``."""
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "get_center" and isinstance(node.func.value, ast.Name):
+        return objects.get(node.func.value.id)
+    return None
+
+
+def _connected_line(call: ast.Call, name: str, objects: dict[str, SceneObject]) -> SceneObject | None:
+    """``Line(a.get_center(), b.get_center(), …)`` inside ``always_redraw``: a line between two objects."""
+    if _call_name(call) not in ("Line", "Arrow", "DoubleArrow", "DashedLine") or len(call.args) < 2:
+        return None
+    ends = [_center_of(arg, objects) for arg in call.args[:2]]
+    if any(end is None for end in ends):
+        return None
+    obj = build_object(ast.Call(func=call.func, args=[], keywords=call.keywords), name, objects)
+    start, end = ends
+    obj.params.update(attach="between", attach_start=start.id, attach_end=end.id)
+    from manim_studio.model.attach import connection_geometry
+
+    x, y, rotation, length = connection_geometry((start.x, start.y), (end.x, end.y))
+    obj.x, obj.y, obj.rotation, obj.params["length"] = round(x, 6), round(y, 6), round(rotation, 6), round(max(length, 0.01), 6)
+    if _call_name(call) == "DashedLine":
+        kwargs = _kwargs(call)
+        for key in ("dash_length", "dashed_ratio"):
+            if key in kwargs:
+                obj.params[key] = _number(kwargs[key])
+    return obj
 
 
 #: Manim's boolean operations (and the union helper of generated scripts).

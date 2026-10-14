@@ -40,6 +40,8 @@ All notable changes to Manim Studio are listed here. The format follows
 
 - The script import reads graph tools made by axes: `plot_derivative_graph`, `plot_antiderivative_graph`, `get_area` (also `bounded_graph`), `get_riemann_rectangles`, `get_secant_slope_group`, `get_graph_label`, points `Dot(ax.i2gp(x, graph))`, and curves from `plot_parametric_curve` and `plot_polar_graph`.
 
+- Lines, arrows, double arrows and dashed lines can run between two objects (coupling *between two objects*: from center to center, `always_redraw(lambda: Line(a.get_center(), b.get_center()))`). When the objects move, the line follows on the stage like in the video, e.g. the sides of a triangle whose corners are dots. The import reads such lines.
+
 - Texts can run through a color gradient letter by letter (*Color gradient: Letters*, Manim's `Text(gradient=(a, b))`); the stage colors every character like Pango, spaces and line breaks included. Colored words and a gradient exclude each other (Manim cannot give a letter two colors). The import reads `gradient=`.
 
 - Highlights can mark a cell, a row or a column of a table (*Table row*/*Table column*, 0 = all): frame, background, underline or cross over exactly the cells, like Manim's `Table.get_cell` (`studio_table_cells`). Template "Table of values and graph" (now 20 templates): a frame walks through the columns and each pair of values becomes a point, then the graph joins them.

@@ -4,6 +4,9 @@
   (``m.move_to(target.get_center() + offset)``), e.g. a label next to a moving dot.
 * **formula**: the position is computed from parameters (``ValueTracker``),
   e.g. ``x = 2 cos(w)``, ``y = 2 sin(w)`` moves a dot on a circle when ``w`` changes.
+* **between** (lines and arrows): the line runs from the center of one object to the
+  center of another (``always_redraw(lambda: Line(a.get_center(), b.get_center()))``),
+  e.g. the sides of a triangle whose corners are dots that move.
 
 The settings live in the object's ``params`` (``attach``, ``attach_target``,
 ``attach_x``, ``attach_y``) because they apply to many object kinds.
@@ -11,6 +14,7 @@ The settings live in the object's ``params`` (``attach``, ``attach_target``,
 
 from __future__ import annotations
 
+import math
 from typing import Callable
 
 from manim_studio.model.entities import Scene, SceneObject
@@ -21,7 +25,10 @@ from manim_studio.model.types import ObjectKind
 ATTACH_NONE = "none"
 ATTACH_FOLLOW = "follow"
 ATTACH_FORMULA = "formula"
-ATTACH_MODES = (ATTACH_NONE, ATTACH_FOLLOW, ATTACH_FORMULA)
+ATTACH_BETWEEN = "between"
+ATTACH_MODES = (ATTACH_NONE, ATTACH_FOLLOW, ATTACH_FORMULA, ATTACH_BETWEEN)
+#: Line-like objects that can run between two objects.
+CONNECTABLE_KINDS = frozenset({ObjectKind.LINE, ObjectKind.ARROW, ObjectKind.DOUBLE_ARROW, ObjectKind.DASHED_LINE})
 
 #: Placeholder variable of position formulas (they only use parameters).
 FORMULA_VARIABLE = "x"
@@ -69,7 +76,18 @@ ATTACH_SPECS: tuple[ParamSpec, ...] = (
     ParamSpec("attach_target", ParamType.OBJECT_REF, None, ref_kinds=tuple(sorted(FOLLOWABLE_KINDS, key=lambda kind: kind.value)), visible_when=("attach", (ATTACH_FOLLOW,))),
     ParamSpec("attach_x", ParamType.EXPRESSION, "0", visible_when=("attach", (ATTACH_FORMULA,))),
     ParamSpec("attach_y", ParamType.EXPRESSION, "0", visible_when=("attach", (ATTACH_FORMULA,))),
+    ParamSpec("attach_start", ParamType.OBJECT_REF, None, ref_kinds=tuple(sorted(FOLLOWABLE_KINDS, key=lambda kind: kind.value)), visible_when=("attach", (ATTACH_BETWEEN,))),
+    ParamSpec("attach_end", ParamType.OBJECT_REF, None, ref_kinds=tuple(sorted(FOLLOWABLE_KINDS, key=lambda kind: kind.value)), visible_when=("attach", (ATTACH_BETWEEN,))),
 )
+
+
+def attach_specs(kind: ObjectKind) -> tuple[ParamSpec, ...]:
+    """The coupling settings of a kind: only lines and arrows can run between two objects."""
+    if kind in CONNECTABLE_KINDS:
+        return ATTACH_SPECS
+    first = ATTACH_SPECS[0]
+    modes = ParamSpec(first.key, first.type, first.default, choices=(ATTACH_NONE, ATTACH_FOLLOW, ATTACH_FORMULA))
+    return (modes,) + tuple(spec for spec in ATTACH_SPECS[1:] if spec.key not in ("attach_start", "attach_end"))
 
 
 def attach_mode(obj: SceneObject | None) -> str:
@@ -77,7 +95,30 @@ def attach_mode(obj: SceneObject | None) -> str:
     if obj is None or obj.kind not in ATTACHABLE_KINDS:
         return ATTACH_NONE
     mode = str(obj.params.get("attach", ATTACH_NONE))
+    if mode == ATTACH_BETWEEN and obj.kind not in CONNECTABLE_KINDS:
+        return ATTACH_NONE
     return mode if mode in ATTACH_MODES else ATTACH_NONE
+
+
+def connection_targets(scene: Scene, obj: SceneObject) -> tuple[SceneObject, SceneObject] | None:
+    """The two objects a line runs between (``None`` if one is missing or unsuitable).
+
+    The ends may follow or have formulas, but not run between objects themselves (no chains).
+    """
+    if attach_mode(obj) != ATTACH_BETWEEN:
+        return None
+    ends = [scene.object_by_id(obj.params.get(key)) for key in ("attach_start", "attach_end")]
+    if any(end is None or end.id == obj.id or end.kind not in FOLLOWABLE_KINDS or attach_mode(end) == ATTACH_BETWEEN for end in ends):
+        return None
+    if ends[0].id == ends[1].id:
+        return None
+    return ends[0], ends[1]
+
+
+def connection_geometry(start: tuple[float, float], end: tuple[float, float]) -> tuple[float, float, float, float]:
+    """``(x, y, rotation, length)`` of a line from ``start`` to ``end`` (its middle, its angle in degrees)."""
+    dx, dy = end[0] - start[0], end[1] - start[1]
+    return (start[0] + end[0]) / 2, (start[1] + end[1]) / 2, math.degrees(math.atan2(dy, dx)), math.hypot(dx, dy)
 
 
 def is_attached(obj: SceneObject | None) -> bool:
@@ -194,6 +235,19 @@ def set_attach_mode(scene: Scene, object_id: str, mode: str) -> None:
     if mode == ATTACH_FOLLOW and obj.kind == ObjectKind.CAMERA and target is not None:
         # a following camera keeps its target in the middle of the picture
         obj.x, obj.y = _start_position(scene, target)
+    if mode == ATTACH_BETWEEN and connection_targets(scene, obj) is None:
+        # the objects nearest to the two ends of the line
+        half = float(obj.params.get("length", 3.0)) / 2
+        angle = math.radians(obj.rotation)
+        ends = [(obj.x - half * math.cos(angle), obj.y - half * math.sin(angle)), (obj.x + half * math.cos(angle), obj.y + half * math.sin(angle))]
+        candidates = [other for other in scene.objects if other.id != obj.id and other.kind in FOLLOWABLE_KINDS and attach_mode(other) != ATTACH_BETWEEN]
+        chosen: list[str] = []
+        for key, (ex, ey) in zip(("attach_start", "attach_end"), ends):
+            free = [other for other in candidates if other.id not in chosen]
+            nearest = min(free, key=lambda other: (other.x - ex) ** 2 + (other.y - ey) ** 2, default=None)
+            obj.params[key] = nearest.id if nearest is not None else None
+            if nearest is not None:
+                chosen.append(nearest.id)
     if mode == ATTACH_FORMULA and not obj.params.get("attach_x") and not obj.params.get("attach_y"):
         obj.params["attach_x"] = f"{round(obj.x, 4):g}"
         obj.params["attach_y"] = f"{round(obj.y, 4):g}"
@@ -213,6 +267,8 @@ def attached_positions(scene: Scene, position_of: Callable[[str], tuple[float, f
     for _round in range(len(pending) + 1):
         remaining = []
         for obj in pending:
+            if attach_mode(obj) == ATTACH_BETWEEN:
+                continue  # placed after the others (``refresh_attached_states``)
             if attach_mode(obj) == ATTACH_FORMULA:
                 position = formula_position(scene, obj, values)
                 if position is not None:

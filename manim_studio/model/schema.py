@@ -1069,6 +1069,9 @@ def animation_allowed(anim_kind: AnimationKind, obj_kind: ObjectKind, params: di
         return anim_kind in (AnimationKind.FADE_IN, AnimationKind.FADE_OUT)
     if obj_kind == ObjectKind.GROUP and anim_kind in (AnimationKind.TRANSFORM, AnimationKind.REPLACEMENT_TRANSFORM):
         return False
+    if params.get("attach") == "between" and obj_kind in (ObjectKind.LINE, ObjectKind.ARROW, ObjectKind.DOUBLE_ARROW, ObjectKind.DASHED_LINE):
+        # redrawn between its ends in every frame (always_redraw): moving, turning or recoloring would not last
+        return anim_kind not in _NOT_FOR_HIGHLIGHTS | {AnimationKind.APPLY_MATRIX, AnimationKind.APPLY_COMPLEX, AnimationKind.APPLY_POINTWISE}
     dashable = obj_kind in DASHED_KINDS or (obj_kind == ObjectKind.FUNCTION_GRAPH and params.get("curve", "function") in DASHED_CURVES)
     if dashable and params.get("dashed") and anim_kind in TRANSFORM_ANIMATIONS:
         return False  # Manim would bend every dash on its own into the other shape

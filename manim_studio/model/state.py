@@ -441,6 +441,15 @@ def refresh_attached_states(scene: Scene, states: dict[str, ObjectState]) -> dic
     for object_id, (x, y) in coupled.items():
         if object_id in states:
             states[object_id] = replace(states[object_id], x=x, y=y)
+    from manim_studio.model.attach import connection_geometry, connection_targets
+
+    for obj in scene.objects:
+        ends = connection_targets(scene, obj) if obj.id in states else None
+        if ends is not None and all(end.id in states for end in ends):
+            # a line between two objects: in the middle, turned towards the end, as long as the distance
+            start, end = (states[end.id] for end in ends)
+            x, y, rotation, length = connection_geometry((start.x, start.y), (end.x, end.y))
+            states[obj.id] = replace(states[obj.id], x=x, y=y, rotation=rotation, scale=1.0, geometry=(length,))
     for obj in scene.objects:
         if obj.id not in states:
             continue

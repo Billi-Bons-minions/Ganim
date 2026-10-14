@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Callable, Iterable
 
 from manim_studio.model import operations as ops
-from manim_studio.model.attach import ATTACH_FOLLOW, ATTACH_FORMULA, attach_mode
+from manim_studio.model.attach import ATTACH_BETWEEN, ATTACH_FOLLOW, ATTACH_FORMULA, attach_mode
 from manim_studio.model.conflicts import step_conflicts
 from manim_studio.model.entities import STEP_SEQUENCE, Animation, Scene
 from manim_studio.model.factory import create_animation
@@ -76,6 +76,8 @@ def check_edit(scene: Scene, cursor: int, object_ids: Iterable[str], action: str
             return EditCheck(False, "attached", object_id)
         if obj is not None and obj.kind in (ObjectKind.ANGLE, ObjectKind.TRACE, ObjectKind.BOOLEAN_SHAPE) and action in (MOVE, SCALE, ROTATE):
             return EditCheck(False, "attached", object_id)
+        if obj is not None and attach_mode(obj) == ATTACH_BETWEEN and action in (MOVE, SCALE, ROTATE):
+            return EditCheck(False, "attached", object_id)  # its ends decide where it is
         if obj is not None and action == MOVE and (attach_mode(obj) == ATTACH_FORMULA or (attach_mode(obj) == ATTACH_FOLLOW and is_recording(scene, cursor))):
             # a coupled object is placed by its updater; at the start a follower may change its distance
             return EditCheck(False, "coupled", object_id)

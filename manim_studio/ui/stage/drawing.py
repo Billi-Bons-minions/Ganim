@@ -8,7 +8,7 @@ down) and centered on the object's bounding box, just like Manim's
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from PySide6.QtCore import QPointF, QRectF, Qt
@@ -28,6 +28,7 @@ from PySide6.QtGui import (
 from PySide6.QtSvg import QSvgRenderer
 
 from manim_studio.model.assets import resolve_asset_path
+from manim_studio.model.attach import ATTACH_BETWEEN, CONNECTABLE_KINDS, attach_mode
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.geometry import (
     AXES_TICK_SIZE,
@@ -699,6 +700,9 @@ def _hit_path(primitives: list[Primitive], bounds: QRectF, kind: ObjectKind) -> 
 
 def build_drawing(scene: Scene, shape: SceneObject, state: ObjectState, resources: StageResources) -> Drawing:
     """Return the centered drawing of ``shape`` with the colors of ``state``."""
+    if state.geometry and shape.kind in CONNECTABLE_KINDS and attach_mode(shape) == ATTACH_BETWEEN:
+        # a line between two objects is as long as their distance right now
+        shape = replace(shape, params={**shape.params, "length": state.geometry[0]})
     primitives, recenter = _shape_drawing(shape, state, scene, resources)
     bounds = QRectF()
     for primitive in primitives:

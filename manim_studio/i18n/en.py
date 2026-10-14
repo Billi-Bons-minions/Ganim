@@ -1500,4 +1500,10 @@ STRINGS: dict[str, str] = {
     "template.value_table.name": "Table of values and graph",
     "choice.gradient.letters": "Letters",
     "issue.text_gradient_words": "A text with a color gradient cannot have colored words (Manim cannot give a letter two colors).",
+    "choice.attach.between": "between two objects",
+    "param.attach_start": "Starts at",
+    "param.attach_end": "Ends at",
+    "prop.attach_between_note": "The line runs from the center of one object to the center of the other and follows both when they move (e.g. the sides of a triangle made of dots). Moving, turning, scaling, color changes and transforms are then not possible as animations.",
+    "issue.attach_between_missing": "The line needs two different objects for its start and end (not a line that runs between objects itself).",
+    "codegen.attach_between_missing": "“{detail}” should run between two objects, but one is missing.",
 }

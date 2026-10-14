@@ -235,7 +235,7 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
 
 def _attach_issues(scene: Scene, obj: SceneObject, add) -> None:
     """A coupled object needs a target to follow (without a circle) or valid position formulas."""
-    from manim_studio.model.attach import ATTACH_FOLLOW, ATTACH_FORMULA, attach_mode, follows_circularly, formula_error
+    from manim_studio.model.attach import ATTACH_BETWEEN, ATTACH_FOLLOW, ATTACH_FORMULA, attach_mode, connection_targets, follows_circularly, formula_error
 
     mode = attach_mode(obj)
     if mode != "none" and obj.kind == ObjectKind.CAMERA:
@@ -244,6 +244,8 @@ def _attach_issues(scene: Scene, obj: SceneObject, add) -> None:
         if is_3d(scene):
             add(ERROR, "attach_camera_3d")
             return
+    if mode == ATTACH_BETWEEN and connection_targets(scene, obj) is None:
+        add(ERROR, "attach_between_missing")
     if mode == ATTACH_FOLLOW:
         target = scene.object_by_id(obj.params.get("attach_target"))
         if target is None or target.id == obj.id:

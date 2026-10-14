@@ -1521,4 +1521,6 @@ STRINGS: dict[str, str] = {
     "name_label.add": "Name als Beschriftung",
     "name_label.add_tip": "Legt einen Text mit dem Namen des Objekts oben rechts daneben, der dem Objekt folgt (z. B. A, B, C an den Ecken eines Dreiecks).",
     "name_label.name": "Beschriftung {name}",
+    "template.triangle.name": "Dreieck messen",
+    "template.triangle.perimeter": "Umfang:",
 }

@@ -523,6 +523,58 @@ def thales() -> Scene:
     return scene
 
 
+def measure_triangle() -> Scene:
+    """A triangle measures itself: its side lengths (dist) sit at the sides and change while C moves."""
+    scene = create_scene(tr("template.triangle.name"))
+    corners = {}
+    for name, x, y in (("A", -3.0, -1.6), ("B", 3.0, -1.6), ("C", -0.6, 1.9)):
+        corners[name] = _add(scene, create_object(ObjectKind.DOT, name, x, y, radius=0.1))
+        corners[name].z_index = 1
+    corners["C"].fill_color = "#FC6255"
+    labels = {}
+    for name, (dx, dy) in (("A", (-0.35, -0.3)), ("B", (0.35, -0.3)), ("C", (0.0, 0.4))):
+        corner = corners[name]
+        labels[name] = _add(scene, create_object(ObjectKind.TEXT, tr("name_label.name", name=name), corner.x + dx, corner.y + dy, text=name, font_size=36.0, attach="follow", attach_target=corner.id))
+        labels[name].fill_color = corner.fill_color
+    area = _add(scene, create_object(ObjectKind.POLYGON, tr("kind.polygon") + " 1", attach="corners", attach_corners=[corners[name].id for name in ("A", "B", "C")]))
+    area.stroke_width, area.fill_opacity = 0.0, 0.25
+    area.fill_color = "#58C4DD"
+    sides = {}
+    for start, end in (("A", "B"), ("B", "C"), ("C", "A")):
+        side = _add(scene, create_object(ObjectKind.LINE, start + end, attach="between", attach_start=corners[start].id, attach_end=corners[end].id))
+        side.stroke_color = "#58C4DD"
+        sides[start + end] = side
+    # every length sits next to the middle of its side (A.x, A.y … in the position formulas)
+    lengths = []
+    for start, end, dx, dy in (("A", "B", 0.0, -0.45), ("B", "C", 0.55, 0.25), ("C", "A", -0.55, 0.25)):
+        number = _add(
+            scene,
+            create_object(
+                ObjectKind.DECIMAL_NUMBER,
+                f"|{start}{end}|",
+                formula=f"dist({start}, {end})",
+                decimals=2,
+                font_size=30.0,
+                attach="formula",
+                attach_x=f"({start}.x + {end}.x)/2 + {dx}",
+                attach_y=f"({start}.y + {end}.y)/2 + {dy}",
+            ),
+        )
+        number.fill_color = "#FFFF00"
+        lengths.append(number)
+    caption = _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " 1", -4.6, 3.2, text=tr("template.triangle.perimeter"), font_size=32.0))
+    perimeter = _add(scene, create_object(ObjectKind.DECIMAL_NUMBER, tr("template.triangle.perimeter"), -2.7, 3.2, formula="dist(A, B) + dist(B, C) + dist(C, A)", decimals=2, font_size=32.0))
+    perimeter.fill_color = "#FFFF00"
+    _play(scene, *(create_animation(AnimationKind.FADE_IN, corners[name].id) for name in corners), *(create_animation(AnimationKind.WRITE, labels[name].id) for name in labels))
+    _play(scene, *(create_animation(AnimationKind.CREATE, side.id) for side in sides.values()), create_animation(AnimationKind.FADE_IN, area.id))
+    _play(scene, *(create_animation(AnimationKind.WRITE, number.id) for number in lengths))
+    _play(scene, create_animation(AnimationKind.WRITE, caption.id), create_animation(AnimationKind.WRITE, perimeter.id))
+    for x, y, arc, run_time in ((2.2, 2.3, -40.0, 2.5), (-2.4, 0.9, 50.0, 2.5), (-0.6, 1.9, -30.0, 1.5)):
+        _play(scene, create_animation(AnimationKind.MOVE, corners["C"].id, run_time=run_time, x=x, y=y, path_arc=arc))
+    scene.steps.append(create_wait_step(1.0))
+    return scene
+
+
 BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("title", "text", title_and_subtitle),
     BuiltinTemplate("analysis", "graph", analyze_function),
@@ -545,4 +597,5 @@ BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("integral", "graph", integral_function),
     BuiltinTemplate("value_table", "graph", value_table),
     BuiltinTemplate("thales", "a_move_along_path", thales),
+    BuiltinTemplate("triangle", "a_move_along_path", measure_triangle),
 )

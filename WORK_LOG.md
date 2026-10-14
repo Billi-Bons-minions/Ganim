@@ -642,7 +642,7 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 ## Fertig (je ein Commit, mit Tests gegen Manim 0.19.1 und 0.22, Doku; gepusht)
 - Gestrichelte Funktionsgraphen (Werkzeuge rechnen weiter am Graphen)
 - Tabellen wie Manims `Table` auf der Bühne; Tabellenzellen/-zeilen/-spalten hervorheben; Hintergrund hinter dem Ziel
-- Vorlagen „Wertetabelle und Graph“ und „Satz des Thales“ (jetzt 21 Vorlagen)
+- Vorlagen „Wertetabelle und Graph“, „Satz des Thales“ und „Dreieck messen“ (jetzt 22 Vorlagen)
 - Farbverlauf für Texte (Buchstabe für Buchstabe)
 - Linien/Pfeile zwischen zwei Objekten; Vielecke durch Objekte; Erzeugen aus der Auswahl
 - Koordinaten von Objekten in Formeln (`A.x`, `A.y`, `dist(A, B)`)
@@ -662,3 +662,6 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 
 ## Import: studio_plot (Stückfunktionen und abgeschnittene Graphen)
 - Der Import liest jetzt `studio_plot(ax, lambda x: …, [a, b], y_range=…, breaks=…)`, wie Manim Studio Graphen mit Polstellen oder Stücke schreibt. Eine Kette `A if lo <= x < hi else (B if … else np.nan)` wird zur Stückfunktion. `y_range=None` heißt „nicht abschneiden“. Integralfunktionen über `studio_plot` bleiben übersprungen; sie kommen über `plot_antiderivative_graph`.
+
+## Vorlage „Dreieck messen“
+- Ecken A, B, C mit Namen, Seiten als verbundene Linien, Fläche durch die Ecken; die Seitenlängen stehen als Zahlen mit `dist(…)` an den Seitenmitten (Position über `A.x`, `B.y` …), oben der Umfang. C wandert auf Bögen, alle Werte laufen mit (22 Vorlagen). Bildvergleich passt (im Rahmen des halben Bildes Zeitversatz meines Vergleichsskripts bei 2,5-s-Schritten).

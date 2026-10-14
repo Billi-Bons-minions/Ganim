@@ -52,7 +52,7 @@ All notable changes to Manim Studio are listed here. The format follows
 
 - Dashed shapes: circle, ellipse, arc, square, rectangle, triangle, regular polygon, polygon, star and sector can be drawn *Dashed* (outline only) with a number of dashes and a dash ratio (Manim's `DashedVMobject`). The stage cuts the outline like Manim (equal arc lengths, in Manim's order), so every dash lies where it is in the video, also with a gradient (one per dash). Dashed shapes cannot be transformed, used as a path or united in a boolean shape (Manim only has the separate dashes); the import reads `DashedVMobject(…)`.
 
-- README: GIFs of the complex map w = z², the integral function and the zoom lens (rendered from the templates).
+- README: GIFs of the complex map w = z², the integral function, the zoom lens, Thales’ theorem, the table of values and the Venn diagram (rendered from the templates).
 
 ### Fixed
 - Numbers on the stage are set like Manim's `DecimalNumber`: every character on its own and close together, a minus sign in the middle of the digits. Before, they were up to 8 % too wide.

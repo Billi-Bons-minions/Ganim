@@ -26,6 +26,8 @@ All of these clips were made from the built-in templates and the projects in [ex
 | A label follows a dot; a dot driven by a parameter | Polar grid, a rose turns into a cardioid | Vector addition in space with a camera orbit |
 | ![Complex map](docs/images/complex_map.gif) | ![Integral function](docs/images/integral.gif) | ![Zoom lens](docs/images/lens.gif) |
 | The complex plane bent by w = z² | The slope of F is the value of f | A zoom lens: up close the graph is its tangent |
+| ![Thales' theorem](docs/images/thales.gif) | ![Table of values and graph](docs/images/value_table.gif) | ![Venn diagram](docs/images/venn.gif) |
+| C walks on the circle, the sides follow, the angle stays 90° | A frame walks through the table, each pair becomes a point | Intersection of two sets, B moves away and back |
 
 ## Features
 

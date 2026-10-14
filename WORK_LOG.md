@@ -613,3 +613,6 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 - **Entscheidung:** Kein Listen-Editor für die Ecken. Die Ecken kommen aus der Auswahl; beim Umschalten der Kopplung im Panel wird jede Ecke dem nächsten Objekt zugeordnet, die Namen stehen im Hinweis. Ziehen von Ecken und Linienenden ist für solche Objekte aus.
 - **Import:** liest jetzt auch einfache `Polygon(…)` (bisher übersprungen) und Vielecke durch Objekte.
 - **Test:** Dreiecksfläche, Ecke C auf einem Bogen; in jedem Bild liegen die Ecken wie in Manim (0.19.1 und 0.22), Bildvergleich mit Farbverlauf deckungsgleich; Erzeugen aus der Auswahl im echten Fenster.
+
+## README-GIFs: Thales, Wertetabelle, Venn
+- Drei weitere GIFs aus den Vorlagen (640×360, 15 fps) als neue Tabellenzeile: Satz des Thales (Bogenbahn, verbundene Linien, gestrichelter Kreis, rechter Winkel), Wertetabelle und Graph (Zellen-Hervorhebung), Venn-Diagramm (Mengenformen). Das Venn-GIF ist mit 1,5 MB etwas größer als die anderen; eine kleinere Farbpalette machte es größer, daher so gelassen.

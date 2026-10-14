@@ -1516,4 +1516,6 @@ STRINGS: dict[str, str] = {
     "status.polygon_through": "The polygon runs through the selected objects and follows them.",
     "expr.unknown_object": "“{detail}” is not an object with a position (or the name is not unique). A.x, A.y and dist(A, B) need objects with plain, unique names.",
     "issue.attach_formula_self": "The position cannot be computed from the object's own position.",
+    "param.smooth": "Smooth curve",
+    "param.closed": "Closed",
 }

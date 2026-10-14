@@ -177,9 +177,10 @@ def dash_polylines(scene: Scene, obj: SceneObject) -> list[list[Point]]:
     outline = local_outline(scene, obj)
     if not outline or len(outline) < 2:
         return []
-    closed = obj.kind not in (ObjectKind.ARC, ObjectKind.DASHED_LINE)
+    from manim_studio.model.paths import outline_center
+
+    closed = obj.kind not in (ObjectKind.ARC, ObjectKind.DASHED_LINE) and not (obj.kind == ObjectKind.POLYGON and not obj.params.get("closed", True))
     count, ratio = dash_settings(obj)
-    xs, ys = [x for x, _y in outline], [y for _x, y in outline]
-    cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+    cx, cy = outline_center(obj, outline)
     centered = [(x - cx, y - cy) for x, y in outline]
     return cut_dashes(centered, dash_intervals(count, ratio, closed), closed)

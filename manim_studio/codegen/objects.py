@@ -32,6 +32,7 @@ from manim_studio.codegen.objects_extra import (
     boolean_code,
     brace_code,
     bullet_list_code,
+    curve_call,
     group_code,
     highlight_code,
     network_code,
@@ -311,8 +312,10 @@ def corners_code(obj: SceneObject, corners: list[str]) -> str:
     points = [f"{corner}.get_center()" for corner in corners]
     if is_dashed(obj):
         count, ratio = dash_settings(obj)
-        style = [f"{key}={value}" for key, value in _shape_style(dataclasses.replace(obj, fill_opacity=0.0))]
-        return f"DashedVMobject(Polygon({', '.join(points + style)}), num_dashes={count}, dashed_ratio={fmt_float(ratio)}){_gradient_chain(obj)}"
+        plain = dataclasses.replace(obj, fill_opacity=0.0, params={**obj.params, "dashed": False})
+        return f"DashedVMobject({corners_code(plain, corners)}, num_dashes={count}, dashed_ratio={fmt_float(ratio)}){_gradient_chain(obj)}"
+    if obj.params.get("smooth") or not obj.params.get("closed", True):
+        return f"{' '.join(curve_call(obj, points))}{_gradient_chain(obj)}"
     style = [f"{key}={value}" for key, value in _shape_style(obj)]
     return f"Polygon({', '.join(points + style)}){_gradient_chain(obj)}"
 

@@ -626,3 +626,9 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
   - Eine Position darf sich nicht aus sich selbst berechnen (Fehler in der Validierung).
 - **Test:** Strecke AB, B bewegt sich; Länge als Zahl und Mittelpunkt M in jedem Bild wie in Manim (0.19.1 und 0.22).
 - **Dabei beachtet:** Der Zwischenspeicher der Integralfunktion nimmt nur noch die Parameter als Schlüssel; sonst hätte jede Objektbewegung F neu berechnet.
+
+## Glatte und offene Kurven durch Punkte
+- **Was:** Vielecke haben *Glatte Kurve* (`VMobject().set_points_smoothly(…)`) und *Geschlossen* (aus: `set_points_as_corners` ohne Kante zurück), kombinierbar mit Strichen, Verlauf und „durch Objekte“. Freie Kurven und Bahnen für *Entlang Pfad bewegen*. Der Import liest beides.
+- **Manim nachgerechnet:** Die Glättung ist ein C²-Spline mit Manims Randbedingungen (offen: Zeilen (2,1) und (2,7), zweite Griffe 2A − H bzw. (A + H)/2 am Ende; geschlossen: zyklisch mit 4). Das Modell (`model/curves.py`) löst dieselben Gleichungen; Griffe gleich wie Manim (Abweichung 0). Wichtig gefunden: `move_to` eines VMobjects misst nur die *Anker* (nicht die Griffe); die Kurve wird daher um die Box ihrer Punkte zentriert, auch wenn sie darüber hinausschwingt.
+- **Entscheidung:** Glatte oder offene Vielecke können nicht Teil einer Mengenform sein (die Mengenform rechnet mit echten Vielecken).
+- **Test:** Alle Bézier-Punkte von offener/geschlossener glatter Kurve und Linienzug nach `move_to` wie in Manim (0.19.1 und 0.22), Strich-Enden einer gestrichelten Kurve, Verlaufslinie einer glatten Kurve (auch sie misst nur die Anker), Bildvergleich deckungsgleich.

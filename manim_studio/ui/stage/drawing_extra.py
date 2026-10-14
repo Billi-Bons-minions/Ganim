@@ -282,8 +282,22 @@ def annulus_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
 
 
 def polygon_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
+    from manim_studio.model.curves import curve_cubics, is_open, is_smooth
+
     points = [(float(x), float(y)) for x, y in obj.params.get("points", [])] or [(0.0, 0.0)]
-    return [_shape_primitive(_polygon(points), obj, state)]
+    if not is_smooth(obj) and not is_open(obj):
+        return [_shape_primitive(_polygon(points), obj, state)]
+    cubics = curve_cubics(points, is_smooth(obj), not is_open(obj))
+    path = QPainterPath(pt(*points[0]))
+    for _start, first, second, end in cubics:
+        path.cubicTo(pt(*first), pt(*second), pt(*end))
+    if not is_open(obj):
+        path.closeSubpath()
+    primitive = _shape_primitive(path, obj, state)
+    # Manim's move_to centers the box around the anchors (the curve may bulge out of it)
+    xs, ys = [pt(*point).x() for point in points], [pt(*point).y() for point in points]
+    primitive.rect = QRectF(QPointF(min(xs), min(ys)), QPointF(max(xs), max(ys)))
+    return [primitive]
 
 
 def regular_polygon_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:

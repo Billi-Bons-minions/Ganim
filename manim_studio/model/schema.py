@@ -482,7 +482,12 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
     ),
     ObjectKind.POLYGON: KindInfo(
         ObjectKind.POLYGON,
-        (ParamSpec("points", ParamType.POINTS, [[-1.5, -1.0], [1.5, -1.0], [2.0, 0.8], [0.0, 1.6], [-2.0, 0.8]], scalable=True),),
+        (
+            ParamSpec("points", ParamType.POINTS, [[-1.5, -1.0], [1.5, -1.0], [2.0, 0.8], [0.0, 1.6], [-2.0, 0.8]], scalable=True),
+            # a smooth curve through the points (set_points_smoothly) and/or without the edge back to the start
+            ParamSpec("smooth", ParamType.BOOL, False),
+            ParamSpec("closed", ParamType.BOOL, True),
+        ),
         _SHAPE_STYLE,
         (("stroke_color", "#83C167"), ("fill_color", "#83C167")),
     ),

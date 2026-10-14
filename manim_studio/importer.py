@@ -279,6 +279,11 @@ def build_object(call: ast.Call, name: str, objects: dict[str, SceneObject]) -> 
             kwargs = {key: value for key, value in kwargs.items() if key != "color"}
         _style(obj, kwargs)
         return obj
+    if function == "VMobject":
+        # filled in by set_points_smoothly / set_points_as_corners (a curve through points)
+        obj = create_object(ObjectKind.POLYGON, name, points=[])
+        _style(obj, kwargs)
+        return obj
     if function == "Polygon":
         obj = create_object(ObjectKind.POLYGON, name)
         if len(call.args) >= 3:
@@ -685,6 +690,19 @@ class _SceneReader:
             if direction is None or obj.kind not in GRADIENT_KINDS:
                 raise ImportProblem(method)
             obj.params["gradient_direction"] = direction
+        elif method in ("set_points_smoothly", "set_points_as_corners") and call.args and obj.kind == ObjectKind.POLYGON and isinstance(call.args[0], (ast.List, ast.Tuple)):
+            from manim_studio.model.curves import anchor_center
+
+            points = [_vector(item) for item in call.args[0].elts]
+            closed = len(points) > 2 and math.dist(points[0], points[-1]) < 1e-9
+            if closed:
+                points = points[:-1]
+            if len(points) < 2:
+                raise ImportProblem(method)
+            smooth = method == "set_points_smoothly"
+            obj.params.update(points=[[round(x, 6), round(y, 6)] for x, y in points], smooth=smooth, closed=closed)
+            # the object sits in the middle of the box around its points, like Manim's move_to
+            obj.x, obj.y = (round(v, 6) for v in anchor_center(points))
         elif method == "set_z_index" and call.args:
             obj.z_index = int(_number(call.args[0]))
         elif method == "scale" and call.args:

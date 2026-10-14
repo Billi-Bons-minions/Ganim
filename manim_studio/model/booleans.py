@@ -60,10 +60,11 @@ def is_boolean(obj: SceneObject | None) -> bool:
 
 
 def _dashed(shape: SceneObject) -> bool:
-    """Dashed shapes are only an outline (DashedVMobject), Manim cannot unite them."""
+    """Dashed shapes are only an outline (DashedVMobject), Manim cannot unite them; nor open or smooth polygons (curves)."""
     from manim_studio.model.dashes import is_dashed
 
-    return is_dashed(shape)
+    curved = shape.kind == ObjectKind.POLYGON and (shape.params.get("smooth") or not shape.params.get("closed", True))
+    return is_dashed(shape) or bool(curved)
 
 
 def operation(obj: SceneObject) -> str:

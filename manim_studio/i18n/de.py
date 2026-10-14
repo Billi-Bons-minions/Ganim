@@ -1516,4 +1516,6 @@ STRINGS: dict[str, str] = {
     "status.polygon_through": "Das Vieleck läuft durch die ausgewählten Objekte und folgt ihnen.",
     "expr.unknown_object": "„{detail}“ ist kein Objekt mit Position (oder der Name ist nicht eindeutig). A.x, A.y und dist(A, B) brauchen Objekte mit einfachen, eindeutigen Namen.",
     "issue.attach_formula_self": "Die Position kann nicht aus der eigenen Position berechnet werden.",
+    "param.smooth": "Glatte Kurve",
+    "param.closed": "Geschlossen",
 }

@@ -34,7 +34,9 @@ def gradient_points(primitives: list[Primitive], shape: SceneObject, state: Obje
     to_scene = placement_transform(("", "", state.x, state.y, state.rotation, state.scale, tuple(state.matrix)))
     box = QRectF()
     for primitive in primitives:
-        if primitive.path is not None:
+        if primitive.path is not None and primitive.rect is not None and primitive.image is None:
+            box = box.united(to_scene.mapRect(primitive.rect))  # Manim measures the anchors of a smooth curve
+        elif primitive.path is not None:
             box = box.united(to_scene.map(primitive.path).boundingRect())
     if not box.isValid() and box.width() <= 0 and box.height() <= 0:
         return None

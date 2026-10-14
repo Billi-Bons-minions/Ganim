@@ -81,7 +81,18 @@ def dashed_line(obj: SceneObject) -> list[str]:
 
 def polygon(obj: SceneObject) -> list[str]:
     points = [py_point(float(x), float(y)) for x, y in obj.params.get("points", [])]
-    return call("Polygon", points, shape_style(obj), 2)
+    if not obj.params.get("smooth") and obj.params.get("closed", True):
+        return call("Polygon", points, shape_style(obj), 2)
+    return curve_call(obj, points)
+
+
+def curve_call(obj: SceneObject, points: list[str]) -> list[str]:
+    """A smooth curve (set_points_smoothly) or an open line through points (set_points_as_corners)."""
+    if obj.params.get("closed", True) and points:
+        points = points + points[:1]  # back to the start
+    method = "set_points_smoothly" if obj.params.get("smooth") else "set_points_as_corners"
+    lines = call("VMobject", [], shape_style(obj), 2)
+    return lines[:-1] + [f"{lines[-1]}.{method}([{', '.join(points)}])"]
 
 
 def regular_polygon(obj: SceneObject) -> list[str]:

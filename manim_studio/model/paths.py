@@ -60,7 +60,12 @@ def local_outline(scene: Scene, obj: SceneObject) -> list[Point] | None:
         n = max(3, int(p.get("n", 6)))
         return _closed(_regular(n, param_float(p, "radius", 1.0), 90.0 if n % 2 else 0.0))  # like Manim's RegularPolygon
     if kind == ObjectKind.POLYGON:
-        return _closed([(float(x), float(y)) for x, y in p.get("points", [])])
+        from manim_studio.model.curves import curve_cubics, is_open, is_smooth, sample_cubics
+
+        points = [(float(x), float(y)) for x, y in p.get("points", [])]
+        if is_smooth(obj) or is_open(obj):
+            return sample_cubics(curve_cubics(points, is_smooth(obj), not is_open(obj)))
+        return _closed(points)
     if kind == ObjectKind.STAR:
         n = max(3, int(p.get("n", 5)))
         outer, inner = param_float(p, "outer_radius", 1.2), param_float(p, "inner_radius", 0.5)
@@ -79,6 +84,16 @@ def local_outline(scene: Scene, obj: SceneObject) -> list[Point] | None:
         segments = graphs.curve_points(scene, obj)
         return [point for segment in segments for point in segment] or None
     return None
+
+
+def outline_center(obj: SceneObject, local: list[Point]) -> Point:
+    """Where the object's position lies in its outline: the middle of its box (incl. the handles of a smooth curve)."""
+    if obj.kind == ObjectKind.POLYGON and obj.params.get("points"):
+        from manim_studio.model.curves import anchor_center
+
+        return anchor_center([(float(x), float(y)) for x, y in obj.params.get("points", [])])
+    xs, ys = [x for x, _y in local], [y for _x, y in local]
+    return (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
 
 
 def path_polyline(scene: Scene, states: dict, path_id: str) -> list[Point]:
@@ -100,8 +115,7 @@ def path_polyline(scene: Scene, states: dict, path_id: str) -> list[Point]:
     local = local_outline(scene, obj)
     if not local:
         return []
-    xs, ys = [x for x, _y in local], [y for _x, y in local]
-    cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+    cx, cy = outline_center(obj, local)
     state = states.get(path_id)
     x0, y0 = (state.x, state.y) if state is not None else (obj.x, obj.y)
     rotation = state.rotation if state is not None else obj.rotation

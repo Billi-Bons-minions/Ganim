@@ -1497,4 +1497,5 @@ STRINGS: dict[str, str] = {
     "param.table_row": "Tabellenzeile (0 = alle)",
     "param.table_column": "Tabellenspalte (0 = alle)",
     "issue.table_cell_missing": "Die Tabelle hat keine solche Zeile oder Spalte.",
+    "template.value_table.name": "Wertetabelle und Graph",
 }

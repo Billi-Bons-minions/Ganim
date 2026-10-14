@@ -580,3 +580,6 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 - **Entscheidung:** Als Teil der Hervorhebung statt als eigene Animation. So bleibt eine Zellen-Hervorhebung ein Objekt mit allen Ein-/Ausblend-Animationen, und Hervorhebungen anderer Objekte funktionieren gleich.
 - **Bühne = Video, dabei gefunden:** Ein Hintergrund lag auf der Bühne über seinem Ziel (das Skript setzt ihn mit `set_z_index(Ziel − 1)` dahinter). Jetzt auch auf der Bühne dahinter.
 - **Test:** Rahmen um Zelle, Hintergrund hinter Zeile, Rahmen um Spalte, Unterstreichung wie in Manim 0.19.1 und 0.22 (< 0,03), Reihenfolge auf der Bühne, Bildvergleich deckungsgleich.
+
+## Vorlage „Wertetabelle und Graph“
+- f(x) = ½x² − 1: Eine Hervorhebung rahmt nacheinander die Spalten x = −2 … 2 der Wertetabelle ein (Abstand 0, also genau die Spalte), zu jedem Wertepaar erscheint der Punkt mit Hilfslinien zu den Achsen, am Ende verbindet der Graph die Punkte. Zeigt die neue Zellen-Hervorhebung im Einsatz (20 Vorlagen). Bildvergleich Bühne/Video deckungsgleich.

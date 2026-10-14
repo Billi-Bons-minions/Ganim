@@ -452,6 +452,35 @@ def integral_function() -> Scene:
     return scene
 
 
+def value_table() -> Scene:
+    """A table of values is read column by column: each pair becomes a point, then the graph joins them."""
+    scene = create_scene(tr("template.value_table.name"))
+    xs = (-2, -1, 0, 1, 2)
+    rows = [["x", *(str(x) for x in xs)], ["f(x)", *(f"{0.5 * x * x - 1:g}" for x in xs)]]
+    table = _add(scene, create_object(ObjectKind.TABLE, tr("kind.table") + " 1", 0.0, 2.6, rows=rows, font_size=30.0, h_buff=0.7, v_buff=0.35))
+    axes = _add(
+        scene,
+        create_object(ObjectKind.AXES, tr("kind.axes") + " 1", 0.0, -1.3, x_min=-3.0, x_max=3.0, y_min=-1.5, y_max=1.5, x_length=8.0, y_length=4.0, x_label="x", y_label="y"),
+    )
+    graph = _add(scene, create_object(ObjectKind.FUNCTION_GRAPH, "f", expression="0.5x^2 - 1", axes_id=axes.id, x_min=-2.6, x_max=2.6))
+    graph.stroke_color = "#58C4DD"
+    frames, points = [], []
+    for column, x in enumerate(xs, start=2):
+        # the frame lies exactly on the column (buff 0); the point shows its coordinates on the axes
+        frame = _add(scene, create_object(ObjectKind.HIGHLIGHT, tr("kind.highlight") + f" {column - 1}", target=table.id, table_column=column, buff=0.0, corner_radius=0.0))
+        point = _add(scene, create_object(ObjectKind.GRAPH_POINT, tr("kind.graph_point") + f" {column - 1}", graph_id=graph.id, x_value=float(x), show_lines=True))
+        point.fill_color = frame.stroke_color
+        frames.append(frame)
+        points.append(point)
+    _play(scene, create_animation(AnimationKind.CREATE, table.id, run_time=1.5), create_animation(AnimationKind.CREATE, axes.id, run_time=1.5))
+    for index, (frame, point) in enumerate(zip(frames, points)):
+        leaving = [create_animation(AnimationKind.FADE_OUT, frames[index - 1].id, run_time=0.5)] if index else []
+        _play(scene, *leaving, create_animation(AnimationKind.CREATE, frame.id, run_time=0.6), create_animation(AnimationKind.FADE_IN, point.id, run_time=0.8))
+    _play(scene, create_animation(AnimationKind.FADE_OUT, frames[-1].id, run_time=0.5), create_animation(AnimationKind.CREATE, graph.id, run_time=2.0))
+    scene.steps.append(create_wait_step(1.5))
+    return scene
+
+
 BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("title", "text", title_and_subtitle),
     BuiltinTemplate("analysis", "graph", analyze_function),
@@ -472,4 +501,5 @@ BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("complex_map", "a_apply_complex", complex_map),
     BuiltinTemplate("lens", "zoom_in", zoom_lens),
     BuiltinTemplate("integral", "graph", integral_function),
+    BuiltinTemplate("value_table", "graph", value_table),
 )

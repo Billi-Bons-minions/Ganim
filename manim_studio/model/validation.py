@@ -158,6 +158,11 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
         target = scene.object_by_id(obj.params.get("target"))
         if target is None or target.id == obj.id or target.kind in UNGROUPABLE or target.kind == ObjectKind.HIGHLIGHT:
             add(ERROR, "highlight_target_missing")
+        else:
+            from manim_studio.model.tables import selection_outside
+
+            if selection_outside(scene, obj):
+                add(ERROR, "table_cell_missing")
     if obj.kind == ObjectKind.GROUP:
         drawable = [m for m in groups.members(scene, obj.id) if (member := scene.object_by_id(m)) is not None and member.kind not in UNGROUPABLE]
         if not drawable:

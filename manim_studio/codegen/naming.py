@@ -33,6 +33,7 @@ HELPER_FUNCTIONS = frozenset(
         "studio_union",
         "studio_outline",
         "studio_dashed_graph",
+        "studio_table_cells",
         "studio_map_point",
         "studio_map_complex",
         "studio_prepare_map",

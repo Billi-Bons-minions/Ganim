@@ -26,6 +26,7 @@ from manim_studio.codegen.objects_extra import (
     EXTRA_CONSTRUCTORS,
     STUDIO_ANGLE,
     STUDIO_OUTLINE,
+    STUDIO_TABLE_CELLS,
     STUDIO_UNION,
     angle_code,
     boolean_code,
@@ -50,6 +51,7 @@ from manim_studio.model.geometry import param_float, polar_grid
 from manim_studio.model.gradients import DEFAULT_DIRECTION, SHEEN_CODE, gradient_color, gradient_parts
 from manim_studio.model.latex import colored_parts, colorize
 from manim_studio.model.schema import is_vector_image_path
+from manim_studio.model.tables import table_selection
 from manim_studio.model.three_d import THREE_D_KINDS, is_3d
 from manim_studio.model.traces import trace_target
 from manim_studio.model.types import GRAPH_TOOL_KINDS, INVISIBLE_KINDS, ON_3D_AXES, UNADDED_KINDS, UNGROUPABLE, ObjectKind
@@ -345,6 +347,10 @@ def _special_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> tupl
         target = obj.params.get("target")
         if target not in names or target == obj.id:
             raise CodegenError("highlight_target_missing", obj.name)
+        selection = table_selection(scene, obj)
+        if selection is not None:
+            # a cell, row or column of the table
+            return highlight_code(obj, variable, f"{STUDIO_TABLE_CELLS}({names[str(target)]}, {selection[0]}, {selection[1]})"), False
         return highlight_code(obj, variable, names[str(target)]), False
     if obj.kind == ObjectKind.VECTOR_FIELD:
         expressions = field_expressions(scene, obj)
@@ -439,6 +445,8 @@ def object_code(
             helpers.add(STUDIO_ANGLE)
         if obj.kind == ObjectKind.BOOLEAN_SHAPE and uses_union(scene, obj):
             helpers.add(STUDIO_UNION)
+        if obj.kind == ObjectKind.HIGHLIGHT and table_selection(scene, obj) is not None:
+            helpers.add(STUDIO_TABLE_CELLS)
         if obj.kind == ObjectKind.CAMERA:
             if is_3d(scene):
                 # the 3D camera has no frame: a helper frame steers its center, zoom and roll

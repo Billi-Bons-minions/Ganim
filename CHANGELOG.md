@@ -40,6 +40,8 @@ All notable changes to Manim Studio are listed here. The format follows
 
 - The script import reads graph tools made by axes: `plot_derivative_graph`, `plot_antiderivative_graph`, `get_area` (also `bounded_graph`), `get_riemann_rectangles`, `get_secant_slope_group`, `get_graph_label`, points `Dot(ax.i2gp(x, graph))`, and curves from `plot_parametric_curve` and `plot_polar_graph`.
 
+- Highlights can mark a cell, a row or a column of a table (*Table row*/*Table column*, 0 = all): frame, background, underline or cross over exactly the cells, like Manim's `Table.get_cell` (`studio_table_cells`).
+
 - Dashed function graphs (also derivatives, integral functions, piecewise, parametric and polar curves): the graph is wrapped in `DashedVMobject`, while areas, Riemann sums, labels, points and *Move along path* keep using the curve itself. The stage cuts the curve like Manim, across the gaps of clipped or piecewise graphs. The import reads dashed graphs back.
 
 - Dashed shapes: circle, ellipse, arc, square, rectangle, triangle, regular polygon, polygon, star and sector can be drawn *Dashed* (outline only) with a number of dashes and a dash ratio (Manim's `DashedVMobject`). The stage cuts the outline like Manim (equal arc lengths, in Manim's order), so every dash lies where it is in the video, also with a gradient (one per dash). Dashed shapes cannot be transformed, used as a path or united in a boolean shape (Manim only has the separate dashes); the import reads `DashedVMobject(…)`.
@@ -47,6 +49,7 @@ All notable changes to Manim Studio are listed here. The format follows
 - README: GIFs of the complex map w = z², the integral function and the zoom lens (rendered from the templates).
 
 ### Fixed
+- A background highlight lies behind its target on the stage too (the script already put it there with `set_z_index`); before, it covered e.g. the entries of a table row.
 - Tables on the stage are laid out like Manim's `Table`: every row is as high as its highest entry and every column as wide as its widest one (the ink of the text), the lines lie in the middle of the gaps. Before, rows were all equally high and the table was up to 15 % too large.
 - The dashed line on the stage has its dashes where Manim's `DashedLine` puts them (the last dash ends at the end of the line), and a sector runs in Manim's order (*Create* starts at its center like in the video).
 - Lines and outlines on the stage end and turn corners like in the video: flat ends and pointed corners (Cairo's defaults, which Manim keeps) instead of round ones; visible with thick lines.

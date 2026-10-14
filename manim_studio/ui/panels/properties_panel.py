@@ -51,6 +51,7 @@ from manim_studio.model.schema import (
 )
 from manim_studio.model.stage_edits import COLOR, MOVE, ROTATE, SCALE, is_recording, step_animation
 from manim_studio.model.state import first_reference, states_after, visible_at_start
+from manim_studio.model.tables import TABLE_SELECTION_KEYS, highlighted_table
 from manim_studio.model.types import (
     GRAPH_TOOL_KINDS,
     LABELED_TOOL_KINDS,
@@ -516,6 +517,9 @@ class PropertiesPanel(QScrollArea):
             self._edit(label, lambda s: ops.set_object_param(s, object_id, spec.key, value), f"obj:{object_id}:p:{spec.key}")
 
         def visible() -> bool:
+            if spec.key in TABLE_SELECTION_KEYS:
+                # only a table has rows and columns to pick
+                return highlighted_table(self.editor.scene(), self._object(object_id)) is not None
             return spec.is_visible(self._object(object_id).params, defaults)
 
         allowed = graphs.is_function_curve if spec.key in FUNCTION_GRAPH_REFS else (lambda obj: True)

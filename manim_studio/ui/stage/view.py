@@ -316,6 +316,9 @@ class StageView(QGraphicsView):
                 item.setZValue(8_900_000)  # a foreground mobject in Manim
             elif obj.id in depth_ranks:
                 item.setZValue(-900_000 + depth_ranks[obj.id])  # above the exact frame (-1 000 000)
+            elif obj.kind == ObjectKind.HIGHLIGHT and obj.params.get("style") == "background" and (target := scene.object_by_id(obj.params.get("target"))) is not None:
+                # just behind its target, like the script's set_z_index(target − 1)
+                item.setZValue(target.z_index * 10_000 + scene.objects.index(target) - 0.5)
             else:
                 item.setZValue(obj.z_index * 10_000 + index)
             item.content_hidden = self._exact_item is not None

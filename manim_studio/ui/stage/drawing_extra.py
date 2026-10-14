@@ -371,31 +371,58 @@ def brace_primitives(scene: Scene, obj: SceneObject, state: ObjectState) -> tupl
 
 def highlight_primitives(scene: Scene, obj: SceneObject, state: ObjectState) -> list[Primitive]:
     """Frame, background, underline or cross around the target (drawn around the target's center)."""
+    cells = _table_cells(scene, obj, state)
+    if cells is not None:
+        return cells
     box = highlight_box(scene, obj)
     if box is None:
         return []
     width, height = box
-    buff = param_float(obj.params, "buff", 0.15)
+    return _highlight_shape(obj, state, QRectF(-width * PX / 2, -height * PX / 2, width * PX, height * PX), param_float(obj.params, "buff", 0.15))
+
+
+def _table_cells(scene: Scene, obj: SceneObject, state: ObjectState) -> list[Primitive] | None:
+    """A highlight on a cell, row or column of a table: the box of ``studio_table_cells`` (like ``get_cell``)."""
+    from manim_studio.model.tables import highlighted_table, table_selection
+
+    selection = table_selection(scene, obj)
+    table = highlighted_table(scene, obj)
+    layout = table_layout(table) if table is not None and selection is not None else None
+    if layout is None:
+        return None
+    # the highlight sits on the table's center with its turn and scale: the table's own coordinates
+    bounds = QRectF()
+    for primitive in table_primitives(table, state):
+        bounds = bounds.united(primitive.path.boundingRect())
+    box = layout.cell(*selection).translated(-bounds.center().x(), -bounds.center().y())
+    # the buff is measured in the scene, the box grows with the table
+    return _highlight_shape(obj, state, box, param_float(obj.params, "buff", 0.15) / max(state.scale, 0.01))
+
+
+def _highlight_shape(obj: SceneObject, state: ObjectState, box: QRectF, buff: float) -> list[Primitive]:
+    """Frame, background, underline or cross around a box (pixels, the target's coordinates)."""
     style = obj.params.get("style", "frame")
+    center = box.center()
+    width, height = box.width() / PX, box.height() / PX
     w, h = (width + 2 * buff) * PX, (height + 2 * buff) * PX
     path = QPainterPath()
     if style == "underline":
         y = (height / 2 + buff) * PX
         path.moveTo(-width * PX / 2, y)
         path.lineTo(width * PX / 2, y)
-        return [_stroke_primitive(path, obj, state)]
+        return [_stroke_primitive(path.translated(center), obj, state)]
     if style == "cross":
         path.moveTo(-width * PX / 2, -height * PX / 2)
         path.lineTo(width * PX / 2, height * PX / 2)
         path.moveTo(-width * PX / 2, height * PX / 2)
         path.lineTo(width * PX / 2, -height * PX / 2)
-        return [_stroke_primitive(path, obj, state)]
+        return [_stroke_primitive(path.translated(center), obj, state)]
     if style == "background":
         path.addRect(QRectF(-w / 2, -h / 2, w, h))
-        return [Primitive(path=path, brush=QBrush(_color(state.fill_color, param_float(obj.params, "opacity", 0.75))))]
+        return [Primitive(path=path.translated(center), brush=QBrush(_color(state.fill_color, param_float(obj.params, "opacity", 0.75))))]
     radius = min(param_float(obj.params, "corner_radius", 0.0) * PX, w / 2, h / 2)
     path.addRoundedRect(QRectF(-w / 2, -h / 2, w, h), radius, radius)
-    return [_shape_primitive(path, obj, state)]
+    return [_shape_primitive(path.translated(center), obj, state)]
 
 
 def network_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:

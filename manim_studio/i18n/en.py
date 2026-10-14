@@ -1494,4 +1494,7 @@ STRINGS: dict[str, str] = {
     "param.num_dashes": "Number of dashes",
     "issue.path_dashed": "“{detail}” is dashed and cannot be used as a path (Manim only has the separate dashes).",
     "template.integral.name": "Integral function: F′ = f",
+    "param.table_row": "Table row (0 = all)",
+    "param.table_column": "Table column (0 = all)",
+    "issue.table_cell_missing": "The table has no such row or column.",
 }

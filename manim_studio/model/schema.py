@@ -327,6 +327,9 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
             ParamSpec("buff", ParamType.FLOAT, 0.15, minimum=0.0, maximum=3.0, step=0.05),
             ParamSpec("corner_radius", ParamType.FLOAT, 0.1, minimum=0.0, maximum=2.0, step=0.05, visible_when=("style", ("frame",))),
             ParamSpec("opacity", ParamType.FLOAT, 0.75, minimum=0.0, maximum=1.0, step=0.05, visible_when=("style", ("background",))),
+            # a cell, row or column of a table as the target (shown only for tables; 0 = all)
+            ParamSpec("table_row", ParamType.INT, 0, minimum=0, maximum=200, visible_when=("style", HIGHLIGHT_STYLES)),
+            ParamSpec("table_column", ParamType.INT, 0, minimum=0, maximum=200, visible_when=("style", HIGHLIGHT_STYLES)),
         ),
         _SHAPE_STYLE,
         (("stroke_color", "#F7D96F"), ("fill_color", "#000000"), ("fill_opacity", 0.0), ("stroke_width", 4.0)),

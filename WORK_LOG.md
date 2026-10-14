@@ -573,3 +573,10 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 
 ## Test „Platonische Körper mit jeder Animation“ schneller
 - Der Test brauchte zuletzt 277 von 300 erlaubten Sekunden und riss unter Last das Zeitlimit. Teuer waren Animationen, für die Manim den Körper kopiert (Wackeln, Ausbreiten, Bewegen/Drehen im Raum): Der Ikosaeder trug 12 schattierte Eckkugeln. Eckkugeln jetzt nur noch am Tetraeder (die Abdeckung bleibt), Laufzeit 153 s.
+
+## Tabellenzellen hervorheben
+- **Warum:** Wertetabellen und Vorzeichentabellen werden im Unterricht Zeile für Zeile durchgegangen. Bisher ließ sich nur die ganze Tabelle hervorheben.
+- **Was:** Eine Hervorhebung mit Tabellenziel hat *Tabellenzeile*/*Tabellenspalte* (0 = alle; die Felder erscheinen nur bei Tabellen). Im Skript: `studio_table_cells(tabelle, zeile, spalte)`, ein unsichtbares Rechteck über genau diesen Zellen wie `Table.get_cell` (Spalten- bzw. Zeilenränder ± halber Abstand). Rahmen, Hintergrund, Unterstreichung und Kreuz legen sich darum wie bisher (`always_redraw`, folgen der Tabelle). Nicht vorhandene Zeile/Spalte → Fehler in der Validierung.
+- **Entscheidung:** Als Teil der Hervorhebung statt als eigene Animation. So bleibt eine Zellen-Hervorhebung ein Objekt mit allen Ein-/Ausblend-Animationen, und Hervorhebungen anderer Objekte funktionieren gleich.
+- **Bühne = Video, dabei gefunden:** Ein Hintergrund lag auf der Bühne über seinem Ziel (das Skript setzt ihn mit `set_z_index(Ziel − 1)` dahinter). Jetzt auch auf der Bühne dahinter.
+- **Test:** Rahmen um Zelle, Hintergrund hinter Zeile, Rahmen um Spalte, Unterstreichung wie in Manim 0.19.1 und 0.22 (< 0,03), Reihenfolge auf der Bühne, Bildvergleich deckungsgleich.

@@ -1494,4 +1494,7 @@ STRINGS: dict[str, str] = {
     "param.num_dashes": "Anzahl Striche",
     "issue.path_dashed": "„{detail}“ ist gestrichelt und kann deshalb nicht als Pfad benutzt werden (Manim hat nur die einzelnen Striche).",
     "template.integral.name": "Integralfunktion: F′ = f",
+    "param.table_row": "Tabellenzeile (0 = alle)",
+    "param.table_column": "Tabellenspalte (0 = alle)",
+    "issue.table_cell_missing": "Die Tabelle hat keine solche Zeile oder Spalte.",
 }

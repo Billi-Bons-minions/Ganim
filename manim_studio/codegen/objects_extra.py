@@ -266,6 +266,20 @@ def highlight_code(obj: SceneObject, variable: str, target_variable: str) -> lis
     return [f"{variable} = always_redraw(lambda: {shape})"]
 
 
+STUDIO_TABLE_CELLS = "studio_table_cells"
+STUDIO_TABLE_CELLS_SOURCE = '''def studio_table_cells(table, row=0, column=0):
+    """A box over cells of a table, like Table.get_cell: one cell, a row (column 0) or a column (row 0)."""
+    rows, columns = table.get_rows(), table.get_columns()
+    lines = rows[row - 1 : row] if row else rows
+    cells = columns[column - 1 : column] if column else columns
+    left = cells[0].get_left()[0] - table.h_buff / 2
+    right = cells[-1].get_right()[0] + table.h_buff / 2
+    top = lines[0].get_top()[1] + table.v_buff / 2
+    bottom = lines[-1].get_bottom()[1] - table.v_buff / 2
+    box = Rectangle(width=right - left, height=top - bottom, stroke_width=0)
+    return box.move_to([(left + right) / 2, (top + bottom) / 2, 0])'''
+
+
 STUDIO_OUTLINE = "studio_outline"
 STUDIO_OUTLINE_SOURCE = '''def studio_outline(shape):
     """The outline of a shape as a plain VMobject, without curves of length 0.

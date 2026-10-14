@@ -137,7 +137,8 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
         lines = angle_lines(scene, obj)
         if lines is None:
             add(ERROR, "angle_lines_missing")
-        elif angle_geometry(scene, obj, refresh_attached_states(scene, {line.id: initial_state(scene, line) for line in lines})) is None:
+        # all start states: a line between two objects needs its ends to be placed
+        elif angle_geometry(scene, obj, refresh_attached_states(scene, {other.id: initial_state(scene, other) for other in scene.objects})) is None:
             add(WARNING, "angle_parallel")
     if obj.kind == ObjectKind.ZOOM_LENS:
         from manim_studio.model.lenses import lens_of

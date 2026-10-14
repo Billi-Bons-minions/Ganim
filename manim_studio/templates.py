@@ -481,6 +481,42 @@ def value_table() -> Scene:
     return scene
 
 
+def thales() -> Scene:
+    """Thales' theorem: C moves on the circle over AB (on arcs), the sides follow, the angle at C stays 90°."""
+    scene = create_scene(tr("template.thales.name"))
+    cx, cy, radius = 0.0, -0.6, 2.6
+
+    def on_circle(degrees: float) -> tuple[float, float]:
+        return round(cx + radius * math.cos(math.radians(degrees)), 4), round(cy + radius * math.sin(math.radians(degrees)), 4)
+
+    circle = _add(scene, create_object(ObjectKind.CIRCLE, tr("kind.circle") + " 1", cx, cy, radius=radius, dashed=True, num_dashes=40))
+    circle.stroke_color = "#888888"
+    corners = {}
+    for name, degrees in (("A", 180.0), ("B", 0.0), ("C", 120.0)):
+        corners[name] = _add(scene, create_object(ObjectKind.DOT, name, *on_circle(degrees), radius=0.1))
+        corners[name].z_index = 1  # the corners lie on top of the sides
+    corners["C"].fill_color = "#FC6255"
+    # the sides run between the corners and follow C
+    sides = {}
+    for start, end in (("A", "B"), ("C", "A"), ("C", "B")):
+        side = _add(scene, create_object(ObjectKind.LINE, start + end, 0.0, 0.0, attach="between", attach_start=corners[start].id, attach_end=corners[end].id))
+        side.stroke_color = "#58C4DD"
+        sides[start + end] = side
+    angle = _add(scene, create_object(ObjectKind.ANGLE, tr("kind.angle") + " 1", first_line=sides["CA"].id, second_line=sides["CB"].id, radius=0.45, right_angle=True, label="degrees"))
+    angle.stroke_color = "#FC6255"
+    title = _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " 1", 0.0, 3.3, text=tr("template.thales.caption"), font_size=36.0))
+    _play(scene, create_animation(AnimationKind.CREATE, circle.id, run_time=1.5), create_animation(AnimationKind.WRITE, title.id))
+    _play(scene, *(create_animation(AnimationKind.FADE_IN, corners[name].id) for name in ("A", "B")), create_animation(AnimationKind.CREATE, sides["AB"].id))
+    _play(scene, create_animation(AnimationKind.FADE_IN, corners["C"].id), *(create_animation(AnimationKind.CREATE, sides[key].id) for key in ("CA", "CB")))
+    _play(scene, create_animation(AnimationKind.CREATE, angle.id))
+    # C walks on the circle: an arc with the central angle between the two places
+    for start, end, run_time in ((120.0, 45.0, 2.0), (45.0, 160.0, 2.5), (160.0, 95.0, 1.5)):
+        x, y = on_circle(end)
+        _play(scene, create_animation(AnimationKind.MOVE, corners["C"].id, run_time=run_time, x=x, y=y, path_arc=end - start))
+    scene.steps.append(create_wait_step(1.5))
+    return scene
+
+
 BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("title", "text", title_and_subtitle),
     BuiltinTemplate("analysis", "graph", analyze_function),
@@ -502,4 +538,5 @@ BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("lens", "zoom_in", zoom_lens),
     BuiltinTemplate("integral", "graph", integral_function),
     BuiltinTemplate("value_table", "graph", value_table),
+    BuiltinTemplate("thales", "a_move_along_path", thales),
 )

@@ -1506,4 +1506,6 @@ STRINGS: dict[str, str] = {
     "prop.attach_between_note": "The line runs from the center of one object to the center of the other and follows both when they move (e.g. the sides of a triangle made of dots). Moving, turning, scaling, color changes and transforms are then not possible as animations.",
     "issue.attach_between_missing": "The line needs two different objects for its start and end (not a line that runs between objects itself).",
     "codegen.attach_between_missing": "“{detail}” should run between two objects, but one is missing.",
+    "template.thales.name": "Thales\u2019 theorem",
+    "template.thales.caption": "Every angle in a semicircle is a right angle",
 }

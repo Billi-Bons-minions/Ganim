@@ -1506,4 +1506,6 @@ STRINGS: dict[str, str] = {
     "prop.attach_between_note": "Die Linie läuft von der Mitte des einen zur Mitte des anderen Objekts und folgt beiden, wenn sie sich bewegen (z. B. die Seiten eines Dreiecks aus Punkten). Bewegen, Drehen, Skalieren, Farbe ändern und Verwandeln gehen dann nicht als Animation.",
     "issue.attach_between_missing": "Die Linie braucht zwei verschiedene Objekte für Anfang und Ende (keine Linie, die selbst zwischen Objekten läuft).",
     "codegen.attach_between_missing": "„{detail}“ soll zwischen zwei Objekten laufen, aber eines fehlt.",
+    "template.thales.name": "Satz des Thales",
+    "template.thales.caption": "Jeder Winkel im Halbkreis ist ein rechter",
 }

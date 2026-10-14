@@ -598,3 +598,8 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
   - Keine Ketten: Ein Ende darf folgen oder eine Formel haben, aber nicht selbst zwischen Objekten laufen.
 - **Test:** Dreieck aus drei Punkten, ein Punkt wandert auf einem Bogen; in jedem Bild liegen Linie, Pfeil und Strichlinie wie in Manim (0.19.1 und 0.22). Bildvergleich deckungsgleich.
 - **Farbverlauf:** Ein Verlauf einer verbundenen Linie steht mit in der `always_redraw`-Funktion (`Line(…).set_stroke([a, b])`). Weil Manim diese Linie nie dreht, dreht sich die Verlaufsrichtung auch auf der Bühne nicht mit. Test mit einer schrägen Seite wie in Manim.
+
+## Vorlage „Satz des Thales“
+- Gestrichelter Thaleskreis, A und B am Durchmesser, C wandert dreimal auf dem Kreis (*Bewegen* mit Bogenbahn = Mittelpunktswinkel, so bleibt C genau auf dem Kreis). Die Seiten laufen zwischen den Punkten und folgen, der rechte Winkel bei C zeigt dabei immer „90°“. Zeigt Bogenbahn, verbundene Linien und gestrichelte Formen zusammen (21 Vorlagen).
+- Bildvergleich auch mitten in einer Bewegung (Videobild gegen Bühne) deckungsgleich, Seiten und Winkel hinken nicht hinterher.
+- Dabei behoben: Die Validierung meldete fälschlich „parallele Linien“ für einen Winkel zwischen verbundenen Linien (sie platzierte die Linien ohne ihre Endpunkte).

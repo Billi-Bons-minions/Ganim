@@ -567,3 +567,6 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 - **Test:** Strich-Enden von Sinus, Stückfunktion mit Sprung, geschlossener Parameterkurve und Polarkurve wie in Manim (0.19.1 und 0.22), Werkzeuge auf `.curve`, Bildvergleich deckungsgleich.
 - **Import:** liest `studio_dashed_graph(…)`, `DashedVMobject(ax.plot(…))` und `f.curve` in Werkzeugen und Pfaden wieder ein (Rückweg vom eigenen Skript). Stückfunktionen über `studio_plot` liest der Import weiterhin nicht (eigenes Thema).
 - **Nebenbei:** Die README-Zeile zum Import war seit gestern zu vorsichtig (Graph-Werkzeuge, Striche und Verläufe werden inzwischen gelesen); korrigiert. Das Feld heißt jetzt nur „Gestrichelt“ (bei Graphen gibt es keinen „Rand“).
+
+## Bühne = Video: Tabellen
+- Beim Vorbereiten der Zellen-Hervorhebung gefunden: Die Bühne setzte alle Zeilen gleich hoch (Großbuchstabenhöhe · 1,4) und maß Spalten nach der Laufweite. Manims `Table` ordnet die Einträge mit `arrange_in_grid` an: Spaltenbreite = breiteste Tinte, Zeilenhöhe = höchste Tinte (eine Zeile mit „f(x)“ ist wegen der Klammern höher als eine mit Ziffern), Linien in der Mitte der Abstände, einen halben Abstand über die Einträge hinaus. Die Bühne rechnet jetzt genauso (`table_layout`). Test: Rahmen und alle Zellen (`get_cell`) zweier Tabellen auf 0,02 genau wie in Manim 0.19.1 und 0.22.

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import re
+from dataclasses import dataclass
 from html import escape
 
 from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt
@@ -615,29 +616,85 @@ def _cell_texts(rows: list[list[str]], widths: list[float], heights: list[float]
     return path
 
 
+@dataclass
+class TableLayout:
+    """Manim's ``Table`` on the stage (pixels, y down, the entries' bounding box starts at 0, 0).
+
+    ``arrange_in_grid``: a column is as wide as its widest entry, a row as high as its highest
+    one (the ink of the text), with ``h_buff``/``v_buff`` between them; every entry sits in the
+    middle of its cell. Lines and cells reach half a buff beyond the entries.
+    """
+
+    texts: QPainterPath
+    columns: list[tuple[float, float]]
+    rows: list[tuple[float, float]]
+    h_buff: float
+    v_buff: float
+
+    def cell(self, row: int = 0, column: int = 0) -> QRectF:
+        """Manim's ``get_cell`` for a cell, a whole row (``column`` 0), a whole column (``row`` 0) or the table."""
+        cols = self.columns[column - 1 : column] if 0 < column <= len(self.columns) else self.columns
+        lines = self.rows[row - 1 : row] if 0 < row <= len(self.rows) else self.rows
+        left, right = cols[0][0] - self.h_buff / 2, cols[-1][1] + self.h_buff / 2
+        top, bottom = lines[0][0] - self.v_buff / 2, lines[-1][1] + self.v_buff / 2
+        return QRectF(QPointF(left, top), QPointF(right, bottom))
+
+
+def table_layout(obj: SceneObject) -> TableLayout | None:
+    """Where Manim puts the entries, cells and lines of a table."""
+    cells = _cells(obj)
+    if not cells or not cells[0]:
+        return None
+    font = text_font(obj, param_float(obj.params, "font_size", 32.0))
+    inks = []
+    for row in cells:
+        line = []
+        for text in row:
+            path = QPainterPath()
+            path.addText(QPointF(0, 0), font, text)
+            line.append(path)
+        inks.append(line)
+    widths = [max(inks[r][c].boundingRect().width() for r in range(len(cells))) for c in range(len(cells[0]))]
+    heights = [max(path.boundingRect().height() for path in line) for line in inks]
+    h_buff = param_float(obj.params, "h_buff", 1.0) * PX
+    v_buff = param_float(obj.params, "v_buff", 0.5) * PX
+    columns, x = [], 0.0
+    for width in widths:
+        columns.append((x, x + width))
+        x += width + h_buff
+    rows, y = [], 0.0
+    for height in heights:
+        rows.append((y, y + height))
+        y += height + v_buff
+    texts = QPainterPath()
+    for (top, bottom), line in zip(rows, inks):
+        for (left, right), path in zip(columns, line):
+            box = path.boundingRect()
+            if box.isEmpty() and box.width() == 0:
+                continue
+            texts.addPath(path.translated((left + right) / 2 - box.center().x(), (top + bottom) / 2 - box.center().y()))
+    return TableLayout(texts, columns, rows, h_buff, v_buff)
+
+
 def table_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
-    rows, widths, heights, font = _grid(obj, param_float(obj.params, "font_size", 32.0))
-    if not rows:
+    layout = table_layout(obj)
+    if layout is None:
         return []
-    total_w, total_h = sum(widths), sum(heights)
+    whole = layout.cell()
     lines = QPainterPath()
-    x = 0.0
-    for width in widths[:-1]:
-        x += width
-        lines.moveTo(QPointF(x, 0))
-        lines.lineTo(QPointF(x, total_h))
-    y = 0.0
-    for height in heights[:-1]:
-        y += height
-        lines.moveTo(QPointF(0, y))
-        lines.lineTo(QPointF(total_w, y))
+    # Table._add_horizontal_lines/_add_vertical_lines: between rows and columns, half a buff beyond the entries
+    for (_top, bottom), (top, _bottom) in zip(layout.rows, layout.rows[1:]):
+        y = (bottom + top) / 2
+        lines.moveTo(QPointF(whole.left(), y))
+        lines.lineTo(QPointF(whole.right(), y))
+    for (_left, right), (left, _right) in zip(layout.columns, layout.columns[1:]):
+        x = (right + left) / 2
+        lines.moveTo(QPointF(x, whole.top()))
+        lines.lineTo(QPointF(x, whole.bottom()))
     if obj.params.get("outer_lines", True):
-        lines.addRect(QRectF(0, 0, total_w, total_h))
+        lines.addRect(whole)
     pen = _pen(state.stroke_color, obj.stroke_width, 1.0, state.scale)
-    return [
-        Primitive(path=lines, pen=pen),
-        Primitive(path=_cell_texts(rows, widths, heights, font), brush=QBrush(_color(state.fill_color))),
-    ]
+    return [Primitive(path=lines, pen=pen), Primitive(path=layout.texts, brush=QBrush(_color(state.fill_color)))]
 
 
 def matrix_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:

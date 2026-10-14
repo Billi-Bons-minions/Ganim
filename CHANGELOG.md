@@ -47,6 +47,7 @@ All notable changes to Manim Studio are listed here. The format follows
 - README: GIFs of the complex map w = z², the integral function and the zoom lens (rendered from the templates).
 
 ### Fixed
+- Tables on the stage are laid out like Manim's `Table`: every row is as high as its highest entry and every column as wide as its widest one (the ink of the text), the lines lie in the middle of the gaps. Before, rows were all equally high and the table was up to 15 % too large.
 - The dashed line on the stage has its dashes where Manim's `DashedLine` puts them (the last dash ends at the end of the line), and a sector runs in Manim's order (*Create* starts at its center like in the video).
 - Lines and outlines on the stage end and turn corners like in the video: flat ends and pointed corners (Cairo's defaults, which Manim keeps) instead of round ones; visible with thick lines.
 - Manim's `Union` leaves a hole where two shapes drawn in opposite directions overlap (e.g. a sector and a triangle). Generated scripts unite the two areas themselves (`studio_union`), so the video shows the real union like the stage.

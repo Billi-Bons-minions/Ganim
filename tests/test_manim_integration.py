@@ -800,7 +800,8 @@ def test_platonic_solids_with_every_allowed_animation(tmp_path) -> None:
 
     axes = make_object(ObjectKind.AXES_3D, "Raum", "ax")
     shapes = ("tetrahedron", "octahedron", "icosahedron", "dodecahedron")
-    solids = [make_object(ObjectKind.SOLID, shape, shape, axes_id="ax", shape=shape, side=1.2, center_x=-3.0 + 2.0 * i, show_vertices=i % 2 == 0) for i, shape in enumerate(shapes)]
+    # corner spheres only on the tetrahedron: Manim copies them in many animations, on the icosahedron (12) that took minutes
+    solids = [make_object(ObjectKind.SOLID, shape, shape, axes_id="ax", shape=shape, side=1.2, center_x=-3.0 + 2.0 * i, show_vertices=i == 0) for i, shape in enumerate(shapes)]
     allowed = [kind for kind in AnimationKind if animation_allowed(kind, ObjectKind.SOLID, {})]
     entrances = [kind for kind in allowed if kind in ENTRANCE_ANIMATIONS]
     exits = [kind for kind in allowed if kind in EXIT_ANIMATIONS]

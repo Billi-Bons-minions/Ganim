@@ -570,3 +570,6 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 
 ## Bühne = Video: Tabellen
 - Beim Vorbereiten der Zellen-Hervorhebung gefunden: Die Bühne setzte alle Zeilen gleich hoch (Großbuchstabenhöhe · 1,4) und maß Spalten nach der Laufweite. Manims `Table` ordnet die Einträge mit `arrange_in_grid` an: Spaltenbreite = breiteste Tinte, Zeilenhöhe = höchste Tinte (eine Zeile mit „f(x)“ ist wegen der Klammern höher als eine mit Ziffern), Linien in der Mitte der Abstände, einen halben Abstand über die Einträge hinaus. Die Bühne rechnet jetzt genauso (`table_layout`). Test: Rahmen und alle Zellen (`get_cell`) zweier Tabellen auf 0,02 genau wie in Manim 0.19.1 und 0.22.
+
+## Test „Platonische Körper mit jeder Animation“ schneller
+- Der Test brauchte zuletzt 277 von 300 erlaubten Sekunden und riss unter Last das Zeitlimit. Teuer waren Animationen, für die Manim den Körper kopiert (Wackeln, Ausbreiten, Bewegen/Drehen im Raum): Der Ikosaeder trug 12 schattierte Eckkugeln. Eckkugeln jetzt nur noch am Tetraeder (die Abdeckung bleibt), Laufzeit 153 s.

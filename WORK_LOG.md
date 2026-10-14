@@ -607,3 +607,9 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 ## Bühne = Video: Zahlen
 - Zahl-Objekte zeichnete die Bühne als normalen Text. Manims `DecimalNumber` setzt jedes Zeichen einzeln mit 0,001 · Schriftgröße Abstand und hebt das Minus auf Ziffernmitte. Den Nachbau gab es schon für Achsenzahlen; Zahl-Objekte nutzen ihn jetzt auch. „3.14“ war vorher 8 % zu breit. Test: Breite und Höhe von vier Zahlen (Nachkommastellen, Vorzeichen, Tausendertrenner) wie in Manim.
 - **Entscheidung (Beschriftung „a = 1.50“):** Nicht als Teil der Zahl gebaut. `DecimalNumber` baut seine Teile bei jedem Wert neu und `ChangeDecimalToValue` verlangt ein reines `DecimalNumber`. Eine Beschriftung ist ein Text, der der Zahl folgt (Kopplung); die Zahl wächst nach rechts, der Text bleibt links daneben.
+
+## Vieleck durch Objekte; Linie/Vieleck aus der Auswahl
+- **Was:** Kopplung *durch Objekte (Ecken)* für Vielecke: Die Ecken liegen auf den Mittelpunkten von drei oder mehr Objekten (`always_redraw(lambda: Polygon(a.get_center(), …))`), auch gefüllt, gestrichelt oder mit Farbverlauf. Zwei ausgewählte Objekte + *Linie*/*Pfeil*/*Strichlinie* ergibt eine Linie zwischen ihnen, drei oder mehr + *Vieleck* ein Vieleck durch sie (wie bei der Mengenform). Ohne passende Auswahl bleibt alles wie bisher.
+- **Entscheidung:** Kein Listen-Editor für die Ecken. Die Ecken kommen aus der Auswahl; beim Umschalten der Kopplung im Panel wird jede Ecke dem nächsten Objekt zugeordnet, die Namen stehen im Hinweis. Ziehen von Ecken und Linienenden ist für solche Objekte aus.
+- **Import:** liest jetzt auch einfache `Polygon(…)` (bisher übersprungen) und Vielecke durch Objekte.
+- **Test:** Dreiecksfläche, Ecke C auf einem Bogen; in jedem Bild liegen die Ecken wie in Manim (0.19.1 und 0.22), Bildvergleich mit Farbverlauf deckungsgleich; Erzeugen aus der Auswahl im echten Fenster.

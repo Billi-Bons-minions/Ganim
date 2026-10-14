@@ -1508,4 +1508,10 @@ STRINGS: dict[str, str] = {
     "codegen.attach_between_missing": "„{detail}“ soll zwischen zwei Objekten laufen, aber eines fehlt.",
     "template.thales.name": "Satz des Thales",
     "template.thales.caption": "Jeder Winkel im Halbkreis ist ein rechter",
+    "choice.attach.corners": "durch Objekte (Ecken)",
+    "prop.attach_corners_note": "Die Ecken liegen auf den Mittelpunkten von {corners} und folgen ihnen. Wählst du diese Kopplung neu, wird jede Ecke dem nächsten Objekt zugeordnet. Bewegen, Drehen, Skalieren, Farbe ändern und Verwandeln gehen dann nicht als Animation.",
+    "issue.attach_corners_missing": "Das Vieleck braucht mindestens drei verschiedene Objekte als Ecken (keine Linie oder kein Vieleck, das selbst an Objekten hängt).",
+    "codegen.attach_corners_missing": "„{detail}“ soll durch Objekte laufen, aber eines fehlt.",
+    "status.line_between": "Die Linie verbindet die beiden ausgewählten Objekte und folgt ihnen.",
+    "status.polygon_through": "Das Vieleck läuft durch die ausgewählten Objekte und folgt ihnen.",
 }

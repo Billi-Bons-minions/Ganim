@@ -166,6 +166,7 @@ class EditorController(QObject):
             shapes = [i for i in self.editor.selected_objects if (o := scene.object_by_id(i)) is not None and o.kind in OPERAND_KINDS]
             if len(shapes) >= 2:
                 params["first_shape"], params["second_shape"] = shapes[:2]
+        connect = self._connection_from_selection(kind, params)
         if kind in (ObjectKind.HIGHLIGHT, ObjectKind.TRACE) and not params.get("target"):
             target = next((o for o in (scene.object_by_id(i) for i in self.editor.selected_objects) if o is not None and o.kind not in UNGROUPABLE and o.kind != kind), None)
             if target is None:
@@ -198,10 +199,31 @@ class EditorController(QObject):
                 also(s)
 
         self._edit(tr("undo.add_object", name=name), mutate)
+        if connect:
+            self.statusMessage.emit(tr(connect))
         if hosts:
             self.statusMessage.emit(tr("status.hosts_added", name=name, hosts=", ".join(host.name for host in hosts)))
         self.editor.select_objects([obj.id])
         return obj.id
+
+    def _connection_from_selection(self, kind: ObjectKind, params: dict) -> str | None:
+        """Two selected objects and a line → a line between them; three or more and a polygon → a polygon through them.
+
+        Returns the status message to show (``None`` if nothing was connected).
+        """
+        from manim_studio.model.attach import CONNECTABLE_KINDS, FOLLOWABLE_KINDS, REDRAWN_MODES, attach_mode
+
+        scene = self.scene()
+        if params.get("attach"):
+            return None
+        chosen = [o.id for o in (scene.object_by_id(i) for i in self.editor.selected_objects) if o is not None and o.kind in FOLLOWABLE_KINDS and attach_mode(o) not in REDRAWN_MODES]
+        if kind in CONNECTABLE_KINDS and len(chosen) == 2:
+            params.update(attach="between", attach_start=chosen[0], attach_end=chosen[1])
+            return "status.line_between"
+        if kind == ObjectKind.POLYGON and len(chosen) >= 3:
+            params.update(attach="corners", attach_corners=chosen)
+            return "status.polygon_through"
+        return None
 
     def _missing_hosts(self, obj, names: list[str]) -> list:
         """Create the axes / graph a new object needs but the scene does not have yet."""

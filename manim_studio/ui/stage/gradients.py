@@ -39,10 +39,10 @@ def gradient_points(primitives: list[Primitive], shape: SceneObject, state: Obje
     if not box.isValid() and box.width() <= 0 and box.height() <= 0:
         return None
     center = (box.center().x() / PX, -box.center().y() / PX)
-    from manim_studio.model.attach import ATTACH_BETWEEN, attach_mode
+    from manim_studio.model.attach import REDRAWN_MODES, attach_mode
 
-    # a line between two objects is built in place in every frame, never turned: its direction stays
-    turn = 0.0 if attach_mode(shape) == ATTACH_BETWEEN else state.rotation
+    # a shape between or through objects is built in place in every frame, never turned: its direction stays
+    turn = 0.0 if attach_mode(shape) in REDRAWN_MODES else state.rotation
     return gradient_line(center, box.width() / 2 / PX, box.height() / 2 / PX, sheen_direction(shape), turn)
 
 

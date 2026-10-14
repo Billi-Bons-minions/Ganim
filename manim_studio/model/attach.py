@@ -7,6 +7,8 @@
 * **between** (lines and arrows): the line runs from the center of one object to the
   center of another (``always_redraw(lambda: Line(a.get_center(), b.get_center()))``),
   e.g. the sides of a triangle whose corners are dots that move.
+* **corners** (polygons): the corners are the centers of three or more objects
+  (``always_redraw(lambda: Polygon(a.get_center(), b.get_center(), c.get_center()))``).
 
 The settings live in the object's ``params`` (``attach``, ``attach_target``,
 ``attach_x``, ``attach_y``) because they apply to many object kinds.
@@ -26,7 +28,10 @@ ATTACH_NONE = "none"
 ATTACH_FOLLOW = "follow"
 ATTACH_FORMULA = "formula"
 ATTACH_BETWEEN = "between"
-ATTACH_MODES = (ATTACH_NONE, ATTACH_FOLLOW, ATTACH_FORMULA, ATTACH_BETWEEN)
+ATTACH_CORNERS = "corners"
+ATTACH_MODES = (ATTACH_NONE, ATTACH_FOLLOW, ATTACH_FORMULA, ATTACH_BETWEEN, ATTACH_CORNERS)
+#: Modes whose object is drawn anew from other objects in every frame (always_redraw).
+REDRAWN_MODES = (ATTACH_BETWEEN, ATTACH_CORNERS)
 #: Line-like objects that can run between two objects.
 CONNECTABLE_KINDS = frozenset({ObjectKind.LINE, ObjectKind.ARROW, ObjectKind.DOUBLE_ARROW, ObjectKind.DASHED_LINE})
 
@@ -82,11 +87,13 @@ ATTACH_SPECS: tuple[ParamSpec, ...] = (
 
 
 def attach_specs(kind: ObjectKind) -> tuple[ParamSpec, ...]:
-    """The coupling settings of a kind: only lines and arrows can run between two objects."""
+    """The coupling settings of a kind: lines can run between two objects, polygons through their corners."""
     if kind in CONNECTABLE_KINDS:
-        return ATTACH_SPECS
+        first = ATTACH_SPECS[0]
+        return (ParamSpec(first.key, first.type, first.default, choices=(ATTACH_NONE, ATTACH_FOLLOW, ATTACH_FORMULA, ATTACH_BETWEEN)),) + ATTACH_SPECS[1:]
     first = ATTACH_SPECS[0]
-    modes = ParamSpec(first.key, first.type, first.default, choices=(ATTACH_NONE, ATTACH_FOLLOW, ATTACH_FORMULA))
+    extra = (ATTACH_CORNERS,) if kind == ObjectKind.POLYGON else ()
+    modes = ParamSpec(first.key, first.type, first.default, choices=(ATTACH_NONE, ATTACH_FOLLOW, ATTACH_FORMULA, *extra))
     return (modes,) + tuple(spec for spec in ATTACH_SPECS[1:] if spec.key not in ("attach_start", "attach_end"))
 
 
@@ -96,6 +103,8 @@ def attach_mode(obj: SceneObject | None) -> str:
         return ATTACH_NONE
     mode = str(obj.params.get("attach", ATTACH_NONE))
     if mode == ATTACH_BETWEEN and obj.kind not in CONNECTABLE_KINDS:
+        return ATTACH_NONE
+    if mode == ATTACH_CORNERS and obj.kind != ObjectKind.POLYGON:
         return ATTACH_NONE
     return mode if mode in ATTACH_MODES else ATTACH_NONE
 
@@ -108,11 +117,23 @@ def connection_targets(scene: Scene, obj: SceneObject) -> tuple[SceneObject, Sce
     if attach_mode(obj) != ATTACH_BETWEEN:
         return None
     ends = [scene.object_by_id(obj.params.get(key)) for key in ("attach_start", "attach_end")]
-    if any(end is None or end.id == obj.id or end.kind not in FOLLOWABLE_KINDS or attach_mode(end) == ATTACH_BETWEEN for end in ends):
+    if any(end is None or end.id == obj.id or end.kind not in FOLLOWABLE_KINDS or attach_mode(end) in REDRAWN_MODES for end in ends):
         return None
     if ends[0].id == ends[1].id:
         return None
     return ends[0], ends[1]
+
+
+def corner_targets(scene: Scene, obj: SceneObject) -> list[SceneObject] | None:
+    """The objects a polygon runs through (``None`` with fewer than three, a missing or an unsuitable one)."""
+    if attach_mode(obj) != ATTACH_CORNERS:
+        return None
+    corners = [scene.object_by_id(corner) for corner in obj.params.get("attach_corners", []) or []]
+    if len(corners) < 3 or any(c is None or c.id == obj.id or c.kind not in FOLLOWABLE_KINDS or attach_mode(c) in REDRAWN_MODES for c in corners):
+        return None
+    if len({c.id for c in corners}) != len(corners):
+        return None
+    return corners  # type: ignore[return-value]
 
 
 def connection_geometry(start: tuple[float, float], end: tuple[float, float]) -> tuple[float, float, float, float]:
@@ -240,7 +261,7 @@ def set_attach_mode(scene: Scene, object_id: str, mode: str) -> None:
         half = float(obj.params.get("length", 3.0)) / 2
         angle = math.radians(obj.rotation)
         ends = [(obj.x - half * math.cos(angle), obj.y - half * math.sin(angle)), (obj.x + half * math.cos(angle), obj.y + half * math.sin(angle))]
-        candidates = [other for other in scene.objects if other.id != obj.id and other.kind in FOLLOWABLE_KINDS and attach_mode(other) != ATTACH_BETWEEN]
+        candidates = [other for other in scene.objects if other.id != obj.id and other.kind in FOLLOWABLE_KINDS and attach_mode(other) not in REDRAWN_MODES]
         chosen: list[str] = []
         for key, (ex, ey) in zip(("attach_start", "attach_end"), ends):
             free = [other for other in candidates if other.id not in chosen]
@@ -248,6 +269,16 @@ def set_attach_mode(scene: Scene, object_id: str, mode: str) -> None:
             obj.params[key] = nearest.id if nearest is not None else None
             if nearest is not None:
                 chosen.append(nearest.id)
+    if mode == ATTACH_CORNERS and corner_targets(scene, obj) is None:
+        # every corner to the nearest object (each object once)
+        candidates = [other for other in scene.objects if other.id != obj.id and other.kind in FOLLOWABLE_KINDS and attach_mode(other) not in REDRAWN_MODES]
+        chosen: list[str] = []
+        for px, py in obj.params.get("points", []) or []:
+            free = [other for other in candidates if other.id not in chosen]
+            nearest = min(free, key=lambda other: (other.x - obj.x - float(px)) ** 2 + (other.y - obj.y - float(py)) ** 2, default=None)
+            if nearest is not None:
+                chosen.append(nearest.id)
+        obj.params["attach_corners"] = chosen
     if mode == ATTACH_FORMULA and not obj.params.get("attach_x") and not obj.params.get("attach_y"):
         obj.params["attach_x"] = f"{round(obj.x, 4):g}"
         obj.params["attach_y"] = f"{round(obj.y, 4):g}"
@@ -267,7 +298,7 @@ def attached_positions(scene: Scene, position_of: Callable[[str], tuple[float, f
     for _round in range(len(pending) + 1):
         remaining = []
         for obj in pending:
-            if attach_mode(obj) == ATTACH_BETWEEN:
+            if attach_mode(obj) in REDRAWN_MODES:
                 continue  # placed after the others (``refresh_attached_states``)
             if attach_mode(obj) == ATTACH_FORMULA:
                 position = formula_position(scene, obj, values)

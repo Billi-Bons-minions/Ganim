@@ -28,7 +28,7 @@ from PySide6.QtGui import (
 from PySide6.QtSvg import QSvgRenderer
 
 from manim_studio.model.assets import resolve_asset_path
-from manim_studio.model.attach import ATTACH_BETWEEN, CONNECTABLE_KINDS, attach_mode
+from manim_studio.model.attach import ATTACH_BETWEEN, ATTACH_CORNERS, CONNECTABLE_KINDS, attach_mode
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.geometry import (
     AXES_TICK_SIZE,
@@ -703,6 +703,9 @@ def build_drawing(scene: Scene, shape: SceneObject, state: ObjectState, resource
     if state.geometry and shape.kind in CONNECTABLE_KINDS and attach_mode(shape) == ATTACH_BETWEEN:
         # a line between two objects is as long as their distance right now
         shape = replace(shape, params={**shape.params, "length": state.geometry[0]})
+    if state.geometry and attach_mode(shape) == ATTACH_CORNERS:
+        # a polygon through objects has their current positions as corners
+        shape = replace(shape, params={**shape.params, "points": [list(point) for point in state.geometry]})
     primitives, recenter = _shape_drawing(shape, state, scene, resources)
     bounds = QRectF()
     for primitive in primitives:

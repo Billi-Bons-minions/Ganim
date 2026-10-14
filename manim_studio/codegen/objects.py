@@ -44,7 +44,7 @@ from manim_studio.codegen.three_d_code import axes_3d_code, curve_3d_code, solid
 from manim_studio.model import graphs
 from manim_studio.model.angles import ANGLE_LINE_KEYS, angle_lines
 from manim_studio.model.assets import resolve_asset_path
-from manim_studio.model.attach import ATTACH_BETWEEN, attach_mode, connection_targets
+from manim_studio.model.attach import ATTACH_BETWEEN, ATTACH_CORNERS, REDRAWN_MODES, attach_mode, connection_targets, corner_targets
 from manim_studio.model.dashes import dash_settings, is_dashed
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.fields import field_expressions
@@ -306,12 +306,27 @@ def connection_code(obj: SceneObject, start: str, end: str) -> str:
     return f"{name}({', '.join(points + buff + style)}){_gradient_chain(obj)}"
 
 
+def corners_code(obj: SceneObject, corners: list[str]) -> str:
+    """A polygon through the centers of objects (inside ``always_redraw``); dashed as DashedVMobject."""
+    points = [f"{corner}.get_center()" for corner in corners]
+    if is_dashed(obj):
+        count, ratio = dash_settings(obj)
+        style = [f"{key}={value}" for key, value in _shape_style(dataclasses.replace(obj, fill_opacity=0.0))]
+        return f"DashedVMobject(Polygon({', '.join(points + style)}), num_dashes={count}, dashed_ratio={fmt_float(ratio)}){_gradient_chain(obj)}"
+    style = [f"{key}={value}" for key, value in _shape_style(obj)]
+    return f"Polygon({', '.join(points + style)}){_gradient_chain(obj)}"
+
+
 def _gradient_chain(obj: SceneObject) -> str:
-    """A gradient inside ``always_redraw`` (the line is built anew in every frame, unturned)."""
-    _fill, stroke = gradient_parts(obj)
-    if not stroke:
+    """A gradient inside ``always_redraw`` (the shape is built anew in every frame, unturned)."""
+    fill, stroke = gradient_parts(obj)
+    chain = ""
+    if fill:
+        chain += f".set_fill([{py_color(obj.fill_color)}, {py_color(gradient_color(obj))}])"
+    if not (fill or stroke):
         return ""
-    chain = f".set_stroke([{py_color(obj.stroke_color)}, {py_color(gradient_color(obj))}])"
+    if stroke:
+        chain += f".set_stroke([{py_color(obj.stroke_color)}, {py_color(gradient_color(obj))}])"
     direction = str(obj.params.get("gradient_direction", DEFAULT_DIRECTION))
     if direction != DEFAULT_DIRECTION and direction in SHEEN_CODE:
         chain += f".set_sheen_direction({SHEEN_CODE[direction]})"
@@ -329,8 +344,8 @@ def _gradient_lines(obj: SceneObject, variable: str) -> list[str]:
     """Two-color fill or stroke; set before turning the object, so its direction turns with it."""
     if obj.kind == ObjectKind.TEXT:
         return []  # a text's letters get their colors in Text(gradient=…)
-    if attach_mode(obj) == ATTACH_BETWEEN:
-        return []  # part of the always_redraw line (connection_code)
+    if attach_mode(obj) in REDRAWN_MODES:
+        return []  # part of the always_redraw shape (connection_code, corners_code)
     fill, stroke = gradient_parts(obj)
     lines = []
     if fill:
@@ -491,6 +506,13 @@ def object_code(
             special = ([f"{variable} = always_redraw(lambda: {connection_code(obj, *(names[end.id] for end in ends))})"], False)
         elif attach_mode(obj) == ATTACH_BETWEEN:
             raise CodegenError("attach_between_missing", obj.name)
+        corners = corner_targets(scene, obj)
+        if corners is not None:
+            if any(corner.id not in names for corner in corners):
+                raise CodegenError("attach_corners_missing", obj.name)
+            special = ([f"{variable} = always_redraw(lambda: {corners_code(obj, [names[corner.id] for corner in corners])})"], False)
+        elif attach_mode(obj) == ATTACH_CORNERS:
+            raise CodegenError("attach_corners_missing", obj.name)
         if special is not None:
             lines, place = special
         elif obj.kind == ObjectKind.AXES_3D:
@@ -595,6 +617,8 @@ def dependencies(scene: Scene, obj: SceneObject) -> list[str]:
         result += [str(member) for member in obj.params.get("members", [])]
     if attach_mode(obj) == ATTACH_BETWEEN:
         result += [str(obj.params.get(key)) for key in ("attach_start", "attach_end") if obj.params.get(key)]
+    if attach_mode(obj) == ATTACH_CORNERS:
+        result += [str(corner) for corner in obj.params.get("attach_corners", []) or []]
     for key in ("graph_id", "other_graph_id"):
         if obj.params.get(key):
             result.append(str(obj.params.get(key)))

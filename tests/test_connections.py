@@ -136,3 +136,75 @@ def test_gradient_on_a_connected_line(tmp_path, qapp) -> None:
     drawing = build_drawing(scene, side, state, StageResources())
     start, end = gradient_points(drawing.primitives, side, state)
     assert [*start, *end] == pytest.approx(theirs, abs=0.05)
+
+
+def polygon_scene() -> Scene:
+    """A filled triangle through three dots; C moves on an arc."""
+    area = make_object(ObjectKind.POLYGON, "Flaeche", "f", attach="corners", attach_corners=["a", "b", "c"])
+    area.fill_opacity = 0.5
+    dots = [make_object(ObjectKind.DOT, name, key, x, y) for name, key, x, y in (("A", "a", -3.0, -1.5), ("B", "b", 3.0, -1.5), ("C", "c", 0.0, 2.0))]
+    move = make_animation(AnimationKind.MOVE, "c", "m", x=-1.0, y=2.5, path_arc=45.0)
+    move.rate_func = "linear"
+    return Scene(id="p", name="Flaeche", objects=[area, *dots], steps=[play(move)])
+
+
+def corners_of(state) -> list[tuple[float, float]]:
+    return [(state.x + dx, state.y + dy) for dx, dy in state.geometry]
+
+
+def test_polygon_through_objects() -> None:
+    from manim_studio.importer import import_script
+
+    scene = polygon_scene()
+    assert not has_errors(validate_scene(scene))
+    assert corners_of(states_after(scene, -1)["f"]) == pytest.approx([(-3.0, -1.5), (3.0, -1.5), (0.0, 2.0)])
+    c = state_at_time(scene, 0.5)["c"]
+    assert corners_of(state_at_time(scene, 0.5)["f"])[2] == pytest.approx((c.x, c.y))
+    assert not animation_allowed(AnimationKind.ROTATE, ObjectKind.POLYGON, scene.object_by_id("f").params)
+    code = generate_script(make_project(scene))
+    assert "flaeche = always_redraw(lambda: Polygon(a.get_center(), b.get_center(), c.get_center()," in code
+    imported = import_script(code).project.scenes[0]
+    polygon = next(obj for obj in imported.objects if obj.kind == ObjectKind.POLYGON)
+    names = {obj.id: obj.name for obj in imported.objects}
+    assert polygon.params["attach"] == "corners" and [names[i] for i in polygon.params["attach_corners"]] == ["a", "b", "c"]
+    scene.object_by_id("f").params["attach_corners"] = ["a", "b"]
+    assert any(issue.code == "attach_corners_missing" for issue in validate_scene(scene))
+
+
+@pytest.mark.manim
+@pytest.mark.skipif(not HAS_MANIM, reason="Manim is not installed")
+def test_polygon_frames_like_manim(tmp_path) -> None:
+    from tests.test_manim_integration import run_manim
+
+    scene = polygon_scene()
+    record = "\n".join(
+        [
+            "spur = []",
+            "beobachter = Mobject()",
+            "beobachter.add_updater(lambda m, dt: dt > 0 and spur.append((self.renderer.num_plays + self.last_t, *[float(v) for corner in flaeche.get_vertices() for v in corner[:2]])))",
+            "self.add(beobachter)",
+        ]
+    )
+    scene.steps.insert(0, Step(id="record", kind=StepKind.CODE, code=record, wait_time=0.0))
+    scene.steps.append(Step(id="report", kind=StepKind.CODE, code="for frame in spur:\n    print('FRAME', *[round(v, 5) for v in frame])", wait_time=0.0))
+    result = run_manim(tmp_path, generate_script(make_project(scene)), "Flaeche", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+    frames = [[float(v) for v in match.split()] for match in re.findall(r"FRAME ([^\n]+)", result.stdout)]
+    assert len(frames) > 10
+    for time, *values in frames:
+        if 1e-6 < time < 1 - 1e-6:
+            assert values == pytest.approx([v for corner in corners_of(state_at_time(scene, time)["f"]) for v in corner], abs=2e-3), time
+
+
+def test_created_from_the_selection(window) -> None:
+    controller = window.controller
+    dots = [controller.add_object(ObjectKind.DOT, x, y) for x, y in ((-2.0, -1.0), (2.0, -1.0), (0.0, 1.5))]
+    window.editor.select_objects(dots[:2])
+    line = window.editor.scene().object_by_id(controller.add_object(ObjectKind.LINE))
+    assert (line.params["attach"], line.params["attach_start"], line.params["attach_end"]) == ("between", dots[0], dots[1])
+    window.editor.select_objects(dots)
+    polygon = window.editor.scene().object_by_id(controller.add_object(ObjectKind.POLYGON))
+    assert polygon.params["attach"] == "corners" and polygon.params["attach_corners"] == dots
+    window.editor.select_objects([])
+    free = window.editor.scene().object_by_id(controller.add_object(ObjectKind.LINE))
+    assert free.params.get("attach", "none") == "none"

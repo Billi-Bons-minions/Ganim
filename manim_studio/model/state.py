@@ -441,7 +441,7 @@ def refresh_attached_states(scene: Scene, states: dict[str, ObjectState]) -> dic
     for object_id, (x, y) in coupled.items():
         if object_id in states:
             states[object_id] = replace(states[object_id], x=x, y=y)
-    from manim_studio.model.attach import connection_geometry, connection_targets
+    from manim_studio.model.attach import connection_geometry, connection_targets, corner_targets
 
     for obj in scene.objects:
         ends = connection_targets(scene, obj) if obj.id in states else None
@@ -450,6 +450,13 @@ def refresh_attached_states(scene: Scene, states: dict[str, ObjectState]) -> dic
             start, end = (states[end.id] for end in ends)
             x, y, rotation, length = connection_geometry((start.x, start.y), (end.x, end.y))
             states[obj.id] = replace(states[obj.id], x=x, y=y, rotation=rotation, scale=1.0, geometry=(length,))
+        corners = corner_targets(scene, obj) if obj.id in states else None
+        if corners is not None and all(corner.id in states for corner in corners):
+            # a polygon through objects: its points around the middle of their bounding box
+            points = [(states[corner.id].x, states[corner.id].y) for corner in corners]
+            xs, ys = [px for px, _ in points], [py for _, py in points]
+            x, y = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+            states[obj.id] = replace(states[obj.id], x=x, y=y, rotation=0.0, scale=1.0, geometry=tuple((px - x, py - y) for px, py in points))
     for obj in scene.objects:
         if obj.id not in states:
             continue

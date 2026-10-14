@@ -34,7 +34,7 @@ from manim_studio.model import operations as ops
 from manim_studio.model.animation_builder import allowed_for_objects, reference_candidates
 from manim_studio.model.arrange import ALIGN_MODES, DISTRIBUTE_MODES
 from manim_studio.model.assets import relative_asset_path
-from manim_studio.model.attach import ATTACH_BETWEEN, ATTACH_FOLLOW, ATTACH_FORMULA, ATTACHABLE_KINDS, attach_mode, attach_specs, can_follow, is_attached, set_attach_mode
+from manim_studio.model.attach import ATTACH_BETWEEN, ATTACH_CORNERS, ATTACH_FOLLOW, ATTACH_FORMULA, ATTACHABLE_KINDS, attach_mode, attach_specs, can_follow, is_attached, set_attach_mode
 from manim_studio.model.booleans import OPERAND_KEYS, can_use
 from manim_studio.model.entities import STEP_LAGGED, STEP_MODES, STEP_TOGETHER, Animation, SceneObject, Step
 from manim_studio.model.expression import check_expression
@@ -549,6 +549,10 @@ class PropertiesPanel(QScrollArea):
             return tr("prop.attach_follow_note")
         if mode == ATTACH_BETWEEN:
             return tr("prop.attach_between_note")
+        if mode == ATTACH_CORNERS:
+            scene = self.editor.scene()
+            corners = [scene.object_by_id(corner) for corner in self._object(object_id).params.get("attach_corners", []) or []]
+            return tr("prop.attach_corners_note", corners=", ".join(corner.name for corner in corners if corner is not None) or "–")
         if mode == ATTACH_FORMULA:
             symbols = ", ".join(graphs.parameter_symbols(self.editor.scene()))
             functions = ", ".join(f"{name}(…)" for name in sorted(graphs.formula_functions(self.editor.scene())))

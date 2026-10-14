@@ -279,6 +279,16 @@ def build_object(call: ast.Call, name: str, objects: dict[str, SceneObject]) -> 
             kwargs = {key: value for key, value in kwargs.items() if key != "color"}
         _style(obj, kwargs)
         return obj
+    if function == "Polygon":
+        obj = create_object(ObjectKind.POLYGON, name)
+        if len(call.args) >= 3:
+            # the points around the middle of their bounding box, like the stage keeps them
+            points = [_vector(arg) for arg in call.args]
+            xs, ys = [x for x, _ in points], [y for _, y in points]
+            obj.x, obj.y = round((min(xs) + max(xs)) / 2, 6), round((min(ys) + max(ys)) / 2, 6)
+            obj.params["points"] = [[round(x - obj.x, 6), round(y - obj.y, 6)] for x, y in points]
+        _style(obj, kwargs)
+        return obj
     if function in ("Line", "Arrow", "DoubleArrow", "DashedLine"):
         kinds = {"Line": ObjectKind.LINE, "Arrow": ObjectKind.ARROW, "DoubleArrow": ObjectKind.DOUBLE_ARROW, "DashedLine": ObjectKind.DASHED_LINE}
         obj = create_object(kinds[function], name)
@@ -370,6 +380,9 @@ def build_object(call: ast.Call, name: str, objects: dict[str, SceneObject]) -> 
         line = _connected_line(call.args[0].body, name, objects)
         if line is not None:
             return line
+        polygon = _corner_polygon(call.args[0].body, name, objects)
+        if polygon is not None:
+            return polygon
     if function in BOOLEAN_FUNCTIONS and len(call.args) == 2:
         first, second = (_boolean_operand(arg, objects) for arg in call.args)
         obj = create_object(ObjectKind.BOOLEAN_SHAPE, name, operation=BOOLEAN_FUNCTIONS[function], first_shape=first, second_shape=second)
@@ -532,6 +545,29 @@ def _connected_line(call: ast.Call, name: str, objects: dict[str, SceneObject]) 
         for key in ("dash_length", "dashed_ratio"):
             if key in kwargs:
                 obj.params[key] = _number(kwargs[key])
+    return obj
+
+
+def _corner_polygon(call: ast.Call, name: str, objects: dict[str, SceneObject]) -> SceneObject | None:
+    """``Polygon(a.get_center(), b.get_center(), c.get_center(), …)`` inside ``always_redraw``: a polygon through objects."""
+    dashed = None
+    if _call_name(call) == "DashedVMobject" and call.args and isinstance(call.args[0], ast.Call):
+        dashed, call = call, call.args[0]
+    if _call_name(call) != "Polygon" or len(call.args) < 3:
+        return None
+    corners = [_center_of(arg, objects) for arg in call.args]
+    if any(corner is None for corner in corners):
+        return None
+    obj = build_object(ast.Call(func=call.func, args=[], keywords=call.keywords), name, objects)
+    xs, ys = [c.x for c in corners], [c.y for c in corners]
+    obj.x, obj.y = round((min(xs) + max(xs)) / 2, 6), round((min(ys) + max(ys)) / 2, 6)
+    obj.params["points"] = [[round(c.x - obj.x, 6), round(c.y - obj.y, 6)] for c in corners]
+    obj.params.update(attach="corners", attach_corners=[c.id for c in corners])
+    if dashed is not None:
+        kwargs = _kwargs(dashed)
+        obj.params["dashed"] = True
+        obj.params["num_dashes"] = int(_number(kwargs["num_dashes"])) if "num_dashes" in kwargs else DEFAULT_DASHES
+        obj.params["dashed_ratio"] = _number(kwargs["dashed_ratio"]) if "dashed_ratio" in kwargs else DEFAULT_RATIO
     return obj
 
 

@@ -12,6 +12,7 @@ from PySide6.QtGui import QBrush, QColor, QImage, QKeyEvent, QMouseEvent, QPaint
 from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QWidget
 
 from manim_studio.model import groups
+from manim_studio.model.attach import REDRAWN_MODES, attach_mode
 from manim_studio.model.entities import Scene
 from manim_studio.model.stage_edits import MOVE, ROTATE, SCALE
 from manim_studio.model.state import ObjectState
@@ -391,6 +392,8 @@ class StageView(QGraphicsView):
         if item is None or not item.isVisible() or item.locked:
             return
         obj = self._scene_model.object_by_id(item.object_id) if self._scene_model else None
+        if obj is not None and attach_mode(obj) in REDRAWN_MODES:
+            return  # placed by the objects it runs between or through: no handles
         if obj is not None and self._point_editing and obj.kind in LINE_KINDS:
             half = item.drawing.bounds.width() / 2
             self._handles = attach_point_handles(item, [QPointF(-half, 0), QPointF(half, 0)], ROLE_ENDPOINT)
@@ -540,7 +543,7 @@ class StageView(QGraphicsView):
             self.statusMessage.emit("")
             return
         obj = self._scene_model.object_by_id(item.object_id)
-        if obj is not None and obj.kind == ObjectKind.POLYGON and self._point_editing:
+        if obj is not None and obj.kind == ObjectKind.POLYGON and self._point_editing and attach_mode(obj) not in REDRAWN_MODES:
             self._insert_vertex(obj.id, self.mapToScene(position))
 
     def _insert_vertex(self, object_id: str, scene_pos: QPointF) -> None:

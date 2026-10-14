@@ -1508,4 +1508,10 @@ STRINGS: dict[str, str] = {
     "codegen.attach_between_missing": "“{detail}” should run between two objects, but one is missing.",
     "template.thales.name": "Thales\u2019 theorem",
     "template.thales.caption": "Every angle in a semicircle is a right angle",
+    "choice.attach.corners": "through objects (corners)",
+    "prop.attach_corners_note": "The corners lie on the centers of {corners} and follow them. Choosing this coupling again puts every corner on the nearest object. Moving, turning, scaling, color changes and transforms are then not possible as animations.",
+    "issue.attach_corners_missing": "The polygon needs at least three different objects as corners (not a line or polygon that hangs on objects itself).",
+    "codegen.attach_corners_missing": "“{detail}” should run through objects, but one is missing.",
+    "status.line_between": "The line connects the two selected objects and follows them.",
+    "status.polygon_through": "The polygon runs through the selected objects and follows them.",
 }

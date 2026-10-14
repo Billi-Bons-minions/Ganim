@@ -7,6 +7,7 @@ All notable changes to Manim Studio are listed here. The format follows
 ## Unreleased
 
 ### Added
+- The script import reads back the tools that Manim Studio writes with parameters: tangents, secants (also with h as a parameter) and points on graphs that follow a `ValueTracker`, numbers that show a parameter or a formula, objects that follow others or sit at a formula position, axis labels and implicit curves. Still skipped: value labels as separate objects, angle marks between connected lines and tables.
 - Tangents and secants can show their current term as a label (`t(x) = 1.50x − 0.25`, `y = …` or `m = …`). The label follows the line while a parameter moves it and stays on the side away from the graph (or above/below, as chosen).
 - Template "A tangent slides along the graph" (now 15 templates).
 - A formula can compute its result (option *Compute result*): `\frac{a^2}{2} + 3` becomes `\frac{a^2}{2} + 3 = 3.50`, live with parameters.

@@ -18,7 +18,7 @@ from manim_studio.model.dashes import DASHED_CURVES, DASHED_KINDS, DEFAULT_DASHE
 from manim_studio.model.entities import Animation, Project, Scene, SceneObject
 from manim_studio.model.factory import create_animation, create_object, create_play_step, create_scene, create_wait_step
 from manim_studio.model.gradients import FILLED_KINDS, GRADIENT_KINDS, SHEEN_CODE
-from manim_studio.model.types import CURVE_ANTIDERIVATIVE, CURVE_DERIVATIVE, CURVE_PARAMETRIC, CURVE_POLAR, MANIM_COLORS, AnimationKind, ObjectKind, StepKind, Visibility
+from manim_studio.model.types import CURVE_ANTIDERIVATIVE, CURVE_DERIVATIVE, CURVE_IMPLICIT, CURVE_PARAMETRIC, CURVE_POLAR, MANIM_COLORS, AnimationKind, ObjectKind, StepKind, Visibility
 
 SCENE_BASES = {"Scene", "MovingCameraScene", "ThreeDScene", "ZoomedScene"}
 
@@ -181,7 +181,29 @@ def _kwargs(node: ast.Call) -> dict[str, ast.AST]:
 
 
 class _TermWriter(ast.NodeTransformer):
-    """Turn NumPy code from a lambda back into a term (``np.sin(x)`` → ``sin(x)``)."""
+    """Turn NumPy code from a lambda back into a term (``np.sin(x)`` → ``sin(x)``).
+
+    ``a.get_value()`` of a ValueTracker becomes the parameter ``a``, ``p.get_center()[0]``
+    the coordinate ``p.x`` (formulas of numbers and positions).
+    """
+
+    def visit_Call(self, node: ast.Call) -> ast.AST:
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "get_value" and isinstance(node.func.value, ast.Name) and not node.args:
+            return ast.Name(id=node.func.value.id, ctx=ast.Load())
+        return self.generic_visit(node)
+
+    def visit_Subscript(self, node: ast.Subscript) -> ast.AST:
+        value = node.value
+        if (
+            isinstance(value, ast.Call)
+            and isinstance(value.func, ast.Attribute)
+            and value.func.attr == "get_center"
+            and isinstance(value.func.value, ast.Name)
+            and isinstance(node.slice, ast.Constant)
+            and node.slice.value in (0, 1)
+        ):
+            return ast.Attribute(value=ast.Name(id=value.func.value.id, ctx=ast.Load()), attr="xy"[node.slice.value], ctx=ast.Load())
+        return self.generic_visit(node)
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.AST:
         if isinstance(node.value, ast.Name) and node.value.id == "np":
@@ -191,6 +213,13 @@ class _TermWriter(ast.NodeTransformer):
                 return ast.Name(id="e", ctx=ast.Load())
             return ast.Name(id=NUMPY_TO_TERM.get(node.attr, node.attr), ctx=ast.Load())
         return self.generic_visit(node)
+
+
+def _expression_text(node: ast.AST) -> str:
+    """Code of an expression as a term (``a.get_value() ** 2`` → ``a^2``)."""
+    body = _TermWriter().visit(ast.parse(ast.unparse(node), mode="eval"))
+    ast.fix_missing_locations(body)
+    return ast.unparse(body).replace("**", "^")
 
 
 def _term(node: ast.AST) -> tuple[str, str]:
@@ -387,6 +416,9 @@ def build_object(call: ast.Call, name: str, objects: dict[str, SceneObject]) -> 
         line = _connected_line(call.args[0].body, name, objects)
         if line is not None:
             return line
+        inner = _call_name(call.args[0].body)
+        if inner in ("studio_plot", "studio_dashed_graph") or inner.rsplit(".", 1)[-1] in ("plot", "plot_implicit_curve", "plot_parametric_curve", "plot_polar_graph"):
+            return build_object(call.args[0].body, name, objects)  # a graph with parameters, redrawn in every frame
         polygon = _corner_polygon(call.args[0].body, name, objects)
         if polygon is not None:
             return polygon
@@ -456,6 +488,13 @@ def _graph_tool(function: str, call: ast.Call, kwargs: dict[str, ast.AST], name:
         parts = [_curve_term(ast.Lambda(args=call.args[0].args, body=element), "t") for element in body.args[0].elts[:2]]
         obj = create_object(ObjectKind.FUNCTION_GRAPH, name, curve=CURVE_PARAMETRIC, x_expression=parts[0], y_expression=parts[1], axes_id=axes.id)
         _t_range(obj, kwargs.get("t_range"))
+        _style(obj, kwargs)
+        return obj
+    if method == "plot_implicit_curve" and call.args and isinstance(call.args[0], ast.Lambda) and len(call.args[0].args.args) == 2:
+        x_name, y_name = (arg.arg for arg in call.args[0].args.args)
+        text = _expression_text(call.args[0].body)
+        text = re.sub(rf"\b{x_name}\b", "x", re.sub(rf"\b{y_name}\b", "y", text)) if (x_name, y_name) != ("x", "y") else text
+        obj = create_object(ObjectKind.FUNCTION_GRAPH, name, curve=CURVE_IMPLICIT, implicit_expression=text, axes_id=axes.id)
         _style(obj, kwargs)
         return obj
     if method == "plot_polar_graph" and call.args:
@@ -654,6 +693,8 @@ class _SceneReader:
         self.objects: dict[str, SceneObject] = {}
         self.added: set[str] = set()
         self._pending_section = ""
+        #: ``def name_build(): …`` of tools that follow parameters (used by ``always_redraw(name_build)``)
+        self.builds: dict[str, ast.FunctionDef] = {}
 
     def _new_step(self, step) -> None:
         if self._pending_section:
@@ -668,6 +709,8 @@ class _SceneReader:
                 self._call(node.value)
             elif isinstance(node, (ast.Pass, ast.Import, ast.ImportFrom)):
                 return
+            elif isinstance(node, ast.FunctionDef) and not node.args.args:
+                self.builds[node.name] = node  # read when always_redraw uses it
             else:
                 raise ImportProblem("statement")
         except ImportProblem:
@@ -681,6 +724,16 @@ class _SceneReader:
         if not isinstance(target, ast.Name) or not isinstance(node.value, ast.Call):
             raise ImportProblem("assignment")
         call = node.value
+        if _call_name(call) == "always_redraw" and call.args and isinstance(call.args[0], ast.Name) and call.args[0].id in self.builds:
+            build = self.builds.pop(call.args[0].id)
+            try:
+                obj = self._tool_from_build(target.id, build)
+            except ImportProblem:
+                self.report.skipped.append((build.lineno, f"def {build.name}(): …"))
+                raise
+            self.objects[target.id] = obj
+            self.scene.objects.append(obj)
+            return
         chain: list[ast.Call] = []
         while isinstance(call.func, ast.Attribute) and isinstance(call.func.value, ast.Call):
             chain.append(call)
@@ -711,6 +764,121 @@ class _SceneReader:
         if obj.kind in GRADIENT_KINDS:
             has["fill"] = has["fill"] and obj.kind in FILLED_KINDS
             obj.params["gradient"] = {(True, True): "both", (True, False): "fill", (False, True): "stroke"}.get((has["fill"], has["stroke"]), "none")
+
+    def _tool_from_build(self, name: str, build: ast.FunctionDef) -> SceneObject:
+        """A tangent or a point on a graph that follows a parameter (Manim Studio's ``…_build`` functions)."""
+        values: dict[str, ast.AST] = {}
+        result: ast.AST | None = None
+        for statement in build.body:
+            if isinstance(statement, ast.Assign) and len(statement.targets) == 1 and isinstance(statement.targets[0], ast.Name):
+                values[statement.targets[0].id] = statement.value
+            elif isinstance(statement, ast.Assign) and isinstance(statement.targets[0], ast.Tuple) and isinstance(statement.value, ast.Tuple):
+                for key, value in zip(statement.targets[0].elts, statement.value.elts):
+                    if isinstance(key, ast.Name):
+                        values[key.id] = value
+            elif isinstance(statement, ast.Return):
+                result = statement.value
+        graph = self._graph_of(values)
+        params: dict[str, Any] = {"graph_id": graph.id}
+        for key, parameter_key, value_key in (("x0", "x_parameter", "x_value"), ("dx", "h_parameter", "h")):
+            node = values.get(key)
+            tracker = self._tracker(node)
+            if tracker is not None:
+                params[parameter_key] = tracker.id
+            elif node is not None:
+                params[value_key] = _number(node)
+        parts = list(result.args) if isinstance(result, ast.Call) and _call_name(result) == "VGroup" else [result]
+        calls = [part for part in parts if isinstance(part, ast.Call)]
+        if "dx" in values:
+            # a secant: line through two points of the graph, with a slope triangle of dashed lines
+            obj = create_object(ObjectKind.SECANT, name, **params)
+            reach = values.get("left")
+            if isinstance(reach, ast.BinOp) and isinstance(reach.op, ast.Sub):
+                obj.params["extend"] = _number(reach.right)
+            obj.params["show_triangle"] = any(_call_name(part) == "studio_dashed_line" for part in calls)
+            line = next((part for part in calls if _call_name(part) == "Line"), None)
+            if line is not None and "color" in _kwargs(line):
+                obj.stroke_color = _color(_kwargs(line)["color"])
+            dot = next((part for part in calls if _call_name(part) == "Dot"), None)
+            if dot is not None and "radius" in _kwargs(dot):
+                obj.params["radius"] = _number(_kwargs(dot)["radius"])
+            return obj
+        plot = next((part for part in calls if _call_name(part).endswith(".plot")), None)
+        dot = next((part for part in calls if _call_name(part) == "Dot"), None)
+        if plot is not None and "slope" in values:
+            obj = create_object(ObjectKind.TANGENT, name, **params)
+            kwargs = _kwargs(plot)
+            width = kwargs.get("x_range")
+            if isinstance(width, (ast.List, ast.Tuple)) and len(width.elts) == 2 and isinstance(width.elts[1], ast.BinOp):
+                obj.params["width"] = 2 * _number(width.elts[1].right)
+            if "color" in kwargs:
+                obj.stroke_color = _color(kwargs["color"])
+            for key in ("stroke_width", "stroke_opacity"):
+                if key in kwargs:
+                    setattr(obj, key, _number(kwargs[key]))
+            term = next((node for node in ast.walk(result) if isinstance(node, ast.Call) and _call_name(node) == "studio_term"), None)
+            if term is not None and len(term.args) >= 5:
+                obj.params.update(label=_string(term.args[4]), decimals=int(_number(term.args[3])))
+            return obj
+        if dot is not None:
+            obj = create_object(ObjectKind.GRAPH_POINT, name, **params)
+            obj.params["show_lines"] = any(_call_name(part) == "studio_lines_to_point" for part in calls)
+            obj.params["show_label"] = any(_call_name(part) == "Text" for part in calls)
+            kwargs = _kwargs(dot)
+            if "color" in kwargs:
+                obj.fill_color = _color(kwargs["color"])
+            if "radius" in kwargs:
+                obj.params["radius"] = _number(kwargs["radius"])
+            return obj
+        raise ImportProblem("tool")
+
+    def _tracker(self, node: ast.AST | None) -> SceneObject | None:
+        """The ValueTracker of ``a.get_value()`` (``None`` for anything else)."""
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "get_value" and isinstance(node.func.value, ast.Name):
+            found = self.objects.get(node.func.value.id)
+            if found is not None and found.kind == ObjectKind.PARAMETER:
+                return found
+        return None
+
+    def _graph_of(self, values: dict[str, ast.AST]) -> SceneObject:
+        """The graph a tool's ``y0 = (lambda x: …)(x0)`` or ``curve = lambda x: …`` evaluates (same term)."""
+        function = values.get("curve")
+        if function is None and isinstance(values.get("y0"), ast.Call) and isinstance(values["y0"].func, ast.Lambda):
+            function = values["y0"].func
+        if not isinstance(function, ast.Lambda):
+            raise ImportProblem("tool graph")
+        _variable, term = _term(function)
+        for obj in self.scene.objects:
+            if obj.kind == ObjectKind.FUNCTION_GRAPH and obj.params.get("curve", "function") == "function" and str(obj.params.get("expression")) == term:
+                return obj
+        raise ImportProblem("tool graph")
+
+    def _apply_updater(self, obj: SceneObject, function: ast.Lambda) -> None:
+        """Updaters Manim Studio writes: a number shows a parameter or formula, an object follows another or a formula."""
+        body = function.body
+        if not (isinstance(body, ast.Call) and isinstance(body.func, ast.Attribute) and body.args):
+            raise ImportProblem("add_updater")
+        method, value = body.func.attr, body.args[0]
+        if method == "set_value" and obj.kind == ObjectKind.DECIMAL_NUMBER:
+            tracker = value.func.value.id if isinstance(value, ast.Call) and isinstance(value.func, ast.Attribute) and value.func.attr == "get_value" and isinstance(value.func.value, ast.Name) else None
+            if tracker in self.objects and self.objects[tracker].kind == ObjectKind.PARAMETER:
+                obj.params["parameter_id"] = self.objects[tracker].id
+            else:
+                obj.params["formula"] = _expression_text(value)
+            return
+        if method != "move_to":
+            raise ImportProblem("add_updater")
+        if isinstance(value, ast.BinOp) and isinstance(value.op, ast.Add) and isinstance(value.left, ast.Call) and _call_name(value.left).endswith(".get_center"):
+            target = _call_name(value.left).rsplit(".", 1)[0]
+            if target not in self.objects:
+                raise ImportProblem("add_updater")
+            # it keeps the distance it has at the start (Manim Studio writes exactly that offset)
+            obj.params.update(attach="follow", attach_target=self.objects[target].id)
+            return
+        if isinstance(value, (ast.List, ast.Tuple)) and len(value.elts) >= 2:
+            obj.params.update(attach="formula", attach_x=_expression_text(value.elts[0]), attach_y=_expression_text(value.elts[1]))
+            return
+        raise ImportProblem("add_updater")
 
     def _apply_method(self, obj: SceneObject, method: str, call: ast.Call) -> None:
         if method == "move_to" and call.args:
@@ -747,6 +915,16 @@ class _SceneReader:
             obj.params.update(points=[[round(x, 6), round(y, 6)] for x, y in points], smooth=smooth, closed=closed)
             # the object sits in the middle of the box around its points, like Manim's move_to
             obj.x, obj.y = (round(v, 6) for v in anchor_center(points))
+        elif method == "add" and call.args and obj.kind == ObjectKind.AXES and isinstance(call.args[0], ast.Call):
+            # axes.add(axes.get_x_axis_label(Text("x"))): the label of an axis
+            label = call.args[0]
+            kind = _call_name(label).rsplit(".", 1)[-1]
+            text = label.args[0] if label.args else None
+            if kind not in ("get_x_axis_label", "get_y_axis_label") or not isinstance(text, ast.Call) or not text.args:
+                raise ImportProblem(method)
+            obj.params["x_label" if kind == "get_x_axis_label" else "y_label"] = _string(text.args[0])
+        elif method == "add_updater" and call.args and isinstance(call.args[0], ast.Lambda):
+            self._apply_updater(obj, call.args[0])
         elif method == "set_z_index" and call.args:
             obj.z_index = int(_number(call.args[0]))
         elif method == "scale" and call.args:

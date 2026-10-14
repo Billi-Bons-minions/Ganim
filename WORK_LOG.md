@@ -652,9 +652,10 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 - Import: Stückfunktionen und abgeschnittene Graphen (`studio_plot`)
 - Bühne = Video: Zahlen wie `DecimalNumber`; Test „Platonische Körper“ schneller
 - README-GIFs: Thales, Wertetabelle, Venn; Fuzz-Runde 11 ohne Befund
+- Import liest Werkzeuge mit Parametern zurück (Rundreise der eigenen Skripte)
 
 ## Offen / Ideen
-- Import: Werkzeuge mit Parametern (`always_redraw`-Bauteile mit `ValueTracker`)
+- Import: getrennte Wertbeschriftungen, Winkelbögen zwischen verbundenen Linien, Tabellen mit Markierungen und Punkte als `VGroup` (Wertetabelle) werden noch übersprungen
 - 3D: Tiefensortierung pro Fläche statt pro Körper
 
 ## Deine Entscheidungen
@@ -674,3 +675,8 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 
 ## Vorlage „Winkelsumme im Dreieck“
 - Dreieck aus verbundenen Linien mit drei Winkelbögen (Innenwinkel; wo eine Seite andersherum läuft, ist ihre Richtung umgedreht) und „α + β + γ =“ als Zahl mit `angle(…)`. C wandert auf Bögen, die Einzelwinkel ändern sich, die Summe bleibt 180,0 (23 Vorlagen). Bildvergleich passt.
+
+## Import: Rundreise der eigenen Skripte
+- Der Import liest jetzt zurück, was Manim Studio mit Parametern schreibt: `always_redraw(x_build)`-Bauteile werden zu Tangente (Graph + Steigung), Sekante (mit `dx`; `h` als Parameter, Verlängerung, Steigungsdreieck) oder Punkt auf dem Graphen (Dot); der Graph wird über seinen Term gefunden, `x.get_value()` wird zum Parameter `x`, `p.get_center()[0]` zu `p.x`. Dazu Zahlen mit `add_updater(set_value(…))` (Parameter oder Formel), Objekte mit `move_to(X.get_center() + …)` (folgen), Positionen per Formel, Achsenbeschriftungen über `add` und `plot_implicit_curve`.
+- Entscheidung: Eine feste Tangente (ohne Parameter) schreibt Manim Studio als gewöhnlichen Geradengraphen; sie kommt als Funktionsgraph zurück. Das Bild ist gleich, deshalb rate ich nicht nach.
+- Test: Vorlagen (Sekante, Parameter, Kegelschnitte, Dreieck, Venn) kommen ohne übersprungene Zeilen und ohne Fehler zurück; die Tangenten-Vorlage endet nach der Rundreise in Manim an derselben Stelle wie das Original.

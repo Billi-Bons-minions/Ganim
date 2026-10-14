@@ -40,7 +40,9 @@ All notable changes to Manim Studio are listed here. The format follows
 
 - The script import reads graph tools made by axes: `plot_derivative_graph`, `plot_antiderivative_graph`, `get_area` (also `bounded_graph`), `get_riemann_rectangles`, `get_secant_slope_group`, `get_graph_label`, points `Dot(ax.i2gp(x, graph))`, and curves from `plot_parametric_curve` and `plot_polar_graph`.
 
-- Dashed shapes: circle, ellipse, arc, square, rectangle, triangle, regular polygon, polygon, star and sector can be drawn *Dashed (outline only)* with a number of dashes and a dash ratio (Manim's `DashedVMobject`). The stage cuts the outline like Manim (equal arc lengths, in Manim's order), so every dash lies where it is in the video, also with a gradient (one per dash). Dashed shapes cannot be transformed, used as a path or united in a boolean shape (Manim only has the separate dashes); the import reads `DashedVMobject(…)`.
+- Dashed function graphs (also derivatives, integral functions, piecewise, parametric and polar curves): the graph is wrapped in `DashedVMobject`, while areas, Riemann sums, labels, points and *Move along path* keep using the curve itself. The stage cuts the curve like Manim, across the gaps of clipped or piecewise graphs. The import reads dashed graphs back.
+
+- Dashed shapes: circle, ellipse, arc, square, rectangle, triangle, regular polygon, polygon, star and sector can be drawn *Dashed* (outline only) with a number of dashes and a dash ratio (Manim's `DashedVMobject`). The stage cuts the outline like Manim (equal arc lengths, in Manim's order), so every dash lies where it is in the video, also with a gradient (one per dash). Dashed shapes cannot be transformed, used as a path or united in a boolean shape (Manim only has the separate dashes); the import reads `DashedVMobject(…)`.
 
 - README: GIFs of the complex map w = z², the integral function and the zoom lens (rendered from the templates).
 

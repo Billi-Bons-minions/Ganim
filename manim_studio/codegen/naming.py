@@ -32,6 +32,7 @@ HELPER_FUNCTIONS = frozenset(
         "studio_angle",
         "studio_union",
         "studio_outline",
+        "studio_dashed_graph",
         "studio_map_point",
         "studio_map_complex",
         "studio_prepare_map",

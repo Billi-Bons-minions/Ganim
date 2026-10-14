@@ -176,6 +176,10 @@ def _extra_arguments(anim: Animation, scene: Scene, names: dict[str, str]) -> li
         if anim.kind == AnimationKind.MOVE_ALONG_PATH and path is not None and path.kind == ObjectKind.DASHED_LINE:
             # a dashed line keeps its points in the dashes, so follow the line through its ends
             return [f"Line({names[str(other)]}.get_start(), {names[str(other)]}.get_end())"]
+        if path is not None and anim.kind == AnimationKind.MOVE_ALONG_PATH and path.kind == ObjectKind.FUNCTION_GRAPH:
+            from manim_studio.codegen.graph_code import graph_reference
+
+            return [graph_reference(scene, path, names)]  # a dashed graph has only dashes, the curve is inside
         return [names[str(other)]]
     return []
 

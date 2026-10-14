@@ -14,7 +14,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from manim_studio.model.dashes import DASHED_KINDS, DEFAULT_DASHES, DEFAULT_RATIO
+from manim_studio.model.dashes import DASHED_CURVES, DASHED_KINDS, DEFAULT_DASHES, DEFAULT_RATIO
 from manim_studio.model.entities import Animation, Project, Scene, SceneObject
 from manim_studio.model.factory import create_animation, create_object, create_play_step, create_scene, create_wait_step
 from manim_studio.model.gradients import FILLED_KINDS, GRADIENT_KINDS, SHEEN_CODE
@@ -239,10 +239,10 @@ def build_object(call: ast.Call, name: str, objects: dict[str, SceneObject]) -> 
     """Create a model object for a Manim constructor call."""
     function = _call_name(call)
     kwargs = _kwargs(call)
-    if function == "DashedVMobject" and call.args and isinstance(call.args[0], ast.Call):
-        # the outline of a shape cut into dashes
+    if function in ("DashedVMobject", "studio_dashed_graph") and call.args and isinstance(call.args[0], ast.Call):
+        # the outline of a shape or a graph cut into dashes
         obj = build_object(call.args[0], name, objects)
-        if obj.kind not in DASHED_KINDS:
+        if not (obj.kind in DASHED_KINDS or (obj.kind == ObjectKind.FUNCTION_GRAPH and obj.params.get("curve", "function") in DASHED_CURVES)):
             raise ImportProblem(function)
         obj.params["dashed"] = True
         obj.params["num_dashes"] = int(_number(kwargs["num_dashes"])) if "num_dashes" in kwargs else DEFAULT_DASHES
@@ -377,6 +377,8 @@ _LABEL_DIRECTIONS = {"UR": "up_right", "UP": "up", "RIGHT": "right", "DR": "down
 
 
 def _graph_argument(node: ast.AST, objects: dict[str, SceneObject]) -> SceneObject:
+    if isinstance(node, ast.Attribute) and node.attr == "curve":
+        node = node.value  # the curve inside a dashed graph of Manim Studio
     if isinstance(node, ast.Name) and node.id in objects and objects[node.id].kind == ObjectKind.FUNCTION_GRAPH:
         return objects[node.id]
     raise ImportProblem("graph")
@@ -668,6 +670,8 @@ class _SceneReader:
         # Broadcast(x.copy()), ShowPassingFlash(x.copy().set_color(...)) refer to x
         while isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr in ("copy", "set_color", "set_fill", "set_stroke"):
             node = node.func.value
+        if isinstance(node, ast.Attribute) and node.attr == "curve":
+            node = node.value  # the curve inside a dashed graph
         if isinstance(node, ast.Name) and node.id in self.objects:
             return self.objects[node.id].id
         raise ImportProblem("target")

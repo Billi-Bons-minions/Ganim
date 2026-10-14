@@ -12,6 +12,7 @@ from manim_studio.codegen.errors import CodegenError
 from manim_studio.codegen.formatting import INDENT, call
 from manim_studio.codegen.literals import fmt_float, fmt_number, py_color, py_range, py_str
 from manim_studio.model import graphs
+from manim_studio.model.dashes import dash_settings, is_dashed_graph
 from manim_studio.model.entities import Scene, SceneObject
 from manim_studio.model.geometry import bound_axes, param_float
 from manim_studio.model.graphs import Piece
@@ -35,6 +36,12 @@ STUDIO_TERM = "studio_term"
 STUDIO_INTEGRAL = "studio_integral"
 STUDIO_BESIDE = "studio_beside"
 STUDIO_LABEL_TEXT = "studio_label_text"
+STUDIO_DASHED_GRAPH = "studio_dashed_graph"
+STUDIO_DASHED_GRAPH_SOURCE = '''def studio_dashed_graph(graph, **dashes):
+    """A graph drawn with dashes; tools and paths keep using the graph itself (``.curve``)."""
+    dashed = DashedVMobject(graph, **dashes)
+    dashed.curve = graph
+    return dashed'''
 POINT_LABEL_SIZE = 24.0
 AXIS_LABEL_SIZE = 28.0
 SMALL_BUFF = 0.1
@@ -250,7 +257,7 @@ def _tool_parts(scene: Scene, obj: SceneObject, names: dict[str, str]) -> tuple[
     assert axes is not None
     if obj.kind != ObjectKind.GRAPH_LABEL and not graphs.is_tool_graph(graph):
         raise CodegenError("graph_not_function", obj.name)
-    return graph, names[graph.id], names[axes.id]
+    return graph, graph_reference(scene, graph, names), names[axes.id]
 
 
 def _x_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> str:
@@ -269,7 +276,7 @@ def area_code(scene: Scene, obj: SceneObject, names: dict[str, str]) -> list[str
         other = scene.object_by_id(obj.params.get("other_graph_id"))
         if other is None or other.id not in names or not graphs.is_tool_graph(other):
             raise CodegenError("other_graph_missing", obj.name)
-        kwargs.append(("bounded_graph", names[other.id]))
+        kwargs.append(("bounded_graph", graph_reference(scene, other, names)))
     elif mode in ("above", "below"):
         axes = bound_axes(scene, graph)
         assert axes is not None
@@ -674,6 +681,20 @@ def axis_label_lines(obj: SceneObject, variable: str) -> list[str]:
 # --- dispatch -----------------------------------------------------------------------------------------
 
 
+def graph_reference(scene: Scene, graph: SceneObject, names: dict[str, str]) -> str:
+    """The Manim graph of a function graph object (the curve inside a dashed graph)."""
+    return f"{names[graph.id]}.curve" if is_dashed_graph(graph) else names[graph.id]
+
+
+def _dashed(obj: SceneObject, lines: list[str], helpers: set[str]) -> list[str]:
+    """Wrap a dashed graph into ``studio_dashed_graph`` (Manim's DashedVMobject)."""
+    if not is_dashed_graph(obj):
+        return lines
+    helpers.add(STUDIO_DASHED_GRAPH)
+    count, ratio = dash_settings(obj)
+    return [f"{STUDIO_DASHED_GRAPH}("] + [f"{INDENT}{line}" for line in lines[:-1]] + [f"{INDENT}{lines[-1]},", f"{INDENT}num_dashes={count},", f"{INDENT}dashed_ratio={fmt_float(ratio)},", ")"]
+
+
 def _wrap_dynamic(expression_lines: list[str], dynamic: bool) -> list[str]:
     if not dynamic:
         return expression_lines
@@ -690,9 +711,10 @@ def graph_object_code(scene: Scene, obj: SceneObject, names: dict[str, str], hel
     if obj.kind == ObjectKind.FUNCTION_GRAPH:
         dynamic = is_dynamic(scene, obj)
         bound = bound_axes(scene, obj) is not None
-        lines = _wrap_dynamic(graph_constructor(scene, obj, names, helpers), dynamic and bound)
+        constructor = _dashed(obj, graph_constructor(scene, obj, names, helpers), helpers)
+        lines = _wrap_dynamic(constructor, dynamic and bound)
         if dynamic and not bound:
-            lines = _wrap_dynamic(_with_placement(graph_constructor(scene, obj, names, helpers), obj), True)
+            lines = _wrap_dynamic(_with_placement(constructor, obj), True)
             return _assign(variable, lines), False
         return _assign(variable, lines), not bound
     if obj.kind not in GRAPH_TOOL_KINDS:

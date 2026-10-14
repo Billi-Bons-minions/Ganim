@@ -555,3 +555,15 @@ Start: lokales Repo war schon auf dem Stand von GitHub (`0ee67f4`), 458 Tests gr
 
 ## Deine Entscheidungen
 - Release/Tag/PyPI weiter offen (deine Freigabe).
+
+# Session 14.10.
+
+Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die beim Bauen aufgefallen sind, und halte die Auswahl hier fest.
+
+## Gestrichelte Funktionsgraphen
+- **Warum:** Gestrichelte Graphen (Vergleichskurven, Asymptoten, „vorher/nachher“) sind in Manim-Videos häufig. Bisher ging das nur bei Formen.
+- **Was:** Funktionsgraphen (Funktion, Ableitung, Stückfunktion, Integralfunktion, Parameter- und Polarkurve) haben *Gestrichelt*, *Anzahl Striche* (Standard 40, Graphen sind lang) und *Strichanteil*. Im Skript: `studio_dashed_graph(graph, num_dashes, dashed_ratio)`, ein `DashedVMobject` mit dem eigentlichen Graphen als `.curve`. Fläche, Riemann-Summe, Graph-Beschriftung, Fläche „zwischen“ und *Entlang Pfad bewegen* nehmen `.curve`, Werkzeuge mit eigenen Termen (Tangente, Punkt …) brauchen den Graphen ohnehin nicht. Verwandeln ist für gestrichelte Graphen gesperrt wie bei Formen.
+- **Bühne:** Schneidet die Kurve in Szenenkoordinaten nach Bogenlänge. Bei abgeschnittenen oder stückweisen Graphen zählen die Lücken nicht (Manim hängt die Stücke aneinander); ein Strich über eine Lücke wird zu zwei Stücken. Geschlossen ist eine Kurve nur, wenn sie ein Stück ist und am Start endet (wie `is_closed`).
+- **Test:** Strich-Enden von Sinus, Stückfunktion mit Sprung, geschlossener Parameterkurve und Polarkurve wie in Manim (0.19.1 und 0.22), Werkzeuge auf `.curve`, Bildvergleich deckungsgleich.
+- **Import:** liest `studio_dashed_graph(…)`, `DashedVMobject(ax.plot(…))` und `f.curve` in Werkzeugen und Pfaden wieder ein (Rückweg vom eigenen Skript). Stückfunktionen über `studio_plot` liest der Import weiterhin nicht (eigenes Thema).
+- **Nebenbei:** Die README-Zeile zum Import war seit gestern zu vorsichtig (Graph-Werkzeuge, Striche und Verläufe werden inzwischen gelesen); korrigiert. Das Feld heißt jetzt nur „Gestrichelt“ (bei Graphen gibt es keinen „Rand“).

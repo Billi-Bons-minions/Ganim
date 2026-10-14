@@ -86,11 +86,15 @@ def _scene(axes: SceneObject, points: list[Point]) -> list[Point]:
 
 def graph_primitives(scene: Scene, obj: SceneObject, state: ObjectState, values: dict[str, float] | None) -> tuple[list[Primitive], bool]:
     """Function graphs of every curve type (bound to axes or free)."""
-    if bound_axes(scene, obj) is not None:
-        segments = graphs.graph_scene_segments(scene, obj, values)
-        return [_stroke_primitive(_path(segments, graphs.bound_anchor(scene, obj)), obj, state)], False
-    segments = graphs.curve_points(scene, obj, values)
-    return [_stroke_primitive(_path(segments, (0.0, 0.0)), obj, state)], True
+    from manim_studio.model.dashes import graph_dashes, is_dashed_graph
+
+    bound = bound_axes(scene, obj) is not None
+    segments = graphs.graph_scene_segments(scene, obj, values) if bound else graphs.curve_points(scene, obj, values)
+    if is_dashed_graph(obj):
+        # cut by arc length in the scene, like DashedVMobject (one piece per dash)
+        segments = graph_dashes(obj, segments)
+    offset = graphs.bound_anchor(scene, obj) if bound else (0.0, 0.0)
+    return [_stroke_primitive(_path(segments, offset), obj, state)], not bound
 
 
 # --- graph tools -------------------------------------------------------------------------------

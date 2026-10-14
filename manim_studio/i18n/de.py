@@ -1490,7 +1490,7 @@ STRINGS: dict[str, str] = {
     "choice.gradient_direction.down": "↓ unten",
     "choice.gradient_direction.dl": "↙ unten links",
     "choice.gradient_direction.left": "← links",
-    "param.dashed": "Gestrichelt (nur Rand)",
+    "param.dashed": "Gestrichelt",
     "param.num_dashes": "Anzahl Striche",
     "issue.path_dashed": "„{detail}“ ist gestrichelt und kann deshalb nicht als Pfad benutzt werden (Manim hat nur die einzelnen Striche).",
     "template.integral.name": "Integralfunktion: F′ = f",

@@ -1490,7 +1490,7 @@ STRINGS: dict[str, str] = {
     "choice.gradient_direction.down": "↓ down",
     "choice.gradient_direction.dl": "↙ lower left",
     "choice.gradient_direction.left": "← left",
-    "param.dashed": "Dashed (outline only)",
+    "param.dashed": "Dashed",
     "param.num_dashes": "Number of dashes",
     "issue.path_dashed": "“{detail}” is dashed and cannot be used as a path (Manim only has the separate dashes).",
     "template.integral.name": "Integral function: F′ = f",

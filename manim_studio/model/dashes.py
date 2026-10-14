@@ -32,11 +32,25 @@ DASHED_KINDS = frozenset(
 #: Manim's defaults of ``DashedVMobject``.
 DEFAULT_DASHES = 15
 DEFAULT_RATIO = 0.5
+#: Graphs are long: more dashes than Manim's default by default.
+DEFAULT_GRAPH_DASHES = 40
+#: Curves of a function graph that can be dashed (implicit curves are many separate pieces).
+DASHED_CURVES = ("function", "derivative", "piecewise", "antiderivative", "parametric", "polar")
 
 
 def is_dashed(obj: SceneObject | None) -> bool:
     """``True`` for a shape drawn as ``DashedVMobject`` (not for the dashed line, which is its own kind)."""
     return obj is not None and obj.kind in DASHED_KINDS and bool(obj.params.get("dashed", False))
+
+
+def is_dashed_graph(obj: SceneObject | None) -> bool:
+    """``True`` for a function graph drawn with dashes (its tools keep using the graph itself)."""
+    return (
+        obj is not None
+        and obj.kind == ObjectKind.FUNCTION_GRAPH
+        and bool(obj.params.get("dashed", False))
+        and obj.params.get("curve", "function") in DASHED_CURVES
+    )
 
 
 def dash_settings(obj: SceneObject) -> tuple[int, float]:
@@ -47,7 +61,8 @@ def dash_settings(obj: SceneObject) -> tuple[int, float]:
         length = param_float(obj.params, "length", 3.0)
         dash = max(param_float(obj.params, "dash_length", 0.15), 1e-6)
         return max(2, math.ceil(length / dash * ratio)), ratio
-    return max(1, int(obj.params.get("num_dashes", DEFAULT_DASHES))), ratio
+    default = DEFAULT_GRAPH_DASHES if obj.kind == ObjectKind.FUNCTION_GRAPH else DEFAULT_DASHES
+    return max(1, int(obj.params.get("num_dashes", default))), ratio
 
 
 def dash_intervals(count: int, ratio: float, closed: bool, offset: float = 0.0) -> list[tuple[float, float]]:
@@ -114,6 +129,45 @@ def cut_dashes(points: list[Point], intervals: list[tuple[float, float]], closed
         elif closed:
             dashes.append(_piece(points, lengths, start * total, total) + _piece(points, lengths, 0.0, end * total)[1:])
     return dashes
+
+
+def cut_segments(segments: list[list[Point]], intervals: list[tuple[float, float]], closed: bool) -> list[list[Point]]:
+    """Cut a curve made of several pieces; the gaps between pieces do not count (Manim appends the pieces' curves)."""
+    pieces = [segment for segment in segments if len(segment) >= 2]
+    if len(pieces) == 1:
+        return cut_dashes(pieces[0], intervals, closed)
+    lengths = [sum(math.dist(a, b) for a, b in zip(piece, piece[1:])) for piece in pieces]
+    total = sum(lengths)
+    if total <= 0:
+        return []
+    dashes: list[list[Point]] = []
+    for start, end in intervals:
+        begin, finish = start * total, end * total
+        dash: list[Point] = []
+        offset = 0.0
+        for piece, length in zip(pieces, lengths):
+            low, high = max(begin, offset), min(finish, offset + length)
+            if high > low and length > 0:
+                part = cut_dashes(piece, [((low - offset) / length, (high - offset) / length)], False)
+                if part:
+                    if dash:
+                        dashes.append(dash)  # a dash over a gap: Manim's subcurve jumps, two pieces here
+                    dash = part[0]
+            offset += length
+        if dash:
+            dashes.append(dash)
+    return dashes
+
+
+def graph_dashes(obj: SceneObject, segments: list[list[Point]]) -> list[list[Point]]:
+    """The dashes of a dashed graph from its curve pieces in scene coordinates."""
+    pieces = [segment for segment in segments if len(segment) >= 2]
+    if not pieces:
+        return []
+    count, ratio = dash_settings(obj)
+    # like VMobject.is_closed: one piece that ends where it starts (a whole circle or rose)
+    closed = len(pieces) == 1 and math.dist(pieces[0][0], pieces[0][-1]) < 1e-6
+    return cut_segments(pieces, dash_intervals(count, ratio, closed), closed)
 
 
 def dash_polylines(scene: Scene, obj: SceneObject) -> list[list[Point]]:

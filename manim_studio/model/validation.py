@@ -154,6 +154,9 @@ def _object_issues(scene: Scene, obj: SceneObject, latex_available: bool, base_d
             add(ERROR, "boolean_shapes_missing")
         elif start_bounds(scene, obj) is None:
             add(WARNING, "boolean_empty")
+    if obj.kind == ObjectKind.TEXT and obj.params.get("gradient") == "letters" and any(str(word) for word, _color in obj.params.get("colored_words", []) or []):
+        # Manim cannot give a character two colors ("Ambiguous style")
+        add(ERROR, "text_gradient_words")
     if obj.kind == ObjectKind.HIGHLIGHT:
         target = scene.object_by_id(obj.params.get("target"))
         if target is None or target.id == obj.id or target.kind in UNGROUPABLE or target.kind == ObjectKind.HIGHLIGHT:

@@ -316,6 +316,11 @@ def build_object(call: ast.Call, name: str, objects: dict[str, SceneObject]) -> 
             obj.fill_color = _color(kwargs["color"])
         if "fill_opacity" in kwargs:
             obj.fill_opacity = _number(kwargs["fill_opacity"])
+        gradient = kwargs.get("gradient")
+        if function == "Text" and isinstance(gradient, (ast.List, ast.Tuple)) and len(gradient.elts) == 2:
+            # Text(gradient=(a, b)): the letters run from a to b
+            obj.fill_color = _color(gradient.elts[0])
+            obj.params.update(gradient="letters", gradient_color=_color(gradient.elts[1]))
         return obj
     if function in ("Axes", "NumberPlane"):
         obj = create_object(ObjectKind.AXES if function == "Axes" else ObjectKind.NUMBER_PLANE, name)

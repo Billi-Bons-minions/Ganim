@@ -302,6 +302,8 @@ def _placement(obj: SceneObject, variable: str) -> list[str]:
 
 def _gradient_lines(obj: SceneObject, variable: str) -> list[str]:
     """Two-color fill or stroke; set before turning the object, so its direction turns with it."""
+    if obj.kind == ObjectKind.TEXT:
+        return []  # a text's letters get their colors in Text(gradient=…)
     fill, stroke = gradient_parts(obj)
     lines = []
     if fill:

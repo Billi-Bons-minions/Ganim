@@ -217,6 +217,8 @@ def text(obj: SceneObject) -> list[str]:
     words = [(str(word), str(color)) for word, color in obj.params.get("colored_words", []) or [] if str(word)]
     if words:
         kwargs.append(("t2c", "{" + ", ".join(f"{py_str(word)}: {py_color(color)}" for word, color in words) + "}"))
+    if obj.params.get("gradient") == "letters":
+        kwargs.append(("gradient", f"({py_color(obj.fill_color)}, {py_color(str(obj.params.get('gradient_color', '#83C167')))})"))
     lines = content.split("\n")
     alignment = str(obj.params.get("alignment", "left"))
     if len(lines) > 1 and alignment in ("center", "right"):

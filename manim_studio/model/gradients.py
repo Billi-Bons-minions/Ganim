@@ -51,7 +51,9 @@ GRADIENT_KINDS = FILLED_KINDS | STROKE_KINDS
 
 
 def gradient_parts(obj: SceneObject) -> tuple[bool, bool]:
-    """``(fill, stroke)``: which parts of the object have a gradient."""
+    """``(fill, stroke)``: which parts of the object have a gradient (a text's letters are its fill)."""
+    if obj.kind == ObjectKind.TEXT:
+        return obj.params.get("gradient", "none") == "letters", False
     if obj.kind not in GRADIENT_KINDS:
         return False, False
     mode = str(obj.params.get("gradient", "none"))
@@ -62,6 +64,26 @@ def gradient_parts(obj: SceneObject) -> tuple[bool, bool]:
 def gradient_color(obj: SceneObject) -> str:
     """The second color of the gradient."""
     return str(obj.params.get("gradient_color", "#83C167"))
+
+
+def letter_colors(first: str, second: str, count: int) -> list[str]:
+    """Manim's ``color_gradient`` for ``Text(gradient=…)``: one color per character, the first and last exact.
+
+    Every character counts, spaces and line breaks too (Pango colors the characters of the string).
+    """
+    def channels(value: str) -> tuple[float, float, float]:
+        value = value.lstrip("#")
+        try:
+            return int(value[0:2], 16) / 255, int(value[2:4], 16) / 255, int(value[4:6], 16) / 255
+        except (ValueError, IndexError):
+            return 1.0, 1.0, 1.0
+
+    a, b = channels(first), channels(second)
+    colors = []
+    for index in range(count):
+        t = index / (count - 1) if count > 1 else 0.0
+        colors.append("#" + "".join(f"{round((x + (y - x) * t) * 255):02X}" for x, y in zip(a, b)))
+    return colors
 
 
 def sheen_direction(obj: SceneObject) -> tuple[float, float]:

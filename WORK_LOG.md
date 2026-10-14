@@ -583,3 +583,8 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 
 ## Vorlage „Wertetabelle und Graph“
 - f(x) = ½x² − 1: Eine Hervorhebung rahmt nacheinander die Spalten x = −2 … 2 der Wertetabelle ein (Abstand 0, also genau die Spalte), zu jedem Wertepaar erscheint der Punkt mit Hilfslinien zu den Achsen, am Ende verbindet der Graph die Punkte. Zeigt die neue Zellen-Hervorhebung im Einsatz (20 Vorlagen). Bildvergleich Bühne/Video deckungsgleich.
+
+## Farbverlauf für Texte
+- **Was:** Texte haben *Farbverlauf: Buchstaben* mit zweiter Farbe → `Text(…, gradient=(a, b))` (auch zentrierte/rechtsbündige `Paragraph`). Der Import liest `gradient=`.
+- **Manim nachgelesen (0.19.1 und 0.22 gleich):** Pango bekommt pro *Zeichen* des Strings eine Farbe aus `color_gradient(gradient, len(text))`, Leerzeichen und Zeilenumbrüche zählen mit. Die Bühne zeichnet den Text Zeichen für Zeichen (Position über die Laufweite des Zeilenanfangs, so bleibt die Unterschneidung) in genau diesen Farben. Test: Farbe jedes Buchstabens wie in Manim (±1 je Kanal), Bildvergleich deckungsgleich.
+- **Entscheidung:** Farbverlauf und farbige Wörter schließen sich aus. Manim bricht bei Überschneidung mit „Ambiguous style“ ab; die Validierung meldet das vorher.

@@ -1498,4 +1498,6 @@ STRINGS: dict[str, str] = {
     "param.table_column": "Tabellenspalte (0 = alle)",
     "issue.table_cell_missing": "Die Tabelle hat keine solche Zeile oder Spalte.",
     "template.value_table.name": "Wertetabelle und Graph",
+    "choice.gradient.letters": "Buchstaben",
+    "issue.text_gradient_words": "Ein Text mit Farbverlauf kann keine farbigen Wörter haben (Manim kann einem Buchstaben nicht zwei Farben geben).",
 }

@@ -194,6 +194,9 @@ KIND_INFO: dict[ObjectKind, KindInfo] = {
             ParamSpec("alignment", ParamType.CHOICE, "left", choices=ALIGNMENTS),
             ParamSpec("line_spacing", ParamType.FLOAT, 0.0, minimum=0.0, maximum=5.0, step=0.1),
             ParamSpec("colored_words", ParamType.WORD_COLORS, []),
+            # Text(gradient=…): every letter its own color, from the text color to the second color
+            ParamSpec("gradient", ParamType.CHOICE, "none", choices=("none", "letters")),
+            ParamSpec("gradient_color", ParamType.COLOR, "#83C167", visible_when=("gradient", ("letters",))),
         ),
         _TEXT_STYLE,
         (("fill_color", _WHITE), ("fill_opacity", 1.0)),

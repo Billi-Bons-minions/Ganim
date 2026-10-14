@@ -262,6 +262,8 @@ def _text_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
     spacing = param_float(obj.params, "line_spacing", 0.0)
     words = [(str(w), str(c)) for w, c in obj.params.get("colored_words", []) or [] if str(w)]
     base = QBrush(_color(state.fill_color, obj.fill_opacity))
+    if state.fill_color2:
+        return _letter_primitives(obj, state, text, font, alignment, spacing)
     if not words:
         return [Primitive(path=text_path(text, font, alignment, spacing), brush=base)]
     metrics = QFontMetricsF(font)
@@ -278,6 +280,28 @@ def _text_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
         Primitive(path=path, brush=base if color is None else QBrush(_color(color, obj.fill_opacity)))
         for color, path in paths.items()
     ]
+
+
+def _letter_primitives(obj: SceneObject, state: ObjectState, text: str, font: QFont, alignment: str, spacing: float) -> list[Primitive]:
+    """``Text(gradient=…)``: every character its own color; spaces and line breaks count like in Pango."""
+    from manim_studio.model.gradients import letter_colors
+
+    metrics = QFontMetricsF(font)
+    line_height = manim_line_height(font, spacing)
+    lines = text.split("\n")
+    widest = max(metrics.horizontalAdvance(line) for line in lines)
+    colors = letter_colors(state.fill_color, state.fill_color2, len(text))
+    paths: dict[str, QPainterPath] = {}
+    index = 0
+    for row, line in enumerate(lines):
+        left = {"center": (widest - metrics.horizontalAdvance(line)) / 2, "right": widest - metrics.horizontalAdvance(line)}.get(alignment, 0.0)
+        for position, character in enumerate(line):
+            if not character.isspace():
+                # the advance of everything before it keeps the kerning of the whole line
+                paths.setdefault(colors[index], QPainterPath()).addText(QPointF(left + metrics.horizontalAdvance(line[:position]), row * line_height), font, character)
+            index += 1
+        index += 1  # the line break
+    return [Primitive(path=path, brush=QBrush(_color(color, obj.fill_opacity))) for color, path in paths.items()]
 
 
 def _tinted_svg(svg: Path, color: str | None, height_px: float, resources: StageResources) -> QImage | None:
@@ -693,7 +717,7 @@ def build_drawing(scene: Scene, shape: SceneObject, state: ObjectState, resource
         bounds = QRectF()
         for primitive in primitives:
             bounds = bounds.united(_primitive_rect(primitive))
-    if state.fill_color2 or state.stroke_color2:
+    if (state.fill_color2 or state.stroke_color2) and shape.kind != ObjectKind.TEXT:
         from manim_studio.ui.stage.gradients import apply_gradients
 
         apply_gradients(primitives, shape, state)

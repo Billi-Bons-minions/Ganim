@@ -1498,4 +1498,6 @@ STRINGS: dict[str, str] = {
     "param.table_column": "Table column (0 = all)",
     "issue.table_cell_missing": "The table has no such row or column.",
     "template.value_table.name": "Table of values and graph",
+    "choice.gradient.letters": "Letters",
+    "issue.text_gradient_words": "A text with a color gradient cannot have colored words (Manim cannot give a letter two colors).",
 }

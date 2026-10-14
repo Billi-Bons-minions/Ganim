@@ -655,7 +655,6 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 ## Offen / Ideen
 - Import: Werkzeuge mit Parametern (`always_redraw`-Bauteile mit `ValueTracker`)
 - 3D: Tiefensortierung pro Fläche statt pro Körper
-- Bögen/Sektoren: Manim misst `move_to` nur an den Ankern; bei ungewöhnlichen Winkeln liegt die Mitte auf der Bühne um bis zu ~1 % des Radius anders (selten sichtbar)
 
 ## Deine Entscheidungen
 - Release/Tag/PyPI weiter offen (deine Freigabe).
@@ -665,3 +664,6 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 
 ## Vorlage „Dreieck messen“
 - Ecken A, B, C mit Namen, Seiten als verbundene Linien, Fläche durch die Ecken; die Seitenlängen stehen als Zahlen mit `dist(…)` an den Seitenmitten (Position über `A.x`, `B.y` …), oben der Umfang. C wandert auf Bögen, alle Werte laufen mit (22 Vorlagen). Bildvergleich passt (im Rahmen des halben Bildes Zeitversatz meines Vergleichsskripts bei 2,5-s-Schritten).
+
+## Bühne = Video: Bögen und Sektoren nach ihren Ankern zentriert
+- Manims `move_to` misst bei einem Bogen nur seine 9 Anker (gleichmäßig über den Winkel). Liegt der Scheitel zwischen zwei Ankern (z. B. Bogen ab 30° über 200°), sitzt der Bogen im Video etwas höher als die Mitte der echten Kurve. Die Bühne nimmt jetzt dieselbe Ankerbox (auch für den Farbverlauf). Test: Startpunkt von Bogen und Sektor wie in Manim (vorher 0,02 daneben).

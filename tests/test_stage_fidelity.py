@@ -152,3 +152,36 @@ def test_pens_like_cairo(qapp) -> None:
     pen = build_drawing(scene, line, states_after(scene, -1)["l"], StageResources()).primitives[0].pen
     assert pen.capStyle() == Qt.PenCapStyle.FlatCap and pen.joinStyle() == Qt.PenJoinStyle.MiterJoin
     assert pen.miterLimit() == 5.0  # Qt measures from the middle of the line: half of Cairo's 10
+
+
+@pytest.mark.manim
+@pytest.mark.skipif(importlib.util.find_spec("manim") is None, reason="Manim is not installed")
+def test_arcs_centered_on_their_anchors(tmp_path, qapp) -> None:
+    """Manim's move_to measures the 9 anchors of an arc; when the top lies between two of them the arc sits a bit higher."""
+    import re
+
+    from manim_studio.codegen import generate_script
+    from manim_studio.model.entities import Scene, Step
+    from manim_studio.model.state import states_after
+    from manim_studio.model.types import ObjectKind, StepKind
+    from manim_studio.ui.stage.drawing import PX, StageResources, build_drawing
+    from tests.helpers import make_object, make_project
+    from tests.test_manim_integration import run_manim
+
+    objects = [
+        make_object(ObjectKind.ARC, "Bogen", "b", -3.0, 0.0, radius=2.0, start_angle=30.0, angle=200.0),
+        make_object(ObjectKind.SECTOR, "Sektor", "s", 3.0, 0.0, radius=2.0, start_angle=40.0, angle=130.0),
+    ]
+    scene = Scene(id="s", name="Boegen", objects=objects)
+    report = "\n".join(f"print('START {name}', *[round(float(v), 4) for v in {name}.points[0][:2]])" for name in ("bogen", "sektor"))
+    scene.steps.append(Step(id="report", kind=StepKind.CODE, code=report, wait_time=0.0))
+    result = run_manim(tmp_path, generate_script(make_project(scene)), "Boegen", "--dry_run")
+    assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
+    states = states_after(scene, -1)
+    for key, name in (("b", "bogen"), ("s", "sektor")):
+        obj = scene.object_by_id(key)
+        drawing = build_drawing(scene, obj, states[key], StageResources())
+        first = drawing.primitives[0].path.elementAt(0)
+        ours = (obj.x + first.x / PX, obj.y - first.y / PX)
+        theirs = [float(v) for v in re.search(rf"START {name} (\S+) (\S+)", result.stdout).groups()]
+        assert ours == pytest.approx(theirs, abs=3e-3), name

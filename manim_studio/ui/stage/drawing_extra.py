@@ -151,12 +151,26 @@ def arc_points(radius: float, start: float, angle: float, samples: int = 64) -> 
     ]
 
 
+def anchor_rect(points: list[tuple[float, float]]) -> QRectF:
+    """The box around anchor points (pixels): what Manim's ``move_to`` and gradients measure of a VMobject."""
+    xs, ys = [pt(*point).x() for point in points], [pt(*point).y() for point in points]
+    return QRectF(QPointF(min(xs), min(ys)), QPointF(max(xs), max(ys)))
+
+
+def _arc_anchors(radius: float, start: float, angle: float) -> list[tuple[float, float]]:
+    """Manim's Arc has 9 anchors spread evenly over the angle; its top may lie between two of them."""
+    return arc_points(radius, start, angle, samples=8)
+
+
 def arc_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
-    points = arc_points(param_float(obj.params, "radius", 1.5), param_float(obj.params, "start_angle", 0.0), param_float(obj.params, "angle", 120.0))
+    radius, start, angle = param_float(obj.params, "radius", 1.5), param_float(obj.params, "start_angle", 0.0), param_float(obj.params, "angle", 120.0)
+    points = arc_points(radius, start, angle)
     path = QPainterPath(pt(*points[0]))
     for point in points[1:]:
         path.lineTo(pt(*point))
-    return [_stroke_primitive(path, obj, state)]
+    primitive = _stroke_primitive(path, obj, state)
+    primitive.rect = anchor_rect(_arc_anchors(radius, start, angle))
+    return [primitive]
 
 
 def curved_arrow_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
@@ -267,9 +281,12 @@ def lens_primitives(scene: Scene, obj: SceneObject, state: ObjectState) -> list[
 
 
 def sector_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:
-    points = arc_points(param_float(obj.params, "radius", 1.5), param_float(obj.params, "start_angle", 0.0), param_float(obj.params, "angle", 90.0))
+    radius, start, angle = param_float(obj.params, "radius", 1.5), param_float(obj.params, "start_angle", 0.0), param_float(obj.params, "angle", 90.0)
+    points = arc_points(radius, start, angle)
     # Manim's order: center, out to the end of the arc, back along it (AnnularSector with inner radius 0)
-    return [_shape_primitive(_polygon([(0.0, 0.0)] + points[::-1]), obj, state)]
+    primitive = _shape_primitive(_polygon([(0.0, 0.0)] + points[::-1]), obj, state)
+    primitive.rect = anchor_rect([(0.0, 0.0)] + _arc_anchors(radius, start, angle))
+    return [primitive]
 
 
 def annulus_primitives(obj: SceneObject, state: ObjectState) -> list[Primitive]:

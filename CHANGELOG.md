@@ -53,6 +53,7 @@ All notable changes to Manim Studio are listed here. The format follows
 - README: GIFs of the complex map w = z², the integral function and the zoom lens (rendered from the templates).
 
 ### Fixed
+- Numbers on the stage are set like Manim's `DecimalNumber`: every character on its own and close together, a minus sign in the middle of the digits. Before, they were up to 8 % too wide.
 - A background highlight lies behind its target on the stage too (the script already put it there with `set_z_index`); before, it covered e.g. the entries of a table row.
 - Tables on the stage are laid out like Manim's `Table`: every row is as high as its highest entry and every column as wide as its widest one (the ink of the text), the lines lie in the middle of the gaps. Before, rows were all equally high and the table was up to 15 % too large.
 - The dashed line on the stage has its dashes where Manim's `DashedLine` puts them (the last dash ends at the end of the line), and a sector runs in Manim's order (*Create* starts at its center like in the video).

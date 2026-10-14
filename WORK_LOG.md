@@ -603,3 +603,7 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 - Gestrichelter Thaleskreis, A und B am Durchmesser, C wandert dreimal auf dem Kreis (*Bewegen* mit Bogenbahn = Mittelpunktswinkel, so bleibt C genau auf dem Kreis). Die Seiten laufen zwischen den Punkten und folgen, der rechte Winkel bei C zeigt dabei immer „90°“. Zeigt Bogenbahn, verbundene Linien und gestrichelte Formen zusammen (21 Vorlagen).
 - Bildvergleich auch mitten in einer Bewegung (Videobild gegen Bühne) deckungsgleich, Seiten und Winkel hinken nicht hinterher.
 - Dabei behoben: Die Validierung meldete fälschlich „parallele Linien“ für einen Winkel zwischen verbundenen Linien (sie platzierte die Linien ohne ihre Endpunkte).
+
+## Bühne = Video: Zahlen
+- Zahl-Objekte zeichnete die Bühne als normalen Text. Manims `DecimalNumber` setzt jedes Zeichen einzeln mit 0,001 · Schriftgröße Abstand und hebt das Minus auf Ziffernmitte. Den Nachbau gab es schon für Achsenzahlen; Zahl-Objekte nutzen ihn jetzt auch. „3.14“ war vorher 8 % zu breit. Test: Breite und Höhe von vier Zahlen (Nachkommastellen, Vorzeichen, Tausendertrenner) wie in Manim.
+- **Entscheidung (Beschriftung „a = 1.50“):** Nicht als Teil der Zahl gebaut. `DecimalNumber` baut seine Teile bei jedem Wert neu und `ChangeDecimalToValue` verlangt ein reines `DecimalNumber`. Eine Beschriftung ist ein Text, der der Zahl folgt (Kopplung); die Zahl wächst nach rechts, der Text bleibt links daneben.

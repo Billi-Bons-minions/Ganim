@@ -606,9 +606,11 @@ def decimal_text(obj: SceneObject, value: float | None = None) -> str:
 
 
 def decimal_primitives(scene: Scene, obj: SceneObject, state: ObjectState, resources: StageResources) -> list[Primitive]:
+    from manim_studio.ui.stage.drawing import decimal_number_path
+
     value = number_value(scene, obj, resources.values, state.value)
-    path = QPainterPath()
-    path.addText(QPointF(0, 0), text_font(obj, param_float(obj.params, "font_size", 48.0)), decimal_text(obj, value))
+    # like DecimalNumber: every character on its own, close together, a minus in the middle of the digits
+    path, _first = decimal_number_path(decimal_text(obj, value), param_float(obj.params, "font_size", 48.0))
     return [Primitive(path=path, brush=QBrush(_color(state.fill_color, obj.fill_opacity)))]
 
 

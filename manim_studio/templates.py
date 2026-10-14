@@ -575,6 +575,52 @@ def measure_triangle() -> Scene:
     return scene
 
 
+def angle_sum() -> Scene:
+    """The angles of a triangle change while C moves, their sum stays 180°."""
+    scene = create_scene(tr("template.angle_sum.name"))
+    corners = {}
+    for name, x, y in (("A", -3.2, -1.8), ("B", 3.2, -1.8), ("C", -0.8, 1.6)):
+        corners[name] = _add(scene, create_object(ObjectKind.DOT, name, x, y, radius=0.08))
+        corners[name].z_index = 1
+    corners["C"].fill_color = "#FC6255"
+    for name, (dx, dy) in (("A", (-0.35, -0.3)), ("B", (0.35, -0.3)), ("C", (0.0, 0.4))):
+        corner = corners[name]
+        label = _add(scene, create_object(ObjectKind.TEXT, tr("name_label.name", name=name), corner.x + dx, corner.y + dy, text=name, font_size=36.0, attach="follow", attach_target=corner.id))
+        label.fill_color = corner.fill_color
+    sides = {}
+    for start, end in (("A", "B"), ("B", "C"), ("C", "A")):
+        sides[start + end] = _add(scene, create_object(ObjectKind.LINE, start + end, attach="between", attach_start=corners[start].id, attach_end=corners[end].id))
+    # the inner angle at every corner: counterclockwise from the first ray to the second (flipped where the side points the other way)
+    colors = {"A": "#58C4DD", "B": "#83C167", "C": "#FC6255"}
+    marks = []
+    for corner, first, second, flip_first, flip_second in (("A", "AB", "CA", False, True), ("B", "BC", "AB", False, True), ("C", "CA", "BC", False, True)):
+        mark = _add(
+            scene,
+            create_object(
+                ObjectKind.ANGLE,
+                tr("kind.angle") + " " + corner,
+                first_line=sides[first].id,
+                second_line=sides[second].id,
+                flip_first=flip_first,
+                flip_second=flip_second,
+                radius=0.55,
+                label="degrees",
+            ),
+        )
+        mark.stroke_color = colors[corner]
+        marks.append(mark)
+    caption = _add(scene, create_object(ObjectKind.TEXT, tr("kind.text") + " 1", -1.0, 3.1, text="α + β + γ =", font_size=40.0))
+    total = _add(scene, create_object(ObjectKind.DECIMAL_NUMBER, tr("template.angle_sum.sum"), 1.6, 3.1, formula="angle(B, A, C) + angle(A, B, C) + angle(A, C, B)", decimals=1, font_size=40.0))
+    total.fill_color = "#FFFF00"
+    _play(scene, *(create_animation(AnimationKind.FADE_IN, dot.id) for dot in corners.values()), *(create_animation(AnimationKind.CREATE, side.id) for side in sides.values()))
+    _play(scene, *(create_animation(AnimationKind.CREATE, mark.id) for mark in marks))
+    _play(scene, create_animation(AnimationKind.WRITE, caption.id), create_animation(AnimationKind.WRITE, total.id))
+    for x, y, arc, run_time in ((2.0, 1.2, -50.0, 2.5), (-2.4, 0.4, 60.0, 2.5), (-0.8, 1.6, -20.0, 1.5)):
+        _play(scene, create_animation(AnimationKind.MOVE, corners["C"].id, run_time=run_time, x=x, y=y, path_arc=arc))
+    scene.steps.append(create_wait_step(1.0))
+    return scene
+
+
 BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("title", "text", title_and_subtitle),
     BuiltinTemplate("analysis", "graph", analyze_function),
@@ -598,4 +644,5 @@ BUILTIN_TEMPLATES: tuple[BuiltinTemplate, ...] = (
     BuiltinTemplate("value_table", "graph", value_table),
     BuiltinTemplate("thales", "a_move_along_path", thales),
     BuiltinTemplate("triangle", "a_move_along_path", measure_triangle),
+    BuiltinTemplate("angle_sum", "a_move_along_path", angle_sum),
 )

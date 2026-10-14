@@ -642,7 +642,7 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 ## Fertig (je ein Commit, mit Tests gegen Manim 0.19.1 und 0.22, Doku; gepusht)
 - Gestrichelte Funktionsgraphen (Werkzeuge rechnen weiter am Graphen)
 - Tabellen wie Manims `Table` auf der Bühne; Tabellenzellen/-zeilen/-spalten hervorheben; Hintergrund hinter dem Ziel
-- Vorlagen „Wertetabelle und Graph“, „Satz des Thales“ und „Dreieck messen“ (jetzt 22 Vorlagen)
+- Vorlagen „Wertetabelle und Graph“, „Satz des Thales“, „Dreieck messen“ und „Winkelsumme im Dreieck“ (jetzt 23 Vorlagen)
 - Farbverlauf für Texte (Buchstabe für Buchstabe)
 - Linien/Pfeile zwischen zwei Objekten; Vielecke durch Objekte; Erzeugen aus der Auswahl
 - Koordinaten von Objekten in Formeln (`A.x`, `A.y`, `dist(A, B)`, `angle(A, B, C)`)
@@ -671,3 +671,6 @@ Der Auftrag (Punkte 1–10) ist erledigt. Ich mache mit Funktionen weiter, die b
 
 ## angle(A, B, C) in Formeln
 - Winkel bei B zwischen BA und BC in Grad. Ausgeschrieben mit Kahans Formel `2·atan(|u·|v| − v·|u|| / |u·|v| + v·|u||)` (die Formelsprache hat kein atan2; acos verliert nahe 0° und 180° Genauigkeit). Die 500-Zeichen-Grenze gilt für die getippte Formel, nicht für die ausgeschriebene. Test: Winkelsumme 180°, Wert wie atan2 und wie in Manim.
+
+## Vorlage „Winkelsumme im Dreieck“
+- Dreieck aus verbundenen Linien mit drei Winkelbögen (Innenwinkel; wo eine Seite andersherum läuft, ist ihre Richtung umgedreht) und „α + β + γ =“ als Zahl mit `angle(…)`. C wandert auf Bögen, die Einzelwinkel ändern sich, die Summe bleibt 180,0 (23 Vorlagen). Bildvergleich passt.

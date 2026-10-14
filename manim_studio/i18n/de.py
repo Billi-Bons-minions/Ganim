@@ -1523,4 +1523,6 @@ STRINGS: dict[str, str] = {
     "name_label.name": "Beschriftung {name}",
     "template.triangle.name": "Dreieck messen",
     "template.triangle.perimeter": "Umfang:",
+    "template.angle_sum.name": "Winkelsumme im Dreieck",
+    "template.angle_sum.sum": "Winkelsumme",
 }

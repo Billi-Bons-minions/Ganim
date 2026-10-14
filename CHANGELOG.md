@@ -46,7 +46,7 @@ All notable changes to Manim Studio are listed here. The format follows
 
 - Polygons can be a *Smooth curve* through their points (Manim's `set_points_smoothly`, the same spline) and/or open (*Closed* off: `set_points_as_corners` without the edge back), also dashed, with a gradient or through objects. Handy as free curves and as paths for *Move along path*. The import reads both.
 
-- Formulas can also use `angle(A, B, C)`: the angle at B in degrees (Kahan's formula, exact also for very small and wide angles), e.g. the angle sum of a triangle stays 180°.
+- Formulas can also use `angle(A, B, C)`: the angle at B in degrees (Kahan's formula, exact also for very small and wide angles), e.g. the angle sum of a triangle stays 180°. Template "Angle sum of a triangle" (now 23 templates).
 - Formulas of numbers, positions and computed results can use coordinates of objects: `A.x`, `A.y` and `dist(A, B)` (objects with a plain, unique name). A number shows the length of a segment live, a dot with the position `x = (A.x + B.x)/2`, `y = (A.y + B.y)/2` stays the midpoint. In the script they read `a.get_center()`. Template "Measuring a triangle" (now 22 templates): the side lengths and the perimeter change while a corner moves.
 
 - Polygons can run through three or more objects (coupling *through objects (corners)*, `always_redraw(lambda: Polygon(a.get_center(), …))`), filled, dashed or with a gradient: e.g. the area of a triangle that follows its corners. Select three or more dots and click *Polygon*; select two and click *Line* (or an arrow) for a line between them. The import reads polygons, also through objects.

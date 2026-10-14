@@ -62,7 +62,7 @@ Beim Start prüft Manim Studio im Hintergrund, ob Manim, FFmpeg und LaTeX vorhan
 
 Im Raum gibt es 3D-Achsen, eine Kamera, die du schwenken oder mit *Kamera dreht dauerhaft* gleichmäßig weiterdrehen lassen kannst (auch über Pausen hinweg, 0 °/s hält sie an), Flächen (z = f(x, y) oder als Parameterfläche x(u, v), y(u, v), z(u, v), z. B. Kugel oder Torus), Kurven, Körper (auch die platonischen Körper Tetraeder, Oktaeder, Ikosaeder und Dodekaeder), die sich mit *Im Raum bewegen* und *Im Raum drehen* animieren lassen sowie Pfeile, Strecken und Punkte (Bereich *3D* der Objektbibliothek oder Menü *Einfügen*).
 
-Es geht auch ohne leere Bühne: Im Willkommensdialog gibt es fünf Beispielprojekte, und unter *Szene → Neue Szene aus Vorlage* findest du 22 Vorlagen (z. B. Kurvendiskussion, Wertetabelle und Graph, Satz des Thales, Dreieck messen, von der Sekante zur Tangente, Tangente wandert am Graphen, Integralfunktion F′ = f, Satz des Pythagoras, Graphentheorie, lineare Abbildung, komplexe Abbildung w = z², Lupe: lokal linear, Mengen im Venn-Diagramm).
+Es geht auch ohne leere Bühne: Im Willkommensdialog gibt es fünf Beispielprojekte, und unter *Szene → Neue Szene aus Vorlage* findest du 23 Vorlagen (z. B. Kurvendiskussion, Wertetabelle und Graph, Satz des Thales, Dreieck messen, Winkelsumme im Dreieck, von der Sekante zur Tangente, Tangente wandert am Graphen, Integralfunktion F′ = f, Satz des Pythagoras, Graphentheorie, lineare Abbildung, komplexe Abbildung w = z², Lupe: lokal linear, Mengen im Venn-Diagramm).
 
 ## Wichtige Begriffe
 
